@@ -1,0 +1,131 @@
+
+# =========================
+# OS / Editors
+# =========================
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.swo
+.vscode/
+.idea/
+*.iml
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.build/
+dist/
+build/
+.venv/
+venv/
+env/
+pip-wheel-metadata/
+.poetry/
+.pytest_cache/
+coverage/
+htmlcov/
+
+# =========================
+# Notebooks
+# =========================
+.ipynb_checkpoints/
+# (optional) ignore auto-saved notebook copies
+*.nbconvert.ipynb
+
+# =========================
+# Data (keep tiny samples only)
+# =========================
+data/
+!data/README.md
+!data/sample/
+!data/sample/**
+
+# Common dataset/cache dirs
+datasets/
+.cache/
+cache/
+tmp/
+temp/
+outputs/
+artifacts/
+results/
+figures/
+reports/
+
+# =========================
+# Models & checkpoints
+# =========================
+models/
+checkpoints/
+weights/
+# Common model files (use Git LFS if you must track them)
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+*.onnx
+*.h5
+*.tflite
+*.pb
+*.joblib
+*.pkl
+*.xz
+*.zip
+*.tar
+*.tar.gz
+
+# Framework-specific
+# TensorBoard
+logs/
+tensorboard/
+# MLflow
+mlruns/
+# Weights & Biases
+wandb/
+.wandb/
+# Hugging Face caches
+huggingface/
+.huggingface/
+# XGBoost/LightGBM artifacts
+*.model
+*.txt.model
+*.cbm
+
+# =========================
+# Environment / secrets
+# =========================
+.env
+.env.*
+*.secret
+*.key
+*.pem
+secrets/
+credentials/
+config/local.*
+*.credentials
+
+# =========================
+# Docker / Dev containers
+# =========================
+docker-data/
+volumes/
+*.pid
+
+# =========================
+# Misc
+# =========================
+# lock/backup
+*.lock
+*.bak
+*.orig
+
