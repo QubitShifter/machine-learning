@@ -6,17 +6,12 @@ import numpy as np
 import pandas as pd
 
 from .config import (
-    n_employees,
-    start_date,
-    end_date,
-    random_seed,
-    synth_transactions_csv,
+    n_employees, start_date, end_date,
+    random_seed, synth_transactions_csv,
 )
 from .rules import (
-    whitelist_merchants,
-    non_whitelist_merchants,
-    is_whitelisted_merchant,
-    label_misuse,
+    whitelist_merchants, non_whitelist_merchants,
+    is_whitelisted_merchant, label_misuse,
 )
 
 rng = np.random.default_rng(random_seed)
@@ -32,8 +27,8 @@ city_by_country: Dict[str, Tuple[str, ...]] = {
     "uk": ("london", "manchester"),
 }
 
-target_rows = 2_000_000  # final desired size
-label_noise_rate = 0.03  # 3% labels flipped for realism
+target_rows = 2_000_000  # size of the sample
+label_noise_rate = 0.03  # 3% noise added to labels
 
 
 def random_day():
@@ -135,7 +130,7 @@ def generate_base_transactions() -> pd.DataFrame:
                     })
                     tx_id += 1
 
-        # legit local expenses
+        # local expenses which are considered OK
         n_local = int(rng.integers(20, 60))
         for _ in range(n_local):
             d = random_day()
@@ -165,7 +160,7 @@ def generate_base_transactions() -> pd.DataFrame:
             })
             tx_id += 1
 
-        # suspicious / misuse-like
+        # expenses which are considered suspicious / misuse
         n_misuse = int(rng.integers(10, 30))
         for _ in range(n_misuse):
             d = random_day()
@@ -231,12 +226,12 @@ def generate_base_transactions() -> pd.DataFrame:
 
 def inflate_and_label(df: pd.DataFrame, target: int) -> pd.DataFrame:
     """
-    enlarge dataset with noise and recompute labels.
-    1) repeat + shuffle
-    2) add noise to amount and hour
-    3) recompute is_whitelisted_merchant
-    4) recompute is_misuse using rules
-    5) flip a few labels (label noise)
+    add noise to dataset and recompute labels.
+     repeat + shuffle,
+     add noise to amount and hour,
+     recompute is_whitelisted_merchant,
+     recompute is_misuse using rules,
+     flip a few labels -label noise,
     """
     n = len(df)
     if n >= target:

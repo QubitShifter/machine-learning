@@ -8,6 +8,9 @@ csv_path = root / "data" / "raw" / "corp_card_synth_cv2.csv"  # или v2, ак�
 print("Loading:", csv_path)
 df = pd.read_csv(csv_path, parse_dates=["tx_datetime"])
 
+# 0) колони
+print("columns:", df.columns)
+
 # 1) размер
 print("shape:", df.shape)
 

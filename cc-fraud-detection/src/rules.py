@@ -22,6 +22,8 @@ class merchant_def:
     whitelisted: bool
 
 
+# two lists for  generating and label synthetic data (allowed vs not-allowed)
+
 # allowed merchants (policy ok)
 whitelist_merchants: List[merchant_def] = [
     merchant_def("lufthansa",        "flight",     True),
@@ -54,8 +56,8 @@ non_whitelist_names = {m.name for m in non_whitelist_merchants}
 
 def is_whitelisted_merchant(merchant_name: str) -> int:
     """
-    1 if known whitelisted, 0 if known bad or unknown.
-    strict on unknowns to make it interesting.
+    1 if known whitelisted,
+    0 if known bad or unknown.
     """
     name = str(merchant_name).lower()
     if name in whitelist_names:
@@ -68,7 +70,7 @@ def is_whitelisted_merchant(merchant_name: str) -> int:
 def is_late_hour(hour: int) -> int:
     """
     late evening / night flag:
-    from 21:00 until 05:59 considered suspicious window.
+    from 21:00 to 05:59 will be considered as suspicious window.
     """
     return int(hour >= late_hour_start or hour < early_hour_end)
 
@@ -83,16 +85,11 @@ def label_misuse(
     amount: float,
 ) -> int:
     """
-    synthetic misuse rules:
-
+    misuse rules:
       1) very small amount          -> misuse
       2) non-whitelisted merchant   -> misuse
       3) flight/hotel w/o trip      -> misuse
       4) late-hour + personal cat   -> misuse
-
-    gender is NOT used in the rule (we keep it fair),
-    but the model will see gender as a feature so you can
-    inspect if it correlates with patterns.
     """
 
     cat = str(mcc_category).lower()
@@ -102,15 +99,15 @@ def label_misuse(
     if amount < small_suspicious_amount:
         return 1
 
-    # 2) merchant outside whitelist
+    # 2) merchant not whitelisted
     if is_whitelisted_merchant == 0:
         return 1
 
-    # 3) travel-like but no approved trip
+    # 3) travel-like but not approved trip
     if cat in {"flight", "hotel"} and has_business_trip == 0:
         return 1
 
-    # 4) late evening / night personal-style spending
+    # 4) late evening / night personal spending
     if late == 1 and cat in personal_night_cats:
         return 1
 

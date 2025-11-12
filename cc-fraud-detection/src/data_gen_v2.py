@@ -5,19 +5,8 @@ from typing import Dict, Tuple, List
 import numpy as np
 import pandas as pd
 
-from .config import (
-    n_employees,
-    start_date,
-    end_date,
-    random_seed,
-    synth_transactions_v2_csv,
-)
-from .rules import (
-    whitelist_merchants,
-    non_whitelist_merchants,
-    is_whitelisted_merchant,
-    label_misuse,
-)
+from .config import ( n_employees, start_date, end_date, random_seed, synth_transactions_v2_csv, )
+from .rules import ( whitelist_merchants, non_whitelist_merchants, is_whitelisted_merchant, label_misuse, )
 
 rng = np.random.default_rng(random_seed)
 random.seed(random_seed)
@@ -67,7 +56,7 @@ def generate_base_v2() -> pd.DataFrame:
         gender = emp_gender[emp]
         dept = emp_dept[emp]
 
-        # 1) легитимни бизнес пътувания (подобно на v1)
+        # 1) позвол;ени бизнес пътувания (подобно на v1)
         for month in (1, 2, 3):
             n_trips = int(rng.integers(0, 3))
             for _ in range(n_trips):
@@ -79,7 +68,7 @@ def generate_base_v2() -> pd.DataFrame:
                     hour=9, minute=0, second=0, microsecond=0,
                 )
 
-                # полет
+                # полети
                 flight_merch = random.choice(
                     [m for m in whitelist_merchants if m.category == "flight"]
                 )
@@ -99,7 +88,7 @@ def generate_base_v2() -> pd.DataFrame:
                 })
                 tx_id += 1
 
-                # хотел
+                # хотели
                 hotel_merch = random.choice(
                     [m for m in whitelist_merchants if m.category == "hotel"]
                 )
@@ -146,7 +135,7 @@ def generate_base_v2() -> pd.DataFrame:
                     })
                     tx_id += 1
 
-        # 2) локални легитимни разходи
+        # 2) локални позволени разходи
         n_local = int(rng.integers(20, 70))
         for _ in range(n_local):
             d = random_day()
