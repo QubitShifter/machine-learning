@@ -1,6 +1,5 @@
 # src/modeling_v2.py
 import json
-import argparse
 import joblib
 import numpy as np
 import pandas as pd
@@ -8,6 +7,7 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
+from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import (
     average_precision_score,
     precision_recall_curve,
@@ -19,24 +19,11 @@ from sklearn.metrics import (
 from .config import processed_dir, models_dir, reports_dir, target_col
 from .features import build_feature_matrix
 
-
-def parse_args():
-    p = argparse.ArgumentParser()
-    p.add_argument("--model-name", default="gb_v2", help="artifact prefix")
-    p.add_argument("--drop-empid", action="store_true",
-                   help="remove employee_id from categoricals")
-    p.add_argument("--drop-empagg", action="store_true",
-                   help="remove per-employee aggregates")
-    p.add_argument("--clf", choices=["gb", "hgb", "rf", "logreg"],
-                   default="gb", help="which classifier to use")
-    return p.parse_args()
-
+# ---- name your run once; artifacts will use this prefix ----
+model_name = "gb_v2_no_empid"  # e.g. "gb_v2", "gb_v2_deeper700", "hgb_v2", ...
 
 def main():
-    args = parse_args()
-    model_name = args.model_name
-
-    # load split data from processed
+    # ---- load split data ----
     train_path = processed_dir / "corp_card_v2_train_raw.csv"
     test_path  = processed_dir / "corp_card_v2_test_raw.csv"
 
@@ -45,17 +32,13 @@ def main():
 
     # ---- build features (separately; avoids leakage) ----
     X_train, y_train, cat_features, num_features = build_feature_matrix(
-        df_train, target_col,
-        drop_employee_id=args.drop_empid,
-        drop_emp_aggregates=args.drop_empagg
+        df_train, target_col, drop_employee_id=True
     )
-    X_test, y_test, _, _ = build_feature_matrix(
-        df_test, target_col,
-        drop_employee_id=args.drop_empid,
-        drop_emp_aggregates=args.drop_empagg
+    X_test,  y_test,  _,            _           = build_feature_matrix(
+        df_test,  target_col, drop_employee_id=True
     )
 
-    # preprocessing
+    # ---- preprocessing ----
     preprocessor = ColumnTransformer(
         transformers=[
             ("cat", OneHotEncoder(handle_unknown="ignore"), cat_features),
@@ -63,29 +46,15 @@ def main():
         ]
     )
 
-    # choose classifier
-    if args.clf == "gb":
-        from sklearn.ensemble import GradientBoostingClassifier
-        clf = GradientBoostingClassifier(
-            random_state=42, n_estimators=250, learning_rate=0.08, max_depth=4
-        )
-    elif args.clf == "hgb":
-        from sklearn.ensemble import HistGradientBoostingClassifier
-        clf = HistGradientBoostingClassifier(
-            random_state=42, max_iter=400, learning_rate=0.06,
-            max_depth=10, max_leaf_nodes=64
-        )
-    elif args.clf == "rf":
-        from sklearn.ensemble import RandomForestClassifier
-        clf = RandomForestClassifier(
-            random_state=42, n_estimators=300, n_jobs=-1,
-            class_weight="balanced_subsample"
-        )
-    else:  # logreg
-        from sklearn.linear_model import LogisticRegression
-        clf = LogisticRegression(random_state=42, max_iter=500, n_jobs=-1)
+    # ---- classifier ----
+    clf = GradientBoostingClassifier(
+        random_state=42,
+        n_estimators=250,
+        learning_rate=0.08,
+        max_depth=4,
+    )
 
-    # model pipeline
+    # ---- pipeline ----
     model = Pipeline([
         ("prep", preprocessor),
         ("clf",  clf),
@@ -94,16 +63,16 @@ def main():
     print(f"training {model_name} model ...")
     model.fit(X_train, y_train)
 
-    # predict probability on test
+    # ---- predict proba on test ----
     y_score = model.predict_proba(X_test)[:, 1]
 
-    # metrics
+    # ---- metrics ----
     pr_auc = average_precision_score(y_test, y_score)
     roc    = roc_auc_score(y_test, y_score)
 
     prec, rec, thr = precision_recall_curve(y_test, y_score)
     f1 = (2 * prec * rec) / (prec + rec + 1e-12)
-    best_i   = int(np.nanargmax(f1[:-1]))   # align with thr length
+    best_i  = int(np.nanargmax(f1[:-1]))  # align with thr length
     best_thr = float(thr[best_i])
     p_star   = float(prec[best_i])
     r_star   = float(rec[best_i])
@@ -120,7 +89,7 @@ def main():
     print("\nclassification report:")
     print(report_str)
 
-    # check if folders exists
+    # ---- ensure folders ----
     models_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
 
@@ -129,7 +98,7 @@ def main():
     joblib.dump(model, model_path)
     print(f"saved {model_name} model to {model_path}")
 
-    # metrics JSON
+    # ---- metrics JSON ----
     tn, fp, fn, tp = cm.ravel().tolist()
     metrics = {
         "model": model_name,
@@ -142,13 +111,14 @@ def main():
         "n_test": int(len(y_test)),
         "positive_rate_test": float(np.mean(y_test)),
     }
-    (reports_dir / f"{model_name}_metrics.json").write_text(
-        json.dumps(metrics, indent=2)
-    )
-    (reports_dir / f"{model_name}_classification_report.txt").write_text(report_str)
-    print(f"saved metrics to {reports_dir / f'{model_name}_metrics.json'}")
+    metrics_path = reports_dir / f"{model_name}_metrics.json"
+    metrics_path.write_text(json.dumps(metrics, indent=2))
+    print(f"saved metrics to {metrics_path}")
 
-    # export feature importances / coefficients if available
+    # ---- save classification report text ----
+    (reports_dir / f"{model_name}_classification_report.txt").write_text(report_str)
+
+    # ---- export feature importances / coefficients if available ----
     fi_path = reports_dir / f"{model_name}_feature_importances.csv"
     try:
         prep = model.named_steps["prep"]
@@ -183,14 +153,16 @@ def main():
             print(f"saved coefficients to {fi_path}")
 
         else:
-            (reports_dir / f"{model_name}_notes.txt").write_text(
+            note_path = reports_dir / f"{model_name}_notes.txt"
+            note_path.write_text(
                 "Classifier does not expose feature_importances_ or coef_."
             )
-            print("no importances/coef_; wrote note")
+            print(f"no importances/coef_; wrote note to {note_path}")
 
     except Exception as e:
-        (reports_dir / f"{model_name}_fi_error.txt").write_text(str(e))
-        print("feature importance export failed; see fi_error.txt")
+        err_path = reports_dir / f"{model_name}_fi_error.txt"
+        err_path.write_text(str(e))
+        print(f"feature importance export failed; see {err_path}")
 
     return model
 
