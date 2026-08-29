@@ -1,0 +1,65 @@
+{
+    "subject": "ordinary_differential_equations",
+    "topics": [
+      {
+        "id": "algebra_review",
+        "name": "Algebra Review",
+        "level": 0,
+        "prerequisites": []
+      },
+      {
+        "id": "derivatives",
+        "name": "Derivatives",
+        "level": 0,
+        "prerequisites": ["algebra_review"]
+      },
+      {
+        "id": "integration",
+        "name": "Integration",
+        "level": 0,
+        "prerequisites": ["algebra_review"]
+      },
+      {
+        "id": "ode_basics",
+        "name": "ODE Basics",
+        "level": 1,
+        "prerequisites": ["derivatives"]
+      },
+      {
+        "id": "initial_value_problems",
+        "name": "Initial Value Problems",
+        "level": 1,
+        "prerequisites": ["ode_basics"]
+      },
+      {
+        "id": "direct_integration",
+        "name": "Direct Integration",
+        "level": 1,
+        "prerequisites": ["ode_basics", "integration"]
+      },
+      {
+        "id": "separable_equations",
+        "name": "Separable Equations",
+        "level": 2,
+        "prerequisites": ["direct_integration", "integration"]
+      },
+      {
+        "id": "linear_first_order",
+        "name": "First-Order Linear ODEs",
+        "level": 2,
+        "prerequisites": ["ode_basics", "integration"]
+      },
+      {
+        "id": "exact_equations",
+        "name": "Exact Equations",
+        "level": 3,
+        "prerequisites": ["linear_first_order", "partial_derivatives"]
+      },
+      {
+        "id": "partial_derivatives",
+        "name": "Partial Derivatives",
+        "level": 1,
+        "prerequisites": ["derivatives"]
+      }
+    ]
+  }

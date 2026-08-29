@@ -1,0 +1,110 @@
+{
+    "subject": "ordinary_differential_equations",
+    "skills": [
+      {
+        "id": "basic_algebra_manipulation",
+        "name": "Basic Algebraic Manipulation",
+        "topic": "algebra_review"
+      },
+      {
+        "id": "differentiate_polynomials",
+        "name": "Differentiate Polynomials",
+        "topic": "derivatives"
+      },
+      {
+        "id": "product_rule",
+        "name": "Product Rule",
+        "topic": "derivatives"
+      },
+      {
+        "id": "chain_rule",
+        "name": "Chain Rule",
+        "topic": "derivatives"
+      },
+      {
+        "id": "basic_indefinite_integration",
+        "name": "Basic Indefinite Integration",
+        "topic": "integration"
+      },
+      {
+        "id": "substitution",
+        "name": "Integration by Substitution",
+        "topic": "integration"
+      },
+      {
+        "id": "identify_order",
+        "name": "Identify the Order of an ODE",
+        "topic": "ode_basics"
+      },
+      {
+        "id": "identify_dependent_variable",
+        "name": "Identify Dependent and Independent Variables",
+        "topic": "ode_basics"
+      },
+      {
+        "id": "verify_solution",
+        "name": "Verify a Proposed ODE Solution",
+        "topic": "ode_basics"
+      },
+      {
+        "id": "apply_initial_condition",
+        "name": "Apply an Initial Condition",
+        "topic": "initial_value_problems"
+      },
+      {
+        "id": "solve_direct_integration",
+        "name": "Solve ODEs by Direct Integration",
+        "topic": "direct_integration"
+      },
+      {
+        "id": "recognize_separable",
+        "name": "Recognize a Separable ODE",
+        "topic": "separable_equations"
+      },
+      {
+        "id": "separate_variables",
+        "name": "Separate Variables",
+        "topic": "separable_equations"
+      },
+      {
+        "id": "integrate_separated_equation",
+        "name": "Integrate a Separated Equation",
+        "topic": "separable_equations"
+      },
+      {
+        "id": "solve_separable_ivp",
+        "name": "Solve a Separable Initial Value Problem",
+        "topic": "separable_equations"
+      },
+      {
+        "id": "recognize_linear_first_order",
+        "name": "Recognize a First-Order Linear ODE",
+        "topic": "linear_first_order"
+      },
+      {
+        "id": "compute_integrating_factor",
+        "name": "Compute an Integrating Factor",
+        "topic": "linear_first_order"
+      },
+      {
+        "id": "solve_linear_first_order",
+        "name": "Solve a First-Order Linear ODE",
+        "topic": "linear_first_order"
+      },
+      {
+        "id": "compute_partial_derivative",
+        "name": "Compute a Partial Derivative",
+        "topic": "partial_derivatives"
+      },
+      {
+        "id": "test_exactness",
+        "name": "Test Whether an ODE Is Exact",
+        "topic": "exact_equations"
+      },
+      {
+        "id": "solve_exact_equation",
+        "name": "Solve an Exact ODE",
+        "topic": "exact_equations"
+      }
+    ]
+  }

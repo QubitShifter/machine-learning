@@ -1,0 +1,54 @@
+{
+    "subject": "ordinary_differential_equations",
+    "questions": [
+      {
+        "id": "ode_basic_001",
+        "topic": "ode_basics",
+        "difficulty": 1,
+        "skills": [
+          "identify_order"
+        ],
+        "question_type": "short_answer",
+        "question": "What is the order of the differential equation d2y/dx2 + 3dy/dx + 2y = 0?",
+        "answer": "2",
+        "hints": [
+          "Look for the highest derivative appearing in the equation.",
+          "The highest derivative is d2y/dx2."
+        ],
+        "explanation": "The highest derivative in the equation is the second derivative d2y/dx2, so the differential equation is second order."
+      },
+      {
+        "id": "ode_basic_002",
+        "topic": "ode_basics",
+        "difficulty": 1,
+        "skills": [
+          "identify_dependent_variable"
+        ],
+        "question_type": "short_answer",
+        "question": "In the equation dy/dx = 3x, which variable is the dependent variable?",
+        "answer": "y",
+        "hints": [
+          "Ask which variable is being differentiated.",
+          "dy/dx means that y depends on x."
+        ],
+        "explanation": "The variable y is the dependent variable because y is treated as a function of x."
+      },
+      {
+        "id": "ode_basic_003",
+        "topic": "ode_basics",
+        "difficulty": 2,
+        "skills": [
+          "verify_solution",
+          "differentiate_polynomials"
+        ],
+        "question_type": "short_answer",
+        "question": "Does y = x^2 satisfy the differential equation dy/dx = 2x?",
+        "answer": "yes",
+        "hints": [
+          "Differentiate y = x^2.",
+          "Compare the derivative with the right-hand side 2x."
+        ],
+        "explanation": "Differentiating y = x^2 gives dy/dx = 2x, which matches the differential equation. Therefore y = x^2 is a solution."
+      }
+    ]
+  }
