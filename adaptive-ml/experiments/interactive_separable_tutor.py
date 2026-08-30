@@ -7,6 +7,10 @@ from sympy.parsing.sympy_parser import (
     standard_transformations,
 )
 
+from src.core.tutor_engine.separable_log_engine import (
+    SeparableLogEngine,
+)
+
 from src.core.question_generation.separable import (
     generate_separable_question,
 )
@@ -698,432 +702,8 @@ while True:
                 solution_session.get_log_stage()
             )
 
-            print(
-                "\nStage 3 — Solve the logarithmic equation for y"
-            )
-
-            print(
-                "\nStarting equation:"
-            )
-
-            print(
-                f"    ln|y| = "
-                f"{sp.sstr(integrated_fx)} + C"
-            )
-
             #
-            # 3.1 APPLY EXP
-            #
-            if log_stage == LogSolveStage.APPLY_EXP:
-                print(
-                    "\nStep 3.1 — Apply exp to both sides"
-                )
-
-                print(
-                    "\nWe want to undo ln."
-                )
-
-                print(
-                    "Apply the inverse operation to BOTH sides."
-                )
-
-                print(
-                    "\nSuggested form:"
-                )
-
-                print(
-                    "    exp(ln(y)) = exp(... + C)"
-                )
-
-                student_answer = input(
-                    "\nYour step or question: "
-                ).strip()
-
-                if student_answer.lower() == "quit":
-                    raise SystemExit
-
-                if looks_like_concept_question(
-                    student_answer
-                ):
-                    concept_response = (
-                        respond_to_stage3_concept_question(
-                            student_answer
-                        )
-                    )
-
-                    if concept_response is not None:
-                        print("\nTutor:")
-                        print(concept_response)
-                        continue
-
-                evaluation = evaluate_apply_exp_step(
-                    student_answer=student_answer,
-                    integrated_fx=integrated_fx,
-                )
-
-                print(
-                    f"\nTutor: {evaluation['feedback']}"
-                )
-
-                print(
-                    f"Suggestion: {evaluation['suggestion']}"
-                )
-
-                if evaluation["correct"]:
-                    solution_session.advance_log_stage()
-                else:
-                    question_attempts += 1
-
-                continue
-
-            #
-            # 3.2 CANCEL LOG
-            #
-            if log_stage == LogSolveStage.CANCEL_LOG:
-                print(
-                    "\nStep 3.2 — Simplify exp(ln|y|)"
-                )
-
-                print(
-                    "\nCurrent equation:"
-                )
-
-                print(
-                    f"    exp(ln|y|) = "
-                    f"exp({sp.sstr(integrated_fx)} + C)"
-                )
-
-                print(
-                    "\nWhat does exp(ln|y|) become?"
-                )
-
-                print(
-                    "Write the complete equation."
-                )
-
-                student_answer = input(
-                    "\nYour step or question: "
-                ).strip()
-
-                if student_answer.lower() == "quit":
-                    raise SystemExit
-
-                if looks_like_concept_question(
-                    student_answer
-                ):
-                    concept_response = (
-                        respond_to_stage3_concept_question(
-                            student_answer
-                        )
-                    )
-
-                    if concept_response is not None:
-                        print("\nTutor:")
-                        print(concept_response)
-                        continue
-
-                evaluation = evaluate_cancel_log_step(
-                    student_answer=student_answer,
-                    integrated_fx=integrated_fx,
-                )
-
-                print(
-                    f"\nTutor: {evaluation['feedback']}"
-                )
-
-                print(
-                    f"Suggestion: {evaluation['suggestion']}"
-                )
-
-                if evaluation["correct"]:
-                    solution_session.advance_log_stage()
-                else:
-                    question_attempts += 1
-
-                continue
-
-            #
-            # 3.3 SPLIT EXPONENTIAL
-            #
-            if log_stage == LogSolveStage.SPLIT_EXPONENTIAL:
-                print(
-                    "\nStep 3.3 — Split the exponential"
-                )
-
-                print(
-                    "\nCurrent equation:"
-                )
-
-                print(
-                    f"    |y| = "
-                    f"exp({sp.sstr(integrated_fx)} + C)"
-                )
-
-                print(
-                    "\nUse:"
-                )
-
-                print(
-                    "    exp(a + b) = exp(a)*exp(b)"
-                )
-
-                print(
-                    "\nRewrite the equation."
-                )
-
-                student_answer = input(
-                    "\nYour step or question: "
-                ).strip()
-
-                if student_answer.lower() == "quit":
-                    raise SystemExit
-
-                if looks_like_concept_question(
-                    student_answer
-                ):
-                    concept_response = (
-                        respond_to_stage3_concept_question(
-                            student_answer
-                        )
-                    )
-
-                    if concept_response is not None:
-                        print("\nTutor:")
-                        print(concept_response)
-                        continue
-
-                evaluation = (
-                    evaluate_split_exponential_step(
-                        student_answer=student_answer,
-                        integrated_fx=integrated_fx,
-                    )
-                )
-
-                print(
-                    f"\nTutor: {evaluation['feedback']}"
-                )
-
-                print(
-                    f"Suggestion: {evaluation['suggestion']}"
-                )
-
-                if evaluation["correct"]:
-                    solution_session.advance_log_stage()
-                else:
-                    question_attempts += 1
-
-                continue
-
-            #
-            # 3.4 RENAME exp(C)
-            #
-            if log_stage == LogSolveStage.RENAME_EXP_CONSTANT:
-                print(
-                    "\nStep 3.4 — Rename exp(C)"
-                )
-
-                print(
-                    "\nCurrent equation:"
-                )
-
-                print(
-                    f"    |y| = "
-                    f"exp({sp.sstr(integrated_fx)})*exp(C)"
-                )
-
-                print(
-                    "\nSince exp(C) is just a positive constant,"
-                )
-
-                print(
-                    "rename it as K."
-                )
-
-                print(
-                    "\nSuggested form:"
-                )
-
-                print(
-                    "    |y| = K*exp(...)"
-                )
-
-                student_answer = input(
-                    "\nYour step or question: "
-                ).strip()
-
-                if student_answer.lower() == "quit":
-                    raise SystemExit
-
-                if looks_like_concept_question(
-                    student_answer
-                ):
-                    concept_response = (
-                        respond_to_stage3_concept_question(
-                            student_answer
-                        )
-                    )
-
-                    if concept_response is not None:
-                        print("\nTutor:")
-                        print(concept_response)
-                        continue
-
-                evaluation = (
-                    evaluate_rename_exp_constant_step(
-                        student_answer=student_answer,
-                        integrated_fx=integrated_fx,
-                    )
-                )
-
-                print(
-                    f"\nTutor: {evaluation['feedback']}"
-                )
-
-                print(
-                    f"Suggestion: {evaluation['suggestion']}"
-                )
-
-                if evaluation["correct"]:
-                    solution_session.advance_log_stage()
-                else:
-                    question_attempts += 1
-
-                continue
-
-            #
-            # 3.5 REMOVE ABSOLUTE VALUE
-            #
-            if log_stage == LogSolveStage.REMOVE_ABSOLUTE_VALUE:
-                print(
-                    "\nStep 3.5 — Remove the absolute value"
-                )
-
-                print(
-                    "\nCurrent equation:"
-                )
-
-                print(
-                    f"    |y| = "
-                    f"K*exp({sp.sstr(integrated_fx)})"
-                )
-
-                print(
-                    "\nThere are two possibilities for y."
-                )
-
-                print(
-                    "Use +/- or ±."
-                )
-
-                student_answer = input(
-                    "\nYour step or question: "
-                ).strip()
-
-                if student_answer.lower() == "quit":
-                    raise SystemExit
-
-                if looks_like_concept_question(
-                    student_answer
-                ):
-                    concept_response = (
-                        respond_to_stage3_concept_question(
-                            student_answer
-                        )
-                    )
-
-                    if concept_response is not None:
-                        print("\nTutor:")
-                        print(concept_response)
-                        continue
-
-                evaluation = (
-                    evaluate_remove_absolute_value_step(
-                        student_answer=student_answer,
-                        integrated_fx=integrated_fx,
-                    )
-                )
-
-                print(
-                    f"\nTutor: {evaluation['feedback']}"
-                )
-
-                print(
-                    f"Suggestion: {evaluation['suggestion']}"
-                )
-
-                if evaluation["correct"]:
-                    solution_session.advance_log_stage()
-                else:
-                    question_attempts += 1
-
-                continue
-
-            #
-            # 3.6 ABSORB CONSTANT
-            #
-            if log_stage == LogSolveStage.ABSORB_CONSTANT:
-                print(
-                    "\nStep 3.6 — Absorb the constants"
-                )
-
-                print(
-                    "\nCurrent equation:"
-                )
-
-                print(
-                    f"    y = +/- K*exp("
-                    f"{sp.sstr(integrated_fx)})"
-                )
-
-                print(
-                    "\nCombine +/- K into one arbitrary constant C."
-                )
-
-                student_answer = input(
-                    "\nYour step or question: "
-                ).strip()
-
-                if student_answer.lower() == "quit":
-                    raise SystemExit
-
-                if looks_like_concept_question(
-                    student_answer
-                ):
-                    concept_response = (
-                        respond_to_stage3_concept_question(
-                            student_answer
-                        )
-                    )
-
-                    if concept_response is not None:
-                        print("\nTutor:")
-                        print(concept_response)
-                        continue
-
-                evaluation = (
-                    evaluate_absorb_constant_step(
-                        student_answer=student_answer,
-                        integrated_fx=integrated_fx,
-                    )
-                )
-
-                print(
-                    f"\nTutor: {evaluation['feedback']}"
-                )
-
-                print(
-                    f"Suggestion: {evaluation['suggestion']}"
-                )
-
-                if evaluation["correct"]:
-                    solution_session.advance_log_stage()
-                else:
-                    question_attempts += 1
-
-                continue
-
-            #
-            # STAGE 3 COMPLETE
+            # Stage 3 is finished.
             #
             if log_stage == LogSolveStage.COMPLETE:
                 print(
@@ -1133,8 +713,72 @@ while True:
                 )
 
                 solution_session.advance()
-
                 continue
+
+            #
+            # Create the Stage 3 tutoring engine using
+            # the current equation's actual integrated expression.
+            #
+            log_engine = SeparableLogEngine(
+                integrated_fx=integrated_fx
+            )
+
+            print(
+                "\nStage 3 — Solve the logarithmic equation for y"
+            )
+
+            print(
+                f"\n{log_engine.get_step_title(log_stage)}"
+            )
+
+            print(
+                "\n" + log_engine.get_prompt(log_stage)
+            )
+
+            student_answer = input(
+                "\nYour step or question: "
+            ).strip()
+
+            if student_answer.lower() == "quit":
+                raise SystemExit
+
+            result = log_engine.evaluate(
+                stage=log_stage,
+                student_answer=student_answer,
+            )
+
+            print(
+                f"\nTutor: {result['feedback']}"
+            )
+
+            if result.get("suggestion"):
+                print(
+                    f"Suggestion: {result['suggestion']}"
+                )
+
+            #
+            # Correct mathematical step:
+            # advance to the next Stage 3 substep.
+            #
+            if result["advance"]:
+                solution_session.advance_log_stage()
+                continue
+
+            #
+            # A conceptual question should NOT count
+            # as a failed mathematical attempt.
+            #
+            if result["kind"] == "concept":
+                continue
+
+            #
+            # An actual incorrect mathematical attempt
+            # counts toward question attempts.
+            #
+            if result["kind"] == "math":
+                question_attempts += 1
+
+            continue
 
         #
         # STAGE 4

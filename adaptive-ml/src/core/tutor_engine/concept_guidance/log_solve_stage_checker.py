@@ -37,15 +37,26 @@ def detect_common_function_typo(text: str) -> str | None:
 
 
 def normalize_expression(text: str) -> str:
-    return (
-        text.strip()
-        .replace("X", "x")
-        .replace("Y", "y")
-        .replace("^", "**")
-        .replace("×", "*")
-        .replace("÷", "/")
-        .replace("ln(", "log(")
-    )
+    text = text.strip()
+
+    text = text.replace("X", "x")
+    text = text.replace("Y", "y")
+
+    text = text.replace("×", "*")
+    text = text.replace("÷", "/")
+
+    text = text.replace("Exp(", "exp(")
+    text = text.replace("EXP(", "exp(")
+
+    text = text.replace("Ln(", "ln(")
+    text = text.replace("LN(", "ln(")
+
+    text = text.replace("Log(", "log(")
+    text = text.replace("LOG(", "log(")
+
+    text = text.replace("ln(", "log(")
+
+    return text
 
 
 def parse_math(expression: str):
@@ -421,8 +432,25 @@ def evaluate_split_exponential_step(
 
         |y| = exp(F(x)) * exp(C)
 
-    Accept equivalent multiplication forms.
+    Accept mathematically equivalent multiplication forms.
     """
+
+    typo_correction = detect_common_function_typo(
+        student_answer
+    )
+
+    if typo_correction is not None:
+        return {
+            "correct": False,
+            "error_type": "likely_typo",
+            "feedback": (
+                "Your mathematical idea may be right, but "
+                "I noticed what looks like a function-name typo."
+            ),
+            "suggestion": (
+                f"Did you mean '{typo_correction}'?"
+            ),
+        }
 
     answer = normalize_expression(
         student_answer
@@ -486,24 +514,6 @@ def evaluate_split_exponential_step(
         NameError,
         sp.SympifyError,
     ):
-
-        typo_correction = detect_common_function_typo(
-            student_answer
-        )
-
-        if typo_correction is not None:
-            return {
-                "correct": False,
-                "error_type": "likely_typo",
-                "feedback": (
-                    "Your mathematical idea may be right, but "
-                    "I noticed what looks like a function-name typo."
-                ),
-                "suggestion": (
-                    f"Did you mean '{typo_correction}'?"
-                ),
-            }
-        
         return {
             "correct": False,
             "error_type": "parse_error",
@@ -511,8 +521,8 @@ def evaluate_split_exponential_step(
                 "I could not understand that expression."
             ),
             "suggestion": (
-                "Try something like: "
-                "|y| = exp(2*x**3) * exp(C)"
+                f"Try something like: "
+                f"|y| = exp({sp.sstr(integrated_fx)}) * exp(C)"
             ),
         }
 
@@ -528,36 +538,47 @@ def evaluate_split_exponential_step(
     )
 
     mathematically_equivalent = (
-    sp.simplify(
-        right - expected_right
-    ) == 0
+        sp.simplify(
+            right - expected_right
+        ) == 0
     )
 
-    has_split_structure = (
-        isinstance(right, sp.Mul)
-        and sp.exp(integrated_fx) in right.args
-        and sp.exp(C) in right.args
-    )
+    #
+    # Check that the student actually split the exponential
+    # into two factors.
+    #
+    has_split_structure = False
 
-    if (left_correct and mathematically_equivalent and has_split_structure):
-        if (
-            left_correct
-            and mathematically_equivalent
-            and not has_split_structure
-        ):
-            return {
-                "correct": False,
-                "error_type": "not_split_yet",
-                "feedback": (
-                    "Your expression is mathematically equivalent, "
-                    "but you have not performed the requested "
-                    "exponential-splitting step yet."
-                ),
-                "suggestion": (
-                    f"Rewrite exp({sp.sstr(integrated_fx)} + C) "
-                    f"as exp({sp.sstr(integrated_fx)}) * exp(C)."
-                ),
-            }
+    if isinstance(right, sp.Mul):
+        factors = list(right.args)
+
+        has_exp_c = any(
+            sp.simplify(
+                factor - sp.exp(C)
+            ) == 0
+            for factor in factors
+        )
+
+        has_exp_fx = any(
+            sp.simplify(
+                factor - sp.exp(integrated_fx)
+            ) == 0
+            for factor in factors
+        )
+
+        has_split_structure = (
+            has_exp_c
+            and has_exp_fx
+        )
+
+    #
+    # Correct mathematical result AND requested structure.
+    #
+    if (
+        left_correct
+        and mathematically_equivalent
+        and has_split_structure
+    ):
         return {
             "correct": True,
             "error_type": None,
@@ -570,6 +591,28 @@ def evaluate_split_exponential_step(
                 "Since C is arbitrary, exp(C) is just "
                 "some positive constant. What could we "
                 "rename it?"
+            ),
+        }
+
+    #
+    # Mathematically equivalent but not split yet.
+    #
+    if (
+        left_correct
+        and mathematically_equivalent
+        and not has_split_structure
+    ):
+        return {
+            "correct": False,
+            "error_type": "not_split_yet",
+            "feedback": (
+                "Your expression is mathematically equivalent, "
+                "but you have not performed the requested "
+                "exponential-splitting step yet."
+            ),
+            "suggestion": (
+                f"Rewrite exp({sp.sstr(integrated_fx)} + C) "
+                f"as exp({sp.sstr(integrated_fx)}) * exp(C)."
             ),
         }
 

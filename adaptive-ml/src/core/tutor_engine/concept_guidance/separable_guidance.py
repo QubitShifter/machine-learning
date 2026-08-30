@@ -460,11 +460,20 @@ def run_separable_guidance(
         "again using these steps."
     )
 
-def explain_arbitrary_constant_absorption() -> str:
+def explain_arbitrary_constant_absorption(
+    integrated_fx=None,
+) -> str:
+    import sympy as sp
+
+    if integrated_fx is None:
+        fx_text = "F(x)"
+    else:
+        fx_text = sp.sstr(integrated_fx)
+
     return (
         "Let's unpack that carefully.\n\n"
         "We reached:\n\n"
-        "    |y| = exp(x**2) * exp(C)\n\n"
+        f"    |y| = exp({fx_text}) * exp(C)\n\n"
         "First, C is arbitrary. That means C can be any real number.\n\n"
         "Because exp(C) is the exponential of an arbitrary real number, "
         "exp(C) can be any positive constant.\n\n"
@@ -472,30 +481,33 @@ def explain_arbitrary_constant_absorption() -> str:
         "    C = 0       -> exp(C) = 1\n"
         "    C = ln(2)   -> exp(C) = 2\n"
         "    C = ln(10)  -> exp(C) = 10\n\n"
-        "So instead of repeatedly writing exp(C), we could rename it K:\n\n"
-        "    |y| = K * exp(x**2)\n\n"
+        "So instead of repeatedly writing exp(C), "
+        "we can rename it K:\n\n"
+        f"    |y| = K*exp({fx_text})\n\n"
         "where K is some positive constant.\n\n"
         "Now consider the absolute value |y|.\n"
-        "If |y| = K*exp(x**2), then y could be positive or negative:\n\n"
-        "    y = +K*exp(x**2)\n"
+        "If |y| equals that positive expression, "
+        "then y can be positive or negative:\n\n"
+        f"    y = +K*exp({fx_text})\n"
         "or\n"
-        "    y = -K*exp(x**2)\n\n"
-        "We can combine the + or - sign with K into one new arbitrary "
-        "constant A:\n\n"
+        f"    y = -K*exp({fx_text})\n\n"
+        "We can combine the + or - sign with K into "
+        "one new arbitrary constant A:\n\n"
         "    A = +/- K\n\n"
         "So we can write:\n\n"
-        "    y = A*exp(x**2)\n\n"
-        "The letter used for an arbitrary constant does not matter, so "
-        "we normally rename A back to C:\n\n"
-        "    y = C*exp(x**2)\n\n"
-        "So 'absorbed into a new arbitrary constant' means that several "
-        "constant pieces, such as exp(C) and the possible +/- sign, are "
-        "combined and represented by one new constant."
+        f"    y = A*exp({fx_text})\n\n"
+        "The letter used for an arbitrary constant does not matter, "
+        "so we normally rename A back to C:\n\n"
+        f"    y = C*exp({fx_text})\n\n"
+        "So 'absorbed into a new arbitrary constant' means that "
+        "constant pieces such as exp(C) and the possible +/- sign "
+        "are combined and represented by one new constant."
     )
 
 
 def respond_to_stage3_concept_question(
     student_message: str,
+    integrated_fx=None,
 ) -> str | None:
     message = student_message.lower().strip()
 
@@ -521,7 +533,9 @@ def respond_to_stage3_concept_question(
     )
 
     if asks_about_absorbing_constant:
-        return explain_arbitrary_constant_absorption()
+        return explain_arbitrary_constant_absorption(
+            integrated_fx=integrated_fx
+        )
 
     if asks_about_absolute_value:
         return (
