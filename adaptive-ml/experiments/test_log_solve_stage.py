@@ -128,9 +128,12 @@ absolute_answers = [
     "y = +/- K*exp(2*x**3)",
     "y = ±K*exp(2*x**3)",
     "y = +/-K exp(2x^3)",
+    "+/- y = K*exp(2*x**3)",
+    "±y = K*exp(2*x**3)",
     "y = K*exp(2*x**3)",
     "y = -K*exp(2*x**3)",
     "|y| = K*exp(2*x**3)",
+    "y = K*ecp(2*x**3)",
 ]
 
 for answer in absolute_answers:

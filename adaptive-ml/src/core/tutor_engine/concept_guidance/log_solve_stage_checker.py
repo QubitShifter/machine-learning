@@ -18,6 +18,23 @@ TRANSFORMATIONS = standard_transformations + (
     convert_xor,
 )
 
+def detect_common_function_typo(text: str) -> str | None:
+    lowered = text.lower()
+
+    common_typos = {
+        "ecp(": "exp(",
+        "expp(": "exp(",
+        "epx(": "exp(",
+        "l n(": "ln(",
+        "logg(": "log(",
+    }
+
+    for typo, correction in common_typos.items():
+        if typo in lowered:
+            return correction
+
+    return None
+
 
 def normalize_expression(text: str) -> str:
     return (
@@ -67,6 +84,23 @@ def evaluate_apply_exp_step(
         student_answer
     )
 
+    typo_correction = detect_common_function_typo(
+        student_answer
+    )
+
+    if typo_correction is not None:
+        return {
+            "correct": False,
+            "error_type": "likely_typo",
+            "feedback": (
+                "Your mathematical idea may be right, but "
+                "I noticed what looks like a function-name typo."
+            ),
+            "suggestion": (
+                f"Did you mean '{typo_correction}'?"
+            ),
+        }
+
     if "=" not in answer:
         return {
             "correct": False,
@@ -97,6 +131,24 @@ def evaluate_apply_exp_step(
         NameError,
         sp.SympifyError,
     ):
+
+        typo_correction = detect_common_function_typo(
+            student_answer
+        )
+
+        if typo_correction is not None:
+            return {
+                "correct": False,
+                "error_type": "likely_typo",
+                "feedback": (
+                    "Your mathematical idea may be right, but "
+                    "I noticed what looks like a function-name typo."
+                ),
+                "suggestion": (
+                    f"Did you mean '{typo_correction}'?"
+                ),
+            }
+        
         return {
             "correct": False,
             "error_type": "parse_error",
@@ -252,6 +304,24 @@ def evaluate_cancel_log_step(
         NameError,
         sp.SympifyError,
     ):
+
+        typo_correction = detect_common_function_typo(
+            student_answer
+        )
+
+        if typo_correction is not None:
+            return {
+                "correct": False,
+                "error_type": "likely_typo",
+                "feedback": (
+                    "Your mathematical idea may be right, but "
+                    "I noticed what looks like a function-name typo."
+                ),
+                "suggestion": (
+                    f"Did you mean '{typo_correction}'?"
+                ),
+            }
+
         return {
             "correct": False,
             "error_type": "parse_error",
@@ -259,8 +329,8 @@ def evaluate_cancel_log_step(
                 "I could not understand that expression."
             ),
             "suggestion": (
-                "Try something like: "
-                "|y| = exp(2*x**3 + C)"
+                f"Try something like: "
+                f"|y| = exp({sp.sstr(integrated_fx)} + C)"
             ),
         }
 
@@ -416,6 +486,24 @@ def evaluate_split_exponential_step(
         NameError,
         sp.SympifyError,
     ):
+
+        typo_correction = detect_common_function_typo(
+            student_answer
+        )
+
+        if typo_correction is not None:
+            return {
+                "correct": False,
+                "error_type": "likely_typo",
+                "feedback": (
+                    "Your mathematical idea may be right, but "
+                    "I noticed what looks like a function-name typo."
+                ),
+                "suggestion": (
+                    f"Did you mean '{typo_correction}'?"
+                ),
+            }
+        
         return {
             "correct": False,
             "error_type": "parse_error",
@@ -594,6 +682,24 @@ def evaluate_rename_exp_constant_step(
         NameError,
         sp.SympifyError,
     ):
+
+        typo_correction = detect_common_function_typo(
+            student_answer
+        )
+
+        if typo_correction is not None:
+            return {
+                "correct": False,
+                "error_type": "likely_typo",
+                "feedback": (
+                    "Your mathematical idea may be right, but "
+                    "I noticed what looks like a function-name typo."
+                ),
+                "suggestion": (
+                    f"Did you mean '{typo_correction}'?"
+                ),
+            }
+
         return {
             "correct": False,
             "error_type": "parse_error",
@@ -688,23 +794,23 @@ def evaluate_remove_absolute_value_step(
     student_answer: str,
     integrated_fx,
 ) -> dict:
-    """
-    Expected transformation:
 
-        |y| = K * exp(F(x))
+    typo_correction = detect_common_function_typo(
+        student_answer
+    )
 
-    becomes:
-
-        y = +/- K * exp(F(x))
-
-    Accept forms such as:
-        y = K*exp(...)
-        y = -K*exp(...)
-        y = +/-K*exp(...)
-
-    But distinguish whether the student explicitly recognized
-    both possible signs.
-    """
+    if typo_correction is not None:
+        return {
+            "correct": False,
+            "error_type": "likely_typo",
+            "feedback": (
+                "Your mathematical idea may be right, but "
+                "I noticed what looks like a function-name typo."
+            ),
+            "suggestion": (
+                f"Did you mean '{typo_correction}'?"
+            ),
+        }
 
     answer = normalize_expression(
         student_answer
@@ -716,6 +822,8 @@ def evaluate_remove_absolute_value_step(
         .replace("+-", "+/-")
     )
 
+    # ... rest of the existing function
+
     if "=" not in answer:
         return {
             "correct": False,
@@ -725,8 +833,8 @@ def evaluate_remove_absolute_value_step(
                 "the absolute value."
             ),
             "suggestion": (
-                "Think about both possibilities: "
-                "y can be positive or negative."
+                "Show both possibilities for y. "
+                "For example: y = +/- K*exp(...)"
             ),
         }
 
@@ -738,50 +846,30 @@ def evaluate_remove_absolute_value_step(
     left_text = left_text.strip()
     right_text = right_text.strip()
 
-    if left_text != "y":
-        return {
-            "correct": False,
-            "error_type": "absolute_value_not_removed",
-            "feedback": (
-                "At this step, remove |y| and write y "
-                "on the left."
-            ),
-            "suggestion": (
-                "The left side should now simply be y."
-            ),
-        }
-
     K = sp.symbols(
         "K",
         positive=True,
     )
 
-    expected_positive = (
+    expected_unsigned = (
         K * sp.exp(integrated_fx)
     )
 
-    expected_negative = (
-        -K * sp.exp(integrated_fx)
-    )
-
     #
-    # Explicit +/- form
+    # CASE 1:
     #
-    has_plus_minus = (
-        "+/-" in right_text
-    )
-
-    if has_plus_minus:
-        expression_without_sign = (
-            right_text.replace(
-                "+/-",
-                "",
-            )
+    #     y = +/- K*exp(...)
+    #
+    if left_text == "y" and "+/-" in right_text:
+        unsigned_text = (
+            right_text
+            .replace("+/-", "")
+            .strip()
         )
 
         try:
             unsigned_expr = parse_expr(
-                expression_without_sign,
+                unsigned_text,
                 transformations=TRANSFORMATIONS,
                 local_dict={
                     "x": x,
@@ -800,37 +888,55 @@ def evaluate_remove_absolute_value_step(
             NameError,
             sp.SympifyError,
         ):
+
+            typo_correction = detect_common_function_typo(
+                student_answer
+            )
+
+            if typo_correction is not None:
+                return {
+                    "correct": False,
+                    "error_type": "likely_typo",
+                    "feedback": (
+                        "Your mathematical idea may be right, but "
+                        "I noticed what looks like a function-name typo."
+                    ),
+                    "suggestion": (
+                        f"Did you mean '{typo_correction}'?"
+                    ),
+                }
+
             return {
                 "correct": False,
                 "error_type": "parse_error",
                 "feedback": (
-                    "I could not understand the "
-                    "expression after +/-."
+                    "I understood that you want both signs, "
+                    "but I could not understand the expression "
+                    "after +/-."
                 ),
                 "suggestion": (
-                    "Try: y = +/- K*exp(...)"
+                    f"Try: y = +/- K*exp("
+                    f"{sp.sstr(integrated_fx)})"
                 ),
             }
 
-        unsigned_correct = (
+        if (
             sp.simplify(
                 unsigned_expr
-                - expected_positive
-            ) == 0
-        )
-
-        if unsigned_correct:
+                - expected_unsigned
+            )
+            == 0
+        ):
             return {
                 "correct": True,
                 "error_type": None,
                 "feedback": (
-                    "Correct. Removing the absolute value "
-                    "gives both a positive and a negative "
-                    "possibility for y."
+                    "Correct. You included both the positive "
+                    "and negative possibilities for y."
                 ),
                 "suggestion": (
                     "Next, combine +/- K into one new "
-                    "arbitrary constant."
+                    "arbitrary constant C."
                 ),
             }
 
@@ -838,8 +944,9 @@ def evaluate_remove_absolute_value_step(
             "correct": False,
             "error_type": "incorrect_expression",
             "feedback": (
-                "You correctly included both signs, "
-                "but the expression after +/- is not right."
+                "The +/- idea is correct, but the expression "
+                "after it is not equivalent to the current "
+                "right-hand side."
             ),
             "suggestion": (
                 f"Try: y = +/- K*exp("
@@ -848,75 +955,233 @@ def evaluate_remove_absolute_value_step(
         }
 
     #
-    # Single-sign answer
+    # CASE 2:
     #
-    try:
-        right = parse_expr(
-            right_text,
-            transformations=TRANSFORMATIONS,
-            local_dict={
-                "x": x,
-                "y": y,
-                "C": C,
-                "K": K,
-                "exp": sp.exp,
-            },
-            evaluate=True,
+    #     +/- y = K*exp(...)
+    #
+    # This expresses the same two branches:
+    #
+    #     +y = RHS
+    #     -y = RHS
+    #
+    # which is equivalent to:
+    #
+    #     y = +/- RHS
+    #
+    if "+/-" in left_text:
+        left_without_sign = (
+            left_text
+            .replace("+/-", "")
+            .strip()
         )
 
-    except (
-        SyntaxError,
-        TypeError,
-        ValueError,
-        NameError,
-        sp.SympifyError,
-    ):
+        if left_without_sign != "y":
+            return {
+                "correct": False,
+                "error_type": "incorrect_left_side",
+                "feedback": (
+                    "I see the +/- sign, but it should "
+                    "be associated with y."
+                ),
+                "suggestion": (
+                    "You can write either "
+                    "'+/- y = ...' or 'y = +/- ...'."
+                ),
+            }
+
+        try:
+            right_expr = parse_expr(
+                right_text,
+                transformations=TRANSFORMATIONS,
+                local_dict={
+                    "x": x,
+                    "y": y,
+                    "C": C,
+                    "K": K,
+                    "exp": sp.exp,
+                },
+                evaluate=True,
+            )
+
+        except (
+            SyntaxError,
+            TypeError,
+            ValueError,
+            NameError,
+            sp.SympifyError,
+        ):
+
+            typo_correction = detect_common_function_typo(
+                student_answer
+            )
+
+            if typo_correction is not None:
+                return {
+                    "correct": False,
+                    "error_type": "likely_typo",
+                    "feedback": (
+                        "Your mathematical idea may be right, but "
+                        "I noticed what looks like a function-name typo."
+                    ),
+                    "suggestion": (
+                        f"Did you mean '{typo_correction}'?"
+                    ),
+                }
+
+
+            return {
+                "correct": False,
+                "error_type": "parse_error",
+                "feedback": (
+                    "I understood your +/- idea, but I "
+                    "could not understand the right side."
+                ),
+                "suggestion": (
+                    f"Try: +/- y = K*exp("
+                    f"{sp.sstr(integrated_fx)})"
+                ),
+            }
+
+        if (
+            sp.simplify(
+                right_expr
+                - expected_unsigned
+            )
+            == 0
+        ):
+            return {
+                "correct": True,
+                "error_type": None,
+                "feedback": (
+                    "Correct. Writing +/- y on the left "
+                    "expresses the same two sign possibilities."
+                ),
+                "suggestion": (
+                    "A more standard way to write this is "
+                    "y = +/- K*exp(...). "
+                    "Next, combine +/- K into one arbitrary "
+                    "constant C."
+                ),
+            }
+
         return {
             "correct": False,
-            "error_type": "parse_error",
+            "error_type": "incorrect_expression",
             "feedback": (
-                "I could not understand that expression."
+                "Your +/- placement is acceptable, but "
+                "the right-hand expression is not correct."
             ),
             "suggestion": (
-                "Try: y = +/- K*exp(...)"
+                f"Try: +/- y = K*exp("
+                f"{sp.sstr(integrated_fx)})"
             ),
         }
 
-    is_positive_case = (
-        sp.simplify(
-            right - expected_positive
-        ) == 0
-    )
+    #
+    # CASE 3:
+    #
+    # Student writes just one branch:
+    #
+    #     y = K*exp(...)
+    #     y = -K*exp(...)
+    #
+    if left_text == "y":
+        try:
+            right_expr = parse_expr(
+                right_text,
+                transformations=TRANSFORMATIONS,
+                local_dict={
+                    "x": x,
+                    "y": y,
+                    "C": C,
+                    "K": K,
+                    "exp": sp.exp,
+                },
+                evaluate=True,
+            )
 
-    is_negative_case = (
-        sp.simplify(
-            right - expected_negative
-        ) == 0
-    )
+        except (
+            SyntaxError,
+            TypeError,
+            ValueError,
+            NameError,
+            sp.SympifyError,
+        ):
 
-    if is_positive_case or is_negative_case:
-        return {
-            "correct": False,
-            "error_type": "only_one_sign",
-            "feedback": (
-                "That is one valid branch, but |y| means "
-                "there are two possibilities for y."
-            ),
-            "suggestion": (
-                "Include both signs using +/-."
-            ),
-        }
+            typo_correction = detect_common_function_typo(
+                student_answer
+            )
+
+            if typo_correction is not None:
+                return {
+                    "correct": False,
+                    "error_type": "likely_typo",
+                    "feedback": (
+                        "Your mathematical idea may be right, but "
+                        "I noticed what looks like a function-name typo."
+                    ),
+                    "suggestion": (
+                        f"Did you mean '{typo_correction}'?"
+                    ),
+                }
+
+
+            return {
+                "correct": False,
+                "error_type": "parse_error",
+                "feedback": (
+                    "I could not understand the expression."
+                ),
+                "suggestion": (
+                    f"Try: y = +/- K*exp("
+                    f"{sp.sstr(integrated_fx)})"
+                ),
+            }
+
+        positive_case = (
+            sp.simplify(
+                right_expr
+                - expected_unsigned
+            )
+            == 0
+        )
+
+        negative_case = (
+            sp.simplify(
+                right_expr
+                + expected_unsigned
+            )
+            == 0
+        )
+
+        if positive_case or negative_case:
+            return {
+                "correct": False,
+                "error_type": "only_one_sign",
+                "feedback": (
+                    "That is one valid branch of the solution. "
+                    "But |y| represents both a positive and "
+                    "a negative possibility."
+                ),
+                "suggestion": (
+                    f"Combine both branches as: "
+                    f"y = +/- K*exp("
+                    f"{sp.sstr(integrated_fx)})"
+                ),
+            }
 
     return {
         "correct": False,
         "error_type": "incorrect_expression",
         "feedback": (
-            "The absolute value creates positive and "
-            "negative possibilities."
+            "After removing |y|, we need to represent "
+            "both possible signs of y."
         ),
         "suggestion": (
-            f"Try: y = +/- K*exp("
-            f"{sp.sstr(integrated_fx)})"
+            f"You can write either:\n"
+            f"    y = +/- K*exp({sp.sstr(integrated_fx)})\n"
+            f"or:\n"
+            f"    +/- y = K*exp({sp.sstr(integrated_fx)})"
         ),
     }
 
@@ -992,6 +1257,24 @@ def evaluate_absorb_constant_step(
         NameError,
         sp.SympifyError,
     ):
+
+        typo_correction = detect_common_function_typo(
+            student_answer
+        )
+
+        if typo_correction is not None:
+            return {
+                "correct": False,
+                "error_type": "likely_typo",
+                "feedback": (
+                    "Your mathematical idea may be right, but "
+                    "I noticed what looks like a function-name typo."
+                ),
+                "suggestion": (
+                    f"Did you mean '{typo_correction}'?"
+                ),
+            }
+
         return {
             "correct": False,
             "error_type": "parse_error",

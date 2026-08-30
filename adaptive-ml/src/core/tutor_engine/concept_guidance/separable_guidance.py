@@ -535,4 +535,34 @@ def respond_to_stage3_concept_question(
             "arbitrary constant itself to carry the sign."
         )
 
+    asks_about_denominator = (
+        "denominator" in message
+        or "denom" in message
+        or (
+            "where did" in message
+            and "2" in message
+        )
+        or (
+            "why" in message
+            and "2" in message
+        )
+    )
+
+    if asks_about_denominator:
+        return (
+            "The denominator did not disappear.\n\n"
+            "If the integrated expression is:\n\n"
+            "    x^2/2\n\n"
+            "then it stays inside the exponent:\n\n"
+            "    exp(x^2/2)\n\n"
+            "So after we absorb the arbitrary constant, "
+            "the solution has the form:\n\n"
+            "    y = K*exp(x^2/2)\n\n"
+            "Only if the coefficient simplifies, for example:\n\n"
+            "    6*x^2/2 = 3*x^2\n\n"
+            "would the denominator disappear through ordinary algebraic "
+            "simplification.\n\n"
+            "In your current equation, x^2/2 does not simplify further."
+        )
+
     return None
