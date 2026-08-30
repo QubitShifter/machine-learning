@@ -7,6 +7,10 @@ from sympy.parsing.sympy_parser import (
     standard_transformations,
 )
 
+from src.core.tutor_engine.separable_verification_engine import (
+    SeparableVerificationEngine,
+)
+
 from src.core.tutor_engine.separable_log_engine import (
     SeparableLogEngine,
 )
@@ -45,6 +49,13 @@ from src.core.tutor_engine.concept_guidance.log_solve_stage_checker import (
     evaluate_rename_exp_constant_step,
     evaluate_remove_absolute_value_step,
     evaluate_absorb_constant_step,
+)
+
+from src.core.student_model.progress_store import (
+    get_skill_progress,
+    load_progress,
+    save_progress,
+    update_skill_progress,
 )
 
 TRANSFORMATIONS = standard_transformations + (
@@ -182,16 +193,50 @@ student = StudentModel(
 
 skill = "separate_variables"
 
-student.initialize_skill(
-    skill_id=skill,
-    initial_mastery=0.50,
+# Load saved progress from disk.
+progress = load_progress()
+
+saved_skill = get_skill_progress(
+    progress,
+    skill,
+    default_mastery=0.50,
 )
 
+saved_mastery = saved_skill["mastery"]
+
+saved_questions_completed = (
+    saved_skill["questions_completed"]
+)
+
+saved_first_attempt_streak = (
+    saved_skill["first_attempt_streak"]
+)
+
+
+# Initialize the StudentModel using the SAVED mastery,
+# instead of always resetting it to 0.50.
+student.initialize_skill(
+    skill_id=skill,
+    initial_mastery=saved_mastery,
+)
+
+
+# Create the skill session.
 skill_session = SkillSession(
     skill_id=skill,
     min_questions=5,
     mastery_threshold=0.90,
     required_first_attempt_streak=3,
+)
+
+
+# Restore session progress.
+skill_session.questions_completed = (
+    saved_questions_completed
+)
+
+skill_session.first_attempt_correct_streak = (
+    saved_first_attempt_streak
 )
 
 
@@ -266,6 +311,8 @@ while True:
     solution_session = (
         SeparableSolutionSession()
     )
+
+    verification_engine = None
 
     question_attempts = 1
     question_complete = False
@@ -678,9 +725,7 @@ while True:
 
             continue
 
-        #
         # STAGE 3
-        #
         if stage == SeparableStage.SOLVE_LOG_EQUATION:
             rhs = sp.sympify(
                 question["rhs_expression"]
@@ -701,10 +746,8 @@ while True:
             log_stage = (
                 solution_session.get_log_stage()
             )
-
-            #
+            
             # Stage 3 is finished.
-            #
             if log_stage == LogSolveStage.COMPLETE:
                 print(
                     "\nExcellent. You completed the "
@@ -761,7 +804,9 @@ while True:
             # advance to the next Stage 3 substep.
             #
             if result["advance"]:
-                solution_session.advance_log_stage()
+                solution_session.advance_log_stage_by(
+                    result.get("steps_completed", 1)
+                )
                 continue
 
             #
@@ -781,7 +826,7 @@ while True:
             continue
 
         #
-        # STAGE 4
+        # STAGE 4 — VERIFY SOLUTION
         #
         if stage == SeparableStage.FINAL_SOLUTION:
             rhs = sp.sympify(
@@ -801,185 +846,61 @@ while True:
                 x
             )
 
-            expected_expr = (
+            solution_expression = (
                 C * sp.exp(integrated_fx)
             )
 
-            print(
-                "\nStage 4 — Final solution"
-            )
-
-            print(
-                "\nNow write the general solution for y."
-            )
-
-            print(
-                "For example:"
-            )
-
-            print(
-                "    y = C*exp(...)"
-            )
-
-            student_answer = input(
-                "\nYour final answer or question: "
-            ).strip()
-
-            if student_answer.lower() == "quit":
-                raise SystemExit
-
-            message = student_answer.lower()
-
-            looks_like_question = (
-                "why" in message
-                or "where" in message
-                or "how" in message
-                or "what" in message
-                or "don't understand" in message
-                or "do not understand" in message
-                or "confused" in message
-                or "?" in message
-            )
-
-            if looks_like_question:
-                if (
-                    "denominator" in message
-                    or (
-                        "where" in message
-                        and "2" in message
+            if verification_engine is None:
+                verification_engine = (
+                    SeparableVerificationEngine(
+                        rhs_expression=rhs,
+                        solution_expression=solution_expression,
                     )
-                ):
-                    print("\nTutor:")
-
-                    print(
-                        "The denominator did not disappear. "
-                        "The expression was simplified."
-                    )
-
-                    print(
-                        "\nFor example:"
-                    )
-
-                    print(
-                        "    6*x^2/2"
-                    )
-
-                    print(
-                        "\nThe coefficient is:"
-                    )
-
-                    print(
-                        "    6/2 = 3"
-                    )
-
-                    print(
-                        "\nTherefore:"
-                    )
-
-                    print(
-                        "    6*x^2/2 = 3*x^2"
-                    )
-
-                    print(
-                        "\nThose two expressions are mathematically "
-                        "equivalent."
-                    )
-
-                else:
-                    print("\nTutor:")
-
-                    print(
-                        "That's a conceptual question rather "
-                        "than a final answer."
-                    )
-
-                    print(
-                        "Ask about the specific transformation "
-                        "that is unclear and we'll work through it."
-                    )
-
-                continue
-
-            normalized = normalize_final_answer(
-                student_answer
-            )
-
-            try:
-                student_expr = parse_final_expression(
-                    expression=normalized,
-                    x=x,
-                    C=C,
                 )
 
-            except (
-                sp.SympifyError,
-                SyntaxError,
-                TypeError,
-                ValueError,
-                NameError,
-            ):
+            if verification_engine.is_complete():
                 print(
-                    "\nTutor: I could not understand that "
-                    "mathematical expression."
+                    "\nExcellent. The solution has been "
+                    "verified against the original ODE."
                 )
-
-                print(
-                    "You can write something like:"
-                )
-
-                print(
-                    f"    y = {sp.sstr(expected_expr)}"
-                )
-
-                continue
-
-            equivalent = (
-                sp.simplify(
-                    student_expr - expected_expr
-                ) == 0
-            )
-
-            if equivalent:
-                print(
-                    "\nTutor: Correct. Your expression is "
-                    "mathematically equivalent to the "
-                    "general solution."
-                )
-
-                simplified = sp.simplify(
-                    student_expr
-                )
-
-                if simplified != student_expr:
-                    print(
-                        "\nIt can also be simplified to:"
-                    )
-
-                    print(
-                        f"    y = {sp.sstr(simplified)}"
-                    )
 
                 solution_session.advance()
                 continue
 
             print(
-                "\nTutor: That expression is not equivalent "
-                "to the expected general solution."
+                "\nStage 4 — Verify the solution"
             )
 
             print(
-                "\nExpected form:"
+                f"\n{verification_engine.get_title()}"
             )
 
             print(
-                f"    y = {sp.sstr(expected_expr)}"
+                "\n" + verification_engine.get_prompt()
             )
 
-            question_attempts += 1
+            student_answer = input(
+                "\nYour step or question: "
+            ).strip()
+
+            if student_answer.lower() == "quit":
+                raise SystemExit
+
+            result = verification_engine.evaluate(
+                student_answer
+            )
 
             print(
-                "\nTry Stage 4 again."
+                f"\nTutor: {result['feedback']}"
             )
+
+            if result.get("suggestion"):
+                print(
+                    f"Suggestion: {result['suggestion']}"
+                )
+
+            if not result["correct"]:
+                question_attempts += 1
 
             continue
 
@@ -1014,6 +935,18 @@ while True:
             print(
                 f"Updated mastery for "
                 f"'{skill}': {updated_mastery:.2f}"
+            )
+
+            update_skill_progress(
+                progress=progress,
+                skill=skill,
+                mastery=updated_mastery,
+                questions_completed=skill_session.questions_completed,
+                first_attempt_streak=skill_session.first_attempt_correct_streak,
+            )
+
+            save_progress(
+                progress
             )
 
             question_complete = True

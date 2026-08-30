@@ -236,20 +236,13 @@ def evaluate_cancel_log_step(
     integrated_fx,
 ) -> dict:
     """
-    Expected transformation:
-
-        exp(ln|y|) = exp(F(x) + C)
-
-    becomes:
-
-        |y| = exp(F(x) + C)
-
+    Expected transformation: exp(ln|y|) = exp(F(x) + C)
+    becomes: |y| = exp(F(x) + C)
     For terminal input, accept:
         y = exp(...)
         abs(y) = exp(...)
         Abs(y) = exp(...)
-
-    Later we can distinguish absolute-value handling more strictly.
+    Later can distinguish absolute-value handling more strictly.
     """
 
     answer = normalize_expression(
@@ -349,6 +342,46 @@ def evaluate_cancel_log_step(
         integrated_fx + C
     )
 
+    expected_unsplit_right = sp.exp(
+        integrated_fx + C
+    )
+
+    expected_split_right = (
+        sp.exp(integrated_fx)
+        * sp.exp(C)
+    )
+
+    right_is_split = False
+
+    if isinstance(right, sp.Mul):
+        factors = list(right.args)
+
+        has_exp_c = any(
+            sp.simplify(
+                factor - sp.exp(C)
+            ) == 0
+            for factor in factors
+        )
+
+        has_exp_fx = any(
+            sp.simplify(
+                factor - sp.exp(integrated_fx)
+            ) == 0
+            for factor in factors
+        )
+
+        right_is_split = (
+            has_exp_c
+            and has_exp_fx
+        )
+
+    right_is_unsplit = (
+        sp.simplify(
+            right - sp.exp(integrated_fx + C)
+        ) == 0
+        and not right_is_split
+    )
+
     left_is_abs_y = (
         left == sp.Abs(y)
     )
@@ -363,10 +396,27 @@ def evaluate_cancel_log_step(
         ) == 0
     )
 
-    if left_is_abs_y and right_correct:
+    if left_is_abs_y and right_is_split:
         return {
             "correct": True,
             "error_type": None,
+            "steps_completed": 2,
+            "feedback": (
+                "Correct. You simplified exp(ln|y|) to |y| "
+                "and also correctly split exp(F(x) + C) "
+                "into exp(F(x))*exp(C)."
+            ),
+            "suggestion": (
+                "You completed the next step as well. "
+                "Now rename exp(C) as a positive constant K."
+            ),
+        }
+
+    if left_is_abs_y and right_is_unsplit:
+        return {
+            "correct": True,
+            "error_type": None,
+            "steps_completed": 1,
             "feedback": (
                 "Correct. exp and ln are inverse functions, "
                 "so exp(ln|y|) becomes |y|."
@@ -377,7 +427,7 @@ def evaluate_cancel_log_step(
             ),
         }
 
-    if left_is_y and right_correct:
+    if left_is_y and right_is_unsplit:
         return {
             "correct": True,
             "error_type": "absolute_value_skipped",
