@@ -6,6 +6,10 @@ from sympy.parsing.sympy_parser import (
     standard_transformations,
 )
 
+from src.core.tutor_engine.concept_guidance.log_solve_stage_checker import (
+    detect_common_function_typo,
+)
+
 
 x = sp.symbols("x")
 y = sp.symbols("y")
@@ -65,6 +69,24 @@ def evaluate_derivative_step(
     Example:  y = C*exp(-5*x**2/2)
     Expected derivative:  dy/dx = -5*x*C*exp(-5*x**2/2)
     """
+
+    typo_correction = detect_common_function_typo(
+    student_answer
+    )
+
+    if typo_correction is not None:
+        return {
+            "correct": False,
+            "error_type": "likely_typo",
+            "feedback": (
+                "I noticed what looks like a function-name typo "
+                "in your derivative."
+            ),
+            "suggestion": (
+                f"Did you mean '{typo_correction}'?"
+            ),
+        }
+
     answer = normalize_expression(
         student_answer
     )
@@ -199,16 +221,26 @@ def evaluate_rhs_substitution_step(
     Student substitutes the proposed solution into
     the RHS of the original ODE.
 
-    Example:
-
-        dy/dx = -5*x*y
-
+    Example: dy/dx = -5*x*y
         y = C*exp(-5*x**2/2)
-
-    RHS becomes:
-
-        -5*x*C*exp(-5*x**2/2)
+    RHS becomes: -5*x*C*exp(-5*x**2/2)
     """
+    typo_correction = detect_common_function_typo(
+    student_answer
+    )
+
+    if typo_correction is not None:
+        return {
+            "correct": False,
+            "error_type": "likely_typo",
+            "feedback": (
+                "I noticed what looks like a function-name typo "
+                "in your derivative."
+            ),
+            "suggestion": (
+                f"Did you mean '{typo_correction}'?"
+            ),
+        }
 
     answer = normalize_expression(
         student_answer

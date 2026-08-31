@@ -79,6 +79,7 @@ for stage, answer in tests:
     )
 
 
+# OUTSIDE the for loop
 print(
     "\n--- Concept question ---"
 )
@@ -98,6 +99,41 @@ print(
 print(
     "Advance:",
     result["advance"],
+)
+
+print(
+    "Feedback:",
+    result["feedback"],
+)
+
+
+# ALSO OUTSIDE the for loop
+print(
+    "\n--- Multi-step answer test ---"
+)
+
+result = engine.evaluate(
+    stage=LogSolveStage.CANCEL_LOG,
+    student_answer=(
+        "|y| = exp(2*x**3) * exp(C)"
+    ),
+)
+
+print(
+    "Correct:",
+    result["correct"],
+)
+
+print(
+    "Advance:",
+    result["advance"],
+)
+
+print(
+    "Steps completed:",
+    result.get(
+        "steps_completed"
+    ),
 )
 
 print(

@@ -504,12 +504,47 @@ def explain_arbitrary_constant_absorption(
         "are combined and represented by one new constant."
     )
 
+def explain_inverse_of_ln() -> str:
+    return (
+        "The inverse operation of ln is exp.\n\n"
+        "ln and exp undo each other.\n\n"
+        "For example:\n\n"
+        "    ln(5) = a\n\n"
+        "means:\n\n"
+        "    exp(a) = 5\n\n"
+        "In general:\n\n"
+        "    exp(ln(y)) = y\n\n"
+        "and:\n\n"
+        "    ln(exp(x)) = x\n\n"
+        "So when we have an equation such as:\n\n"
+        "    ln|y| = F(x) + C\n\n"
+        "we apply exp to both sides:\n\n"
+        "    exp(ln|y|) = exp(F(x) + C)\n\n"
+        "That allows us to remove the logarithm and continue "
+        "solving for y."
+    )
+
 
 def respond_to_stage3_concept_question(
     student_message: str,
     integrated_fx=None,
 ) -> str | None:
     message = student_message.lower().strip()
+
+    asks_about_inverse_ln = (
+        "opposite to ln" in message
+        or "opposite of ln" in message
+        or "inverse of ln" in message
+        or "inverse to ln" in message
+        or "what reverses ln" in message
+        or "what cancels ln" in message
+        or "what undoes ln" in message
+        or "how do i remove ln" in message
+        or "how to remove ln" in message
+    )
+
+    if asks_about_inverse_ln:
+        return explain_inverse_of_ln()
 
     asks_about_absorbing_constant = (
         "absorb" in message

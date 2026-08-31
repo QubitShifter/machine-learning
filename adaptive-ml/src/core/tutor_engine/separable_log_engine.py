@@ -190,6 +190,10 @@ class SeparableLogEngine:
             "kind": "math",
             "correct": result["correct"],
             "advance": result["correct"],
+            "steps_completed": result.get(
+                "steps_completed",
+                1 if result["correct"] else 0,
+            ),
             "feedback": result["feedback"],
             "suggestion": result.get(
                 "suggestion"

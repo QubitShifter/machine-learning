@@ -1283,16 +1283,27 @@ def evaluate_absorb_constant_step(
     integrated_fx,
 ) -> dict:
     """
-    Expected transformation:
-
-        y = +/- K * exp(F(x))
-
-    becomes:
-
-        y = C * exp(F(x))
-
+    Expected transformation: y = +/- K * exp(F(x))
+    becomes: y = C * exp(F(x))
     where C is now a new arbitrary constant.
     """
+
+    typo_correction = detect_common_function_typo(
+        student_answer
+    )
+
+    if typo_correction is not None:
+        return {
+            "correct": False,
+            "error_type": "likely_typo",
+            "feedback": (
+                "Your mathematical idea may be right, but "
+                "I noticed what looks like a function-name typo."
+            ),
+            "suggestion": (
+                f"Did you mean '{typo_correction}'?"
+            ),
+        }
 
     answer = normalize_expression(
         student_answer

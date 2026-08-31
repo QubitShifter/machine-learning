@@ -156,6 +156,7 @@ absorb_answers = [
     "y = C exp(2x^3)",
     "y = exp(2*x**3)",
     "y = C*exp(3*x**3)",
+    "y = C*ecp(2*x**3)",
 ]
 
 for answer in absorb_answers:
