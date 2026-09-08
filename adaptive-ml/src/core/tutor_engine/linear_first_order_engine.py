@@ -13,6 +13,10 @@ from src.core.tutor_engine.linear_first_order_checker import (
     evaluate_linear_solve_for_y,
 )
 
+from src.core.tutor_engine.concept_guidance.linear_first_order_guidance import (
+    respond_to_linear_concept_question,
+)
+
 
 x = sp.symbols("x")
 
@@ -235,6 +239,28 @@ class LinearFirstOrderEngine:
         student_p=None,
         student_q=None,
     ) -> dict:
+
+        if student_answer is not None:
+            concept_response = (
+                respond_to_linear_concept_question(
+                    student_message=student_answer,
+                    stage=stage,
+                    p_expression=self.p_expression,
+                )
+            )
+
+            if concept_response is not None:
+                return {
+                    "kind": "concept",
+                    "correct": False,
+                    "advance": False,
+                    "error_type": None,
+                    "feedback": concept_response,
+                    "suggestion": (
+                        "When you're ready, continue with "
+                        "the mathematical step."
+                    ),
+                }
 
         if stage == LinearODEStage.IDENTIFY_STANDARD_FORM:
             return self._evaluate_standard_form(

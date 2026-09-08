@@ -1,6 +1,7 @@
-import sympy as sp
+import re
 from tokenize import TokenError
 
+import sympy as sp
 from sympy.parsing.sympy_parser import (
     convert_xor,
     implicit_multiplication_application,
@@ -8,8 +9,23 @@ from sympy.parsing.sympy_parser import (
     standard_transformations,
 )
 
+ANSI_ESCAPE_RE = re.compile(
+    r"\x1b\[[0-?]*[ -/]*[@-~]"
+)
 
-x = sp.symbols("x")
+
+def clean_math_input(text: str) -> str:
+    text = ANSI_ESCAPE_RE.sub("", text)
+
+    return "".join(
+        ch for ch in text
+        if ch.isprintable()
+    ).strip()
+
+
+
+
+x, y, yp, C = sp.symbols("x y yp C")
 
 
 TRANSFORMATIONS = (
@@ -51,15 +67,49 @@ def normalize_expression(
 
 def parse_math(
     expression: str,
+    local_dict: dict | None = None,
 ):
-    return parse_expr(
-        expression,
-        transformations=TRANSFORMATIONS,
-        local_dict={
-            "x": x,
-        },
-        evaluate=True,
-    )
+    """
+    Parse a student mathematical expression safely.
+
+    SymPy may raise tokenize.TokenError for incomplete input such as:
+
+        exp(-x**2
+
+    Convert TokenError to ValueError so the existing checker-level
+    parse-error handlers can return tutor feedback instead of letting
+    the interactive tutor crash.
+    """
+
+    expression = clean_math_input(expression)
+
+    base_local_dict = {
+        "x": x,
+        "y": y,
+        "yp": yp,
+        "C": C,
+        "exp": sp.exp,
+        "sqrt": sp.sqrt,
+        "pi": sp.pi,
+        "erf": sp.erf,
+        "erfi": sp.erfi,
+    }
+
+    if local_dict:
+        base_local_dict.update(local_dict)
+
+    try:
+        return parse_expr(
+            expression,
+            transformations=TRANSFORMATIONS,
+            local_dict=base_local_dict,
+            evaluate=True,
+        )
+
+    except TokenError as exc:
+        raise ValueError(
+            "Incomplete or malformed mathematical expression."
+        ) from exc
 
 
 def evaluate_p_q_identification(
@@ -338,33 +388,16 @@ def evaluate_multiply_by_integrating_factor(
         maxsplit=1,
     )
 
-    try:
-        left = parse_expr(
-            left_text,
-            transformations=TRANSFORMATIONS,
-            local_dict={
-                "x": x,
-                "y": y,
-                "yp": yp,
-                "exp": sp.exp,
-            },
-            evaluate=True,
-        )
+    left_text = clean_math_input(left_text)
+    right_text = clean_math_input(right_text)
 
-        right = parse_expr(
-            right_text,
-            transformations=TRANSFORMATIONS,
-            local_dict={
-                "x": x,
-                "y": y,
-                "yp": yp,
-                "exp": sp.exp,
-            },
-            evaluate=True,
-        )
+    try:
+       left = parse_math(left_text)
+       right = parse_math(right_text)
 
     except (
         SyntaxError,
+        TokenError,
         TypeError,
         ValueError,
         NameError,
@@ -377,7 +410,8 @@ def evaluate_multiply_by_integrating_factor(
                 "I could not understand the multiplied equation."
             ),
             "suggestion": (
-                "Write the complete equation, for example:\n"
+                "There may be an invalid or accidental character. "
+                "Write the complete equation again, for example:\n"
                 "exp(...)*y' + exp(...)*P(x)*y "
                 "= exp(...)*Q(x)"
             ),
@@ -749,6 +783,9 @@ def evaluate_linear_integration_step(
         maxsplit=1,
     )
 
+    left_text = clean_math_input(left_text)
+    right_text = clean_math_input(right_text)
+
     try:
         left = parse_expr(
             left_text,
@@ -776,6 +813,7 @@ def evaluate_linear_integration_step(
 
     except (
         SyntaxError,
+        TokenError,
         TypeError,
         ValueError,
         NameError,
@@ -788,8 +826,8 @@ def evaluate_linear_integration_step(
                 "I could not understand the integrated equation."
             ),
             "suggestion": (
-                "Write something like "
-                "exp(x**2)*y = exp(x**2)/2 + C."
+                "There may be an invalid or accidental character. "
+                "Write the complete equation again."
             ),
         }
 
@@ -983,6 +1021,7 @@ def evaluate_linear_solve_for_y(
 
     except (
         SyntaxError,
+        TokenError,
         TypeError,
         ValueError,
         NameError,

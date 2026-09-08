@@ -274,7 +274,7 @@ def run_math_stage(
         )
 
         student_answer = input(
-            "Your step: "
+            "Your step or question: "
         )
 
         command = handle_special_command(
@@ -284,12 +284,26 @@ def run_math_stage(
         if command is not None:
             return command
 
-        solution_session.record_attempt()
-
         result = engine.evaluate(
             stage=stage,
             student_answer=student_answer,
         )
+
+        #
+        # Conceptual questions do not count as attempts
+        # and do not advance the mathematical stage.
+        #
+        if result.get("kind") == "concept":
+            print_feedback(
+                result
+            )
+
+            continue
+
+        #
+        # Only mathematical submissions count as attempts.
+        #
+        solution_session.record_attempt()
 
         print_feedback(
             result
