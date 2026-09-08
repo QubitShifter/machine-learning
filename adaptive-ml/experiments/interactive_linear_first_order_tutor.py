@@ -106,6 +106,26 @@ def handle_special_command(
     return None
 
 
+
+def make_question_signature(
+    question: dict,
+) -> tuple:
+    """
+    Return a stable signature for a generated ODE.
+
+    Questions with the same P(x) and Q(x) are treated
+    as duplicates within the current tutor session.
+    """
+    return (
+        sp.sstr(
+            question["p_expression"]
+        ),
+        sp.sstr(
+            question["q_expression"]
+        ),
+    )
+
+
 # ---------------------------------------------------------
 # Stage presentation
 # ---------------------------------------------------------
@@ -759,6 +779,8 @@ def main():
     # -----------------------------------------------------
     #
 
+    used_questions = set()
+
     while True:
         current_mastery = (
             student.get_mastery(
@@ -812,11 +834,52 @@ def main():
 
             break
 
-        question = (
-            generate_linear_first_order_question(
-                difficulty=difficulty
+        max_generation_attempts = 50
+
+        question = None
+
+        for _ in range(
+            max_generation_attempts
+        ):
+            candidate = (
+                generate_linear_first_order_question(
+                    difficulty=difficulty
+                )
             )
-        )
+
+            signature = make_question_signature(
+                candidate
+            )
+
+            if signature not in used_questions:
+                question = candidate
+
+                used_questions.add(
+                    signature
+                )
+
+                break
+
+        if question is None:
+            #
+            # The available combinations for this difficulty
+            # were probably exhausted.
+            #
+            # Clear the session history and allow repeats again.
+            #
+            used_questions.clear()
+
+            question = (
+                generate_linear_first_order_question(
+                    difficulty=difficulty
+                )
+            )
+
+            used_questions.add(
+                make_question_signature(
+                    question
+                )
+            )
 
         result = run_question(
             question
@@ -852,7 +915,9 @@ def main():
             student.update_mastery_after_question(
                 skill_id=skill,
                 attempts=question_attempts,
-                correct=True,
+                final_evaluation={
+                    "correct": True,
+                },
             )
         )
 

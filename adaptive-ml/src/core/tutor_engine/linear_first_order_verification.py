@@ -328,6 +328,48 @@ class LinearFirstOrderVerificationEngine:
             .lower()
         )
 
+        normalized_answer = (
+            answer
+            .replace(",", "")
+            .replace(".", "")
+            .replace("!", "")
+            .replace("?", "")
+        )
+
+        positive_phrases = [
+            "yes",
+            "they match",
+            "match",
+            "they are equal",
+            "are equal",
+            "equal",
+            "same",
+            "correct",
+            "true",
+        ]
+
+        negative_phrases = [
+            "no",
+            "do not match",
+            "don't match",
+            "not equal",
+            "not the same",
+            "false",
+        ]
+
+        student_says_no = any(
+            phrase in normalized_answer
+            for phrase in negative_phrases
+        )
+
+        student_says_yes = (
+            not student_says_no
+            and any(
+                phrase in normalized_answer
+                for phrase in positive_phrases
+            )
+        )
+
         expected_lhs = (
             self.get_expected_lhs()
         )
@@ -339,26 +381,8 @@ class LinearFirstOrderVerificationEngine:
             ) == 0
         )
 
-        positive_answers = {
-            "yes",
-            "y",
-            "they match",
-            "match",
-            "equal",
-            "they are equal",
-            "true",
-        }
-
-        negative_answers = {
-            "no",
-            "n",
-            "they do not match",
-            "not equal",
-            "false",
-        }
-
         if actually_matches:
-            if answer in positive_answers:
+            if student_says_yes:
                 return {
                     "correct": True,
                     "error_type": None,
@@ -381,7 +405,7 @@ class LinearFirstOrderVerificationEngine:
                 ),
             }
 
-        if answer in negative_answers:
+        if student_says_no:
             return {
                 "correct": True,
                 "error_type": None,

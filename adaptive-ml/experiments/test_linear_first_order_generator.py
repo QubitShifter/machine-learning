@@ -19,6 +19,7 @@ for difficulty in [
             )
         )
 
+        print()
         print(
             question["question"]
         )
@@ -31,4 +32,39 @@ for difficulty in [
         print(
             "Q(x) =",
             question["Q"],
+        )
+
+        print(
+            "Particular solution =",
+            question[
+                "particular_solution"
+            ],
+        )
+
+        print(
+            "Integrating factor =",
+            question[
+                "integrating_factor"
+            ],
+        )
+
+        print(
+            "mu*Q =",
+            question[
+                "integrand"
+            ],
+        )
+
+        print(
+            "Integral(mu*Q) =",
+            question[
+                "antiderivative"
+            ],
+        )
+
+        print(
+            "General solution =",
+            question[
+                "general_solution"
+            ],
         )
