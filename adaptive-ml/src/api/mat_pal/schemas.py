@@ -32,6 +32,8 @@ class AnswerRequest(BaseModel):
 class SessionResponse(BaseModel):
     session_id: str
     problem_id: str
+    problem_title: str
+    problem_statement: str
     status: str
     feedback: str
     current_step: int

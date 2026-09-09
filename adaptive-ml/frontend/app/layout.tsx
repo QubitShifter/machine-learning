@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import "../node_modules/mathlive/mathlive-fonts.css";
+import "../node_modules/mathlive/mathlive-static.css";
 import "./globals.css";
 
 export const metadata: Metadata = {

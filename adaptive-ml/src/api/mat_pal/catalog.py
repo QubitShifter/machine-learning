@@ -6,12 +6,9 @@ from src.api.mat_pal.schemas import (
     ProblemDetail,
     ProblemSummary,
 )
-from src.core.tutor_engine.primary_school.problem_types import (
-    PrimarySchoolProblem,
-)
-from src.core.tutor_engine.primary_school.reverse_reasoning_solver import (
-    load_reverse_reasoning_problem,
-    load_reverse_reasoning_problems,
+from src.api.mat_pal.tutor_registry import (
+    DEFAULT_TUTOR_REGISTRY,
+    TutorRegistration,
 )
 
 
@@ -36,87 +33,126 @@ PHYSICS_DOMAINS = [
 
 
 def _problem_summary(
-    problem: PrimarySchoolProblem,
+    registration: TutorRegistration,
 ) -> ProblemSummary:
     return ProblemSummary(
-        problem_id=problem.problem_id,
-        title=problem.title,
-        subject="mathematics",
-        domain="primary_school",
-        topic=problem.topic,
-        problem_type=problem.problem_type.value,
-        grade=problem.grade,
-        total_steps=problem.get_number_of_steps(),
-        expected_input_type="text",
+        problem_id=registration.problem_id,
+        title=registration.title,
+        subject=registration.subject,
+        domain=registration.domain,
+        topic=registration.topic,
+        problem_type=registration.problem_type,
+        grade=registration.grade,
+        total_steps=registration.total_steps,
+        expected_input_type=(
+            registration.expected_input_type
+        ),
     )
 
 
 def _problem_detail(
-    problem: PrimarySchoolProblem,
+    registration: TutorRegistration,
 ) -> ProblemDetail:
     summary = _problem_summary(
-        problem
+        registration
     )
 
     return ProblemDetail(
         **summary.model_dump(),
-        problem_text=problem.problem_text,
-        language=problem.language,
-        skills=problem.skills,
-        metadata={
-            "strategy": problem.strategy,
-            "known": problem.known,
-            "unknown": problem.unknown,
-        },
+        problem_text=registration.problem_statement,
+        language=registration.language,
+        skills=list(registration.skills),
+        metadata=registration.metadata or {},
     )
 
 
 def list_problems() -> list[ProblemSummary]:
-    problems = load_reverse_reasoning_problems()
+    registrations = (
+        DEFAULT_TUTOR_REGISTRY
+        .list_registrations(
+            catalog_visible=True
+        )
+    )
 
     return [
         _problem_summary(
-            problem
+            registration
         )
-        for problem in problems
+        for registration in registrations
     ]
 
 
 def get_problem(
     problem_id: str,
 ) -> ProblemDetail:
-    problem = load_reverse_reasoning_problem(
+    registration = DEFAULT_TUTOR_REGISTRY.get(
         problem_id
     )
 
+    if not registration.catalog_visible:
+        raise ValueError(
+            f"Problem is not catalog-visible: {problem_id}"
+        )
+
     return _problem_detail(
-        problem
+        registration
     )
 
 
-def get_catalog() -> CatalogResponse:
-    available_problems = list_problems()
-    primary_school_topics = [
+def _topics_for_domain(
+    registrations: list[TutorRegistration],
+    domain_id: str,
+) -> list[CatalogTopic]:
+    topic_records: dict[
+        str,
+        dict,
+    ] = {}
+
+    for registration in registrations:
+        if registration.domain != domain_id:
+            continue
+
+        topic_record = topic_records.setdefault(
+            registration.topic,
+            {
+                "name": registration.topic_name,
+                "problem_ids": [],
+            },
+        )
+        topic_record["problem_ids"].append(
+            registration.problem_id
+        )
+
+    return [
         CatalogTopic(
-            id="word_problems",
-            name="Word Problems",
+            id=topic_id,
+            name=topic_record["name"],
             available_problem_count=len(
-                available_problems
+                topic_record["problem_ids"]
             ),
-            problem_ids=[
-                problem.problem_id
-                for problem in available_problems
+            problem_ids=topic_record[
+                "problem_ids"
             ],
         )
+        for topic_id, topic_record
+        in topic_records.items()
     ]
+
+
+def get_catalog() -> CatalogResponse:
+    registrations = (
+        DEFAULT_TUTOR_REGISTRY
+        .list_registrations(
+            catalog_visible=True
+        )
+    )
 
     mathematics_domains = []
 
     for domain_id, domain_name in MATHEMATICS_DOMAINS:
-        topics = (
-            primary_school_topics
-            if domain_id == "primary_school"
-            else []
+        topics = _topics_for_domain(
+            registrations=registrations,
+            domain_id=domain_id,
         )
         available_problem_count = sum(
             topic.available_problem_count

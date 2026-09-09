@@ -1,30 +1,20 @@
-import type { InputType } from "@/types/tutor";
+import type { HTMLAttributes } from "react";
 
-interface AnswerInputProps {
-  value: string;
-  expectedInputType: InputType;
-  disabled: boolean;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
+import type { AnswerEditorProps } from "@/components/answer-input/types";
+
+interface TextAnswerInputProps
+  extends AnswerEditorProps {
+  inputMode?: HTMLAttributes<HTMLInputElement>["inputMode"];
 }
 
-function getInputMode(
-  expectedInputType: InputType,
-) {
-  if (expectedInputType === "number") {
-    return "decimal";
-  }
-
-  return "text";
-}
-
-export function AnswerInput({
+export function TextAnswerInput({
   value,
   expectedInputType,
   disabled,
+  inputMode = "text",
   onChange,
   onSubmit,
-}: AnswerInputProps) {
+}: TextAnswerInputProps) {
   return (
     <form
       className="answer-form"
@@ -40,9 +30,7 @@ export function AnswerInput({
         <input
           disabled={disabled}
           id="answer"
-          inputMode={getInputMode(
-            expectedInputType,
-          )}
+          inputMode={inputMode}
           onChange={(event) =>
             onChange(event.target.value)
           }

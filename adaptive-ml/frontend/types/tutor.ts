@@ -18,6 +18,8 @@ export type TutorStatus =
 export interface TutorSession {
   session_id: string;
   problem_id: string;
+  problem_title: string;
+  problem_statement: string;
   status: TutorStatus | string;
   feedback: string;
   current_step: number;

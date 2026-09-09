@@ -186,7 +186,7 @@ export default function Home() {
   }
 
   function handleStart() {
-    if (!selectedProblemId) {
+    if (!selectedProblemId || !selectedProblem) {
       setErrorMessage(
         "Choose an available problem before starting.",
       );
@@ -450,7 +450,11 @@ export default function Home() {
           ) : null}
 
           <button
-            disabled={loading || !selectedProblemId}
+            disabled={
+              loading ||
+              !selectedProblemId ||
+              !selectedProblem
+            }
             onClick={handleStart}
             type="button"
           >

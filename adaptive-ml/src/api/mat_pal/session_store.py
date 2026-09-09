@@ -5,15 +5,14 @@ from src.api.mat_pal.schemas import (
     AnswerRequest,
     SessionResponse,
 )
+from src.api.mat_pal.tutor_registry import (
+    DEFAULT_TUTOR_REGISTRY,
+    MATH_INPUT_PROBE_PROBLEM_ID,
+    TutorEngine,
+)
 from src.core.tutor_engine.contracts import (
     StudentSubmission,
     TutorResponse,
-)
-from src.core.tutor_engine.primary_school.engine import (
-    PrimarySchoolTutorEngine,
-)
-from src.core.tutor_engine.primary_school.reverse_reasoning_solver import (
-    load_reverse_reasoning_problem,
 )
 
 
@@ -21,7 +20,9 @@ from src.core.tutor_engine.primary_school.reverse_reasoning_solver import (
 class StoredSession:
     session_id: str
     problem_id: str
-    engine: PrimarySchoolTutorEngine
+    problem_title: str
+    problem_statement: str
+    engine: TutorEngine
     last_response: TutorResponse
 
 
@@ -35,6 +36,10 @@ def _to_session_response(
     return SessionResponse(
         session_id=stored_session.session_id,
         problem_id=stored_session.problem_id,
+        problem_title=stored_session.problem_title,
+        problem_statement=(
+            stored_session.problem_statement
+        ),
         status=tutor_response.status,
         feedback=tutor_response.feedback,
         current_step=tutor_response.current_step,
@@ -50,11 +55,11 @@ def _to_session_response(
 def start_session(
     problem_id: str,
 ) -> SessionResponse:
-    problem = load_reverse_reasoning_problem(
+    registration = DEFAULT_TUTOR_REGISTRY.get(
         problem_id
     )
-    engine = PrimarySchoolTutorEngine(
-        problem=problem
+    engine = DEFAULT_TUTOR_REGISTRY.create_engine(
+        problem_id
     )
     initial_response = engine.get_current_response()
 
@@ -64,6 +69,10 @@ def start_session(
     stored_session = StoredSession(
         session_id=session_id,
         problem_id=problem_id,
+        problem_title=registration.title,
+        problem_statement=(
+            registration.problem_statement
+        ),
         engine=engine,
         last_response=initial_response,
     )

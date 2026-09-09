@@ -1,4 +1,4 @@
-import { AnswerInput } from "@/components/AnswerInput";
+import { AnswerInput } from "@/components/answer-input/AnswerInput";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
 import { ProgressBar } from "@/components/ProgressBar";
 import type { TutorSession } from "@/types/tutor";
@@ -28,6 +28,12 @@ export function TutorCard({
 }: TutorCardProps) {
   return (
     <article className="tutor-card">
+      <section className="problem-context-card">
+        <p className="eyebrow">Problem</p>
+        <h1>{session.problem_title}</h1>
+        <p>{session.problem_statement}</p>
+      </section>
+
       <ProgressBar
         completed={session.completed}
         currentStep={session.current_step}
@@ -51,7 +57,7 @@ export function TutorCard({
         <>
           <section className="prompt-card">
             <p className="eyebrow">
-              Problem {session.problem_id}
+              Current step
             </p>
             <h1>{currentPrompt}</h1>
           </section>

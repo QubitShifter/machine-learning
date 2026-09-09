@@ -4,3 +4,7 @@ __pycache__/
 .ipynb_checkpoints/
 .env
 *.log
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/tsconfig.tsbuildinfo
