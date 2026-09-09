@@ -1,9 +1,14 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
+from src.api.mat_pal import catalog
 from src.api.mat_pal import session_store
 from src.api.mat_pal.schemas import (
     AnswerRequest,
+    CatalogResponse,
+    ProblemDetail,
+    ProblemSummary,
     SessionResponse,
     StartSessionRequest,
 )
@@ -15,6 +20,21 @@ app = FastAPI(
     docs_url="/swagger",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_methods=[
+        "GET",
+        "POST",
+    ],
+    allow_headers=[
+        "Content-Type",
+    ],
+)
+
 
 @app.get(
     "/fastapi",
@@ -24,6 +44,41 @@ def fastapi_docs() -> RedirectResponse:
     return RedirectResponse(
         url="/swagger"
     )
+
+
+@app.get(
+    "/catalog",
+    response_model=CatalogResponse,
+)
+def get_catalog() -> CatalogResponse:
+    return catalog.get_catalog()
+
+
+@app.get(
+    "/problems",
+    response_model=list[ProblemSummary],
+)
+def list_problems() -> list[ProblemSummary]:
+    return catalog.list_problems()
+
+
+@app.get(
+    "/problems/{problem_id}",
+    response_model=ProblemDetail,
+)
+def get_problem(
+    problem_id: str,
+) -> ProblemDetail:
+    try:
+        return catalog.get_problem(
+            problem_id
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        ) from error
 
 
 @app.post(
