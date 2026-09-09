@@ -1,0 +1,96 @@
+{
+    "subject": "primary_school_math",
+    "grade": 4,
+    "skills": [
+      {
+        "id": "grade4_arithmetic_addition",
+        "topic": "arithmetic",
+        "name": "Addition",
+        "description": "Add whole numbers accurately."
+      },
+      {
+        "id": "grade4_arithmetic_subtraction",
+        "topic": "arithmetic",
+        "name": "Subtraction",
+        "description": "Subtract whole numbers accurately."
+      },
+      {
+        "id": "grade4_arithmetic_multiplication",
+        "topic": "arithmetic",
+        "name": "Multiplication",
+        "description": "Multiply whole numbers accurately."
+      },
+      {
+        "id": "grade4_arithmetic_division",
+        "topic": "arithmetic",
+        "name": "Division",
+        "description": "Divide whole numbers accurately."
+      },
+      {
+        "id": "grade4_fraction_half",
+        "topic": "fractions",
+        "name": "Understand one half",
+        "description": "Recognize and use one half of a quantity."
+      },
+      {
+        "id": "grade4_fraction_whole_from_half",
+        "topic": "fractions",
+        "name": "Find the whole from one half",
+        "description": "Determine a whole quantity when one half is known."
+      },
+      {
+        "id": "grade4_word_problem_identify_known",
+        "topic": "word_problems",
+        "name": "Identify known information",
+        "description": "Extract the important known quantities from a word problem."
+      },
+      {
+        "id": "grade4_word_problem_identify_unknown",
+        "topic": "word_problems",
+        "name": "Identify the unknown",
+        "description": "Determine what quantity the problem asks the student to find."
+      },
+      {
+        "id": "grade4_reverse_reasoning",
+        "topic": "word_problems",
+        "name": "Reverse reasoning",
+        "description": "Work backwards from a final known quantity to an earlier unknown quantity."
+      },
+      {
+        "id": "grade4_reverse_addition",
+        "topic": "word_problems",
+        "name": "Reverse addition",
+        "description": "Undo an addition operation using subtraction."
+      },
+      {
+        "id": "grade4_reverse_subtraction",
+        "topic": "word_problems",
+        "name": "Reverse subtraction",
+        "description": "Undo a subtraction operation using addition."
+      },
+      {
+        "id": "grade4_reverse_multiplication",
+        "topic": "word_problems",
+        "name": "Reverse multiplication",
+        "description": "Undo multiplication using division."
+      },
+      {
+        "id": "grade4_reverse_division",
+        "topic": "word_problems",
+        "name": "Reverse division",
+        "description": "Undo division using multiplication."
+      },
+      {
+        "id": "grade4_number_pattern_recursive_digits",
+        "topic": "number_patterns",
+        "name": "Recursive digit patterns",
+        "description": "Determine later digits from rules involving previous digits."
+      },
+      {
+        "id": "grade4_number_pattern_constraints",
+        "topic": "number_patterns",
+        "name": "Digit constraints",
+        "description": "Use digit limits and logical constraints to find valid numbers."
+      }
+    ]
+  }

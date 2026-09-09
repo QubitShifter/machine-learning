@@ -1,0 +1,88 @@
+{
+    "problems": [
+      {
+        "id": "grade4_reverse_reasoning_001",
+        "grade": 4,
+        "topic": "word_problems",
+        "problem_type": "reverse_reasoning",
+        "title": "Hazelnuts in Three Hollows",
+        "language": "en",
+        "problem_text": "A squirrel collected some hazelnuts and decided to store them in three hollows. In the first hollow, it put half of the hazelnuts and 2 more hazelnuts. In the second hollow, it put half of the remaining hazelnuts and 4 more hazelnuts. In the third hollow, it put half of the remaining hazelnuts and 5 more hazelnuts. After that, 7 hazelnuts remained. How many hazelnuts did the squirrel collect at the beginning?",
+        "skills": [
+          "grade4_word_problem_identify_known",
+          "grade4_word_problem_identify_unknown",
+          "grade4_reverse_reasoning",
+          "grade4_reverse_subtraction",
+          "grade4_reverse_division"
+        ],
+        "known": {
+          "final_remaining": 7,
+          "extra_first_hollow": 2,
+          "extra_second_hollow": 4,
+          "extra_third_hollow": 5
+        },
+        "unknown": {
+          "name": "initial_hazelnuts"
+        },
+        "strategy": "work_backwards",
+        "solution_steps": [
+          {
+            "step": 1,
+            "skill": "grade4_word_problem_identify_known",
+            "prompt": "How many hazelnuts were left after the squirrel finished filling all three hollows?",
+            "expected_answer": 7,
+            "hint": "Look at the final sentence of the problem."
+          },
+          {
+            "step": 2,
+            "skill": "grade4_reverse_subtraction",
+            "prompt": "Before the squirrel added 5 extra hazelnuts to the third hollow, how many hazelnuts represented half of the previous amount?",
+            "expected_answer": 12,
+            "operation": "7 + 5",
+            "hint": "Work backwards: undo subtracting 5 by adding 5."
+          },
+          {
+            "step": 3,
+            "skill": "grade4_reverse_division",
+            "prompt": "If 12 hazelnuts were half of the amount before the third hollow, what was the whole amount?",
+            "expected_answer": 24,
+            "operation": "12 * 2",
+            "hint": "If one half is 12, two halves make the whole."
+          },
+          {
+            "step": 4,
+            "skill": "grade4_reverse_subtraction",
+            "prompt": "Before the squirrel added 4 extra hazelnuts to the second hollow, how many hazelnuts represented half of the previous amount?",
+            "expected_answer": 28,
+            "operation": "24 + 4",
+            "hint": "Undo the extra 4 by adding 4 back."
+          },
+          {
+            "step": 5,
+            "skill": "grade4_reverse_division",
+            "prompt": "If 28 hazelnuts were half of the amount before the second hollow, what was the whole amount?",
+            "expected_answer": 56,
+            "operation": "28 * 2",
+            "hint": "Double 28."
+          },
+          {
+            "step": 6,
+            "skill": "grade4_reverse_subtraction",
+            "prompt": "Before the squirrel added 2 extra hazelnuts to the first hollow, how many hazelnuts represented half of the original amount?",
+            "expected_answer": 58,
+            "operation": "56 + 2",
+            "hint": "Undo the extra 2 by adding 2 back."
+          },
+          {
+            "step": 7,
+            "skill": "grade4_reverse_division",
+            "prompt": "If 58 hazelnuts were half of the original amount, how many hazelnuts were there at the beginning?",
+            "expected_answer": 116,
+            "operation": "58 * 2",
+            "hint": "Double 58 to recover the original amount."
+          }
+        ],
+        "final_answer": 116
+      }
+    ]
+  }

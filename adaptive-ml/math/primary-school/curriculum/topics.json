@@ -1,0 +1,31 @@
+{
+    "subject": "primary_school_math",
+    "grade": 4,
+    "topics": [
+      {
+        "id": "arithmetic",
+        "name": "Arithmetic",
+        "description": "Whole-number addition, subtraction, multiplication, and division."
+      },
+      {
+        "id": "fractions",
+        "name": "Fractions",
+        "description": "Basic fractions, parts of a whole, and reasoning with halves and other simple fractions."
+      },
+      {
+        "id": "word_problems",
+        "name": "Word Problems",
+        "description": "Understand written mathematical situations, identify known and unknown quantities, choose a strategy, and solve step by step."
+      },
+      {
+        "id": "geometry",
+        "name": "Geometry",
+        "description": "Basic shapes, perimeter, area, angles, and spatial reasoning."
+      },
+      {
+        "id": "number_patterns",
+        "name": "Number Patterns",
+        "description": "Recognize and continue numerical patterns and solve digit-based logic problems."
+      }
+    ]
+  }
