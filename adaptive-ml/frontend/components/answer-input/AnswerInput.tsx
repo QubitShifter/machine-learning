@@ -3,6 +3,7 @@ import { MatrixAnswerInput } from "@/components/answer-input/MatrixAnswerInput";
 import { PlaceholderAnswerInput } from "@/components/answer-input/PlaceholderAnswerInput";
 import { TextAnswerInput } from "@/components/answer-input/TextAnswerInput";
 import type { AnswerEditorProps } from "@/components/answer-input/types";
+import { UnitsAnswerInput } from "@/components/answer-input/UnitsAnswerInput";
 import { VectorAnswerInput } from "@/components/answer-input/VectorAnswerInput";
 
 export function AnswerInput(
@@ -30,10 +31,12 @@ export function AnswerInput(
       return <MathAnswerInput {...props} />;
 
     case "multiple_choice":
-    case "units":
       return (
         <PlaceholderAnswerInput {...props} />
       );
+
+    case "units":
+      return <UnitsAnswerInput {...props} />;
 
     case "vector":
       return <VectorAnswerInput {...props} />;

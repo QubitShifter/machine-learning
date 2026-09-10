@@ -345,20 +345,43 @@ button:disabled {
   margin-bottom: 0.5rem;
 }
 
+.answer-label {
+  color: var(--text);
+  font-weight: 800;
+  margin: 0 0 0.5rem;
+}
+
 .answer-row {
   display: grid;
   gap: 0.75rem;
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.answer-row input {
+.units-answer-row {
+  align-items: end;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(8rem, 0.55fr) minmax(8rem, 1fr) auto;
+}
+
+.units-answer-row label {
+  color: var(--text);
+  display: grid;
+  font-weight: 700;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.answer-row input,
+.units-answer-row input {
   border: 1px solid var(--border);
   border-radius: 999px;
   min-height: 2.75rem;
   padding: 0.75rem 1rem;
 }
 
-.answer-row input:focus {
+.answer-row input:focus,
+.units-answer-row input:focus {
   border-color: var(--primary);
   outline: 3px solid rgba(37, 99, 235, 0.16);
 }
@@ -566,7 +589,8 @@ button:disabled {
   }
 
   .comparison-grid,
-  .answer-row {
+  .answer-row,
+  .units-answer-row {
     grid-template-columns: 1fr;
   }
 
@@ -578,6 +602,7 @@ button:disabled {
   .math-answer-actions button,
   .action-row button,
   .question-row button,
+  .units-answer-row button,
   .answer-row button {
     width: 100%;
   }
