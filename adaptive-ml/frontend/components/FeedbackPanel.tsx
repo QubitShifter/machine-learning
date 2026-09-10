@@ -1,3 +1,5 @@
+import { MathContent } from "@/components/math/MathContent";
+
 interface FeedbackPanelProps {
   feedback: string;
   suggestion: string | null;
@@ -23,13 +25,13 @@ export function FeedbackPanel({
 
       <div>
         <h2>Feedback</h2>
-        <p>{feedback}</p>
+        <MathContent text={feedback} />
       </div>
 
       {suggestion ? (
         <div className="suggestion">
           <h2>Suggestion</h2>
-          <p>{suggestion}</p>
+          <MathContent text={suggestion} />
         </div>
       ) : null}
     </section>

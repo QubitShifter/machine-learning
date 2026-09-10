@@ -204,6 +204,160 @@ def assert_math_stage_answer(
     return data
 
 
+def assert_stage_4_concept_question_response(
+    session_id: str,
+) -> dict:
+    response = client.post(
+        f"/sessions/{session_id}/answer",
+        json={
+            "answer": (
+                "why do we need an integrating factor?"
+            ),
+            "input_type": "text",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    print_response(
+        "ODE Stage 4 concept-question response",
+        data,
+    )
+
+    assert data["status"] == "concept"
+    assert data["current_step"] == 4
+    assert data["expected_input_type"] == "math"
+    assert data["metadata"]["concept_question"] is True
+    assert data["metadata"]["attempts"] == 0
+
+    return data
+
+
+def assert_full_ode_completion(
+    session_id: str,
+) -> dict:
+    answers = [
+        {
+            "answer": (
+                r"e^{x^2}*y' + "
+                r"2*x*e^{x^2}*y = x*e^{x^2}"
+            ),
+            "input_type": "math",
+            "expected_step": 5,
+            "expected_input_type": "math",
+        },
+        {
+            "answer": (
+                r"d/dx(e^{x^2}*y) = x*e^{x^2}"
+            ),
+            "input_type": "math",
+            "expected_step": 6,
+            "expected_input_type": "math",
+        },
+        {
+            "answer": (
+                r"e^{x^2}*y = e^{x^2}/2 + C"
+            ),
+            "input_type": "math",
+            "expected_step": 7,
+            "expected_input_type": "math",
+        },
+        {
+            "answer": (
+                r"y = 1/2 + C*e^{-x^2}"
+            ),
+            "input_type": "math",
+            "expected_step": 8,
+            "expected_input_type": "math",
+        },
+        {
+            "answer": (
+                r"\frac{dy}{dx}=-2xCe^{-x^2}"
+            ),
+            "input_type": "math",
+            "expected_step": 8,
+            "expected_input_type": "math",
+        },
+        {
+            "answer": "x",
+            "input_type": "math",
+            "expected_step": 8,
+            "expected_input_type": "text",
+        },
+    ]
+
+    data = None
+
+    for answer in answers:
+        response = client.post(
+            f"/sessions/{session_id}/answer",
+            json={
+                "answer": answer["answer"],
+                "input_type": answer["input_type"],
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["status"] == "correct"
+        assert data["current_step"] == (
+            answer["expected_step"]
+        )
+        assert data["expected_input_type"] == (
+            answer["expected_input_type"]
+        )
+        assert data["completed"] is False
+
+    assert data is not None
+    comparison = data["metadata"]["comparison"]
+    print_response(
+        "ODE compare metadata",
+        comparison,
+    )
+    assert comparison["kind"] == (
+        "expression_comparison"
+    )
+    assert comparison["title"] == (
+        "Verification comparison"
+    )
+    assert comparison["left_label"] == (
+        "Simplified left-hand side"
+    )
+    assert comparison["left"] == "x"
+    assert comparison["right_label"] == (
+        "Right-hand side Q(x)"
+    )
+    assert comparison["right"] == "x"
+    assert comparison["question"] == (
+        "Do they match?"
+    )
+
+    complete_response = client.post(
+        f"/sessions/{session_id}/answer",
+        json={
+            "answer": "yes",
+            "input_type": "text",
+        },
+    )
+
+    assert complete_response.status_code == 200
+    complete_data = complete_response.json()
+
+    print_response(
+        "ODE completion response",
+        complete_data,
+    )
+
+    assert complete_data["status"] == "complete"
+    assert complete_data["current_step"] == 8
+    assert complete_data["total_steps"] == 8
+    assert complete_data["completed"] is True
+
+    return complete_data
+
+
 def assert_malformed_math_response() -> dict:
     start = start_ode_session()
     session_id = start["session_id"]
@@ -242,7 +396,7 @@ def assert_malformed_math_response() -> dict:
     return data
 
 
-def assert_ode_remains_hidden_from_catalog() -> None:
+def assert_ode_is_visible_in_catalog() -> None:
     response = client.get("/problems")
 
     assert response.status_code == 200
@@ -253,14 +407,18 @@ def assert_ode_remains_hidden_from_catalog() -> None:
 
     assert (
         LINEAR_ODE_FIXED_PROBLEM_ID
-        not in problem_ids
+        in problem_ids
     )
 
     detail_response = client.get(
         f"/problems/{LINEAR_ODE_FIXED_PROBLEM_ID}"
     )
 
-    assert detail_response.status_code == 404
+    assert detail_response.status_code == 200
+    assert (
+        detail_response.json()["problem_id"]
+        == LINEAR_ODE_FIXED_PROBLEM_ID
+    )
 
 
 def assert_primary_school_api_regression() -> None:
@@ -318,8 +476,14 @@ def main():
     assert_math_stage_answer(
         session_id
     )
+    assert_stage_4_concept_question_response(
+        session_id
+    )
+    assert_full_ode_completion(
+        session_id
+    )
     assert_malformed_math_response()
-    assert_ode_remains_hidden_from_catalog()
+    assert_ode_is_visible_in_catalog()
     assert_primary_school_api_regression()
 
     print(

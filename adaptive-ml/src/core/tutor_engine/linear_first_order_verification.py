@@ -2,26 +2,15 @@ import sympy as sp
 
 from enum import Enum
 
-from sympy.parsing.sympy_parser import (
-    convert_xor,
-    implicit_multiplication_application,
-    parse_expr,
-    standard_transformations,
+from src.core.tutor_engine.linear_first_order_checker import (
+    normalize_expression,
+    parse_math,
 )
 
 
 x = sp.symbols("x")
 y = sp.symbols("y")
 C = sp.symbols("C")
-
-
-TRANSFORMATIONS = (
-    standard_transformations
-    + (
-        implicit_multiplication_application,
-        convert_xor,
-    )
-)
 
 
 class LinearVerificationStage(Enum):
@@ -34,12 +23,7 @@ class LinearVerificationStage(Enum):
 def _normalize(
     text: str,
 ) -> str:
-    text = text.strip()
-
-    text = text.replace("X", "x")
-    text = text.replace("^", "**")
-    text = text.replace("×", "*")
-    text = text.replace("÷", "/")
+    text = normalize_expression(text)
 
     if "=" in text:
         left, right = text.split(
@@ -50,6 +34,7 @@ def _normalize(
         if left.strip().lower() in {
             "dy/dx",
             "y'",
+            "yp",
         }:
             text = right.strip()
 
@@ -59,21 +44,7 @@ def _normalize(
 def _parse(
     text: str,
 ):
-    return parse_expr(
-        text,
-        transformations=TRANSFORMATIONS,
-        local_dict={
-            "x": x,
-            "y": y,
-            "C": C,
-            "exp": sp.exp,
-            "sin": sp.sin,
-            "cos": sp.cos,
-            "log": sp.log,
-            "ln": sp.log,
-        },
-        evaluate=True,
-    )
+    return parse_math(text)
 
 
 class LinearFirstOrderVerificationEngine:

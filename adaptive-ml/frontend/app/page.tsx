@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { TutorCard } from "@/components/TutorCard";
+import { MathContent } from "@/components/math/MathContent";
 import {
   getCatalog,
   getProblem,
@@ -287,6 +288,32 @@ export default function Home() {
     );
   }
 
+  function handleSubmitQuestion(
+    question: string,
+  ) {
+    if (!session) {
+      return;
+    }
+
+    void runRequest(
+      () =>
+        submitAnswer(session.session_id, {
+          answer: question,
+          input_type: "text",
+        }),
+      (nextSession) => {
+        if (
+          nextSession.status === "correct" ||
+          nextSession.status === "waiting_for_answer"
+        ) {
+          setCurrentPrompt(
+            readNextPrompt(nextSession),
+          );
+        }
+      },
+    );
+  }
+
   function handleRequestHint() {
     if (!session) {
       return;
@@ -441,7 +468,9 @@ export default function Home() {
                 {selectedProblem.topic}
               </p>
               <h3>{selectedProblem.title}</h3>
-              <p>{selectedProblem.problem_text}</p>
+              <MathContent
+                text={selectedProblem.problem_text}
+              />
               <span>
                 {selectedProblem.total_steps} tutor
                 steps
@@ -478,6 +507,7 @@ export default function Home() {
           onRequestHint={handleRequestHint}
           onRestart={handleStart}
           onSubmitAnswer={handleSubmitAnswer}
+          onSubmitQuestion={handleSubmitQuestion}
           session={session}
         />
       )}

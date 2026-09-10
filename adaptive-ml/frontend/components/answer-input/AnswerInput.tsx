@@ -1,7 +1,9 @@
 import { MathAnswerInput } from "@/components/answer-input/MathAnswerInput";
+import { MatrixAnswerInput } from "@/components/answer-input/MatrixAnswerInput";
 import { PlaceholderAnswerInput } from "@/components/answer-input/PlaceholderAnswerInput";
 import { TextAnswerInput } from "@/components/answer-input/TextAnswerInput";
 import type { AnswerEditorProps } from "@/components/answer-input/types";
+import { VectorAnswerInput } from "@/components/answer-input/VectorAnswerInput";
 
 export function AnswerInput(
   props: AnswerEditorProps,
@@ -28,12 +30,16 @@ export function AnswerInput(
       return <MathAnswerInput {...props} />;
 
     case "multiple_choice":
-    case "vector":
-    case "matrix":
     case "units":
       return (
         <PlaceholderAnswerInput {...props} />
       );
+
+    case "vector":
+      return <VectorAnswerInput {...props} />;
+
+    case "matrix":
+      return <MatrixAnswerInput {...props} />;
 
     default:
       return (

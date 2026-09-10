@@ -111,7 +111,7 @@ button:disabled {
 }
 
 .start-card h2,
-.prompt-card h1,
+.prompt-content,
 .completion-card h1 {
   letter-spacing: -0.03em;
   margin: 0 0 0.75rem;
@@ -183,6 +183,10 @@ button:disabled {
   margin: 0 0 0.75rem;
 }
 
+.problem-preview .math-content {
+  margin-bottom: 0.75rem;
+}
+
 .problem-preview span {
   color: var(--primary);
   font-size: 0.9rem;
@@ -247,6 +251,7 @@ button:disabled {
 
 .problem-context-card,
 .prompt-card,
+.comparison-card,
 .completion-card,
 .feedback-panel {
   background: #f8fbff;
@@ -260,7 +265,8 @@ button:disabled {
 }
 
 .problem-context-card h1 {
-  font-size: clamp(1.35rem, 4vw, 1.85rem);
+  font-size: clamp(1.25rem, 3vw, 1.6rem);
+  font-weight: 600;
   letter-spacing: -0.03em;
   margin: 0 0 0.75rem;
 }
@@ -269,6 +275,64 @@ button:disabled {
   color: var(--muted);
   line-height: 1.65;
   margin: 0;
+}
+
+.math-content,
+.completion-card .math-content,
+.feedback-panel .math-content,
+.problem-context-card .math-content {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.math-content p,
+.prompt-content p {
+  margin: 0 0 0.75rem;
+}
+
+.math-content p:last-child,
+.prompt-content p:last-child {
+  margin-bottom: 0;
+}
+
+.prompt-content {
+  color: var(--text);
+  font-size: clamp(1.2rem, 2.8vw, 1.45rem);
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.math-inline {
+  color: var(--text);
+  font-weight: 400;
+}
+
+.math-display {
+  color: var(--text);
+  display: block;
+  font-size: clamp(1.25rem, 3vw, 1.65rem);
+  font-weight: 400;
+  overflow-x: auto;
+}
+
+.math-display .katex-display {
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.math-content-block {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  font-weight: 400;
+  padding: 0.75rem;
+}
+
+.feedback-panel .math-content,
+.suggestion .math-content {
+  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  font-weight: 400;
 }
 
 .answer-form {
@@ -338,6 +402,44 @@ button:disabled {
   margin: 0.5rem 0 0;
 }
 
+.comparison-card {
+  margin: 1rem 0 1.25rem;
+}
+
+.comparison-card > .math-content {
+  color: var(--muted);
+  font-weight: 700;
+  margin: 1rem 0 0;
+}
+
+.comparison-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.comparison-grid h2 {
+  font-size: 0.95rem;
+  margin: 0 0 0.4rem;
+}
+
+.comparison-expression {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  color: var(--text);
+  display: block;
+  font-size: 1rem;
+  padding: 0.75rem;
+  white-space: pre-wrap;
+}
+
+.comparison-expression .math-content-block {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
 .placeholder-input {
   background: #f8fbff;
   border: 1px dashed var(--border);
@@ -360,6 +462,7 @@ button:disabled {
 
 .action-row {
   display: flex;
+  gap: 0.75rem;
   justify-content: flex-end;
   margin-bottom: 1.25rem;
 }
@@ -371,6 +474,38 @@ button:disabled {
 
 .secondary-button:hover:not(:disabled) {
   background: #c7dbff;
+}
+
+.question-form {
+  background: #f8fbff;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  margin: 0 0 1.25rem;
+  padding: 1rem;
+}
+
+.question-form label {
+  display: block;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.question-row {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.question-row input {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.question-row input:focus {
+  border-color: var(--primary);
+  outline: 3px solid rgba(37, 99, 235, 0.16);
 }
 
 .feedback-panel {
@@ -415,6 +550,11 @@ button:disabled {
   color: var(--primary);
 }
 
+.status-concept {
+  background: #eef4ff;
+  color: #1e3a8a;
+}
+
 .error-message {
   color: var(--error);
   font-weight: 700;
@@ -425,17 +565,24 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
+  .comparison-grid,
   .answer-row {
     grid-template-columns: 1fr;
   }
 
   .action-row {
     justify-content: stretch;
+    flex-direction: column;
   }
 
   .math-answer-actions button,
   .action-row button,
+  .question-row button,
   .answer-row button {
     width: 100%;
+  }
+
+  .question-row {
+    grid-template-columns: 1fr;
   }
 }

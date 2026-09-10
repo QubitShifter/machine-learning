@@ -276,6 +276,20 @@ class LinearODETutorAdapter:
         verification_stage = (
             verification_engine.get_stage()
         )
+        metadata = self._metadata(
+            extra={
+                "verification_stage": (
+                    verification_stage.value
+                ),
+            }
+        )
+        comparison = self._comparison_metadata(
+            verification_engine=verification_engine,
+            verification_stage=verification_stage,
+        )
+
+        if comparison is not None:
+            metadata["comparison"] = comparison
 
         return TutorResponse(
             status="waiting_for_answer",
@@ -289,13 +303,7 @@ class LinearODETutorAdapter:
             expected_input_type=VERIFICATION_INPUT_TYPES[
                 verification_stage
             ],
-            metadata=self._metadata(
-                extra={
-                    "verification_stage": (
-                        verification_stage.value
-                    ),
-                }
-            ),
+            metadata=metadata,
         )
 
     def _submit_verification(
@@ -435,15 +443,16 @@ class LinearODETutorAdapter:
                 next_response.feedback
             )
 
-            if (
-                "verification_stage"
-                in next_response.metadata
+            for key in (
+                "verification_stage",
+                "comparison",
             ):
-                metadata["verification_stage"] = (
-                    next_response.metadata[
-                        "verification_stage"
-                    ]
-                )
+                if key in next_response.metadata:
+                    metadata[key] = (
+                        next_response.metadata[
+                            key
+                        ]
+                    )
 
         return TutorResponse(
             status=(
@@ -540,6 +549,35 @@ class LinearODETutorAdapter:
             f"left-hand side with Q(x) = {q_expression}. "
             "Do they match?"
         )
+
+    def _comparison_metadata(
+        self,
+        verification_engine:
+            LinearFirstOrderVerificationEngine,
+        verification_stage: LinearVerificationStage,
+    ) -> dict | None:
+        if (
+            verification_stage
+            != LinearVerificationStage.COMPARE
+        ):
+            return None
+
+        return {
+            "kind": "expression_comparison",
+            "title": "Verification comparison",
+            "left_label": (
+                "Simplified left-hand side"
+            ),
+            "left": sp.sstr(
+                verification_engine
+                .get_expected_lhs()
+            ),
+            "right_label": "Right-hand side Q(x)",
+            "right": sp.sstr(
+                verification_engine.q_expression
+            ),
+            "question": "Do they match?",
+        }
 
     def _expected_input_type(self) -> str:
         if self.solution_session.is_complete():

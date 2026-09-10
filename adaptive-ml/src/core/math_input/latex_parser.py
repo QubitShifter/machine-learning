@@ -27,6 +27,15 @@ LATEX_COMMANDS = {
     r"\sqrt": "sqrt",
 }
 
+KNOWN_FUNCTIONS = (
+    "exp",
+    "sqrt",
+    "log",
+    "sin",
+    "cos",
+    "tan",
+)
+
 
 def _read_balanced(
     text: str,
@@ -249,6 +258,47 @@ def _replace_latex_commands(
     return text
 
 
+def _insert_implicit_multiplication(
+    text: str,
+) -> str:
+    function_pattern = (
+        "|".join(KNOWN_FUNCTIONS)
+    )
+
+    text = re.sub(
+        rf"(?<=[0-9xyC)])\s+(?=(?:{function_pattern})\()",
+        "*",
+        text,
+    )
+    text = re.sub(
+        r"(?<=[0-9xyC)])\s+(?=[0-9xyC(])",
+        "*",
+        text,
+    )
+    text = re.sub(
+        r"(?<=[0-9)])(?=[A-Za-z])",
+        "*",
+        text,
+    )
+    text = re.sub(
+        r"(?<=[xyC])(?=[xyC])",
+        "*",
+        text,
+    )
+    text = re.sub(
+        rf"(?<=[xyC])(?=(?:{function_pattern})\()",
+        "*",
+        text,
+    )
+    text = re.sub(
+        r"(?<!/dx)(?<=[xyC])(?=\()",
+        "*",
+        text,
+    )
+
+    return text
+
+
 def _validate_balanced_delimiters(
     text: str,
 ) -> None:
@@ -304,6 +354,7 @@ def latex_to_sympy_text(
     text = text.replace("^", "**")
     text = text.replace("{", "(")
     text = text.replace("}", ")")
+    text = _insert_implicit_multiplication(text)
 
     text = re.sub(
         r"\s+",

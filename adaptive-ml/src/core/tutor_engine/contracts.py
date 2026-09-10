@@ -1,5 +1,17 @@
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
+
+
+ExpectedInputType = Literal[
+    "text",
+    "number",
+    "math",
+    "latex",
+    "multiple_choice",
+    "vector",
+    "matrix",
+    "units",
+]
 
 
 @dataclass
@@ -18,7 +30,7 @@ class StudentSubmission:
 
     answer: str
 
-    input_type: str = "text"
+    input_type: ExpectedInputType = "text"
 
     metadata: dict[str, Any] = field(
         default_factory=dict
@@ -69,7 +81,7 @@ class TutorResponse:
 
     suggestion: str | None = None
 
-    expected_input_type: str = "text"
+    expected_input_type: ExpectedInputType = "text"
 
     metadata: dict[str, Any] = field(
         default_factory=dict

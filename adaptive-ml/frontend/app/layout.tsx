@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import "../node_modules/katex/dist/katex.min.css";
 import "../node_modules/mathlive/mathlive-fonts.css";
 import "../node_modules/mathlive/mathlive-static.css";
 import "./globals.css";

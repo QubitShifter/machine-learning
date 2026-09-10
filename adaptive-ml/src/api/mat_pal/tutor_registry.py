@@ -8,6 +8,7 @@ from src.core.tutor_engine.adapters import (
     LinearODETutorAdapter,
 )
 from src.core.tutor_engine.contracts import (
+    ExpectedInputType,
     StudentSubmission,
     TutorResponse,
 )
@@ -52,7 +53,7 @@ class TutorRegistration:
     topic_name: str
     problem_type: str
     total_steps: int
-    expected_input_type: str
+    expected_input_type: ExpectedInputType
     create_engine: Callable[[], TutorEngine]
     grade: int | None = None
     language: str = "en"
@@ -241,7 +242,7 @@ def _register_linear_ode_tutors(
                     ),
                 )
             ),
-            catalog_visible=False,
+            catalog_visible=True,
         )
     )
 

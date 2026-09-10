@@ -84,7 +84,7 @@ def assert_linear_ode_registration():
     assert registration.subject == "mathematics"
     assert registration.domain == "ode"
     assert registration.topic == "first_order_linear"
-    assert registration.catalog_visible is False
+    assert registration.catalog_visible is True
     assert response.current_step == 1
     assert response.expected_input_type == "text"
 
@@ -130,7 +130,7 @@ def assert_catalog_uses_visible_registrations_only():
     assert PRIMARY_SCHOOL_PROBLEM_ID in problem_ids
     assert (
         LINEAR_ODE_FIXED_PROBLEM_ID
-        not in problem_ids
+        in problem_ids
     )
     assert (
         MATH_INPUT_PROBE_PROBLEM_ID
