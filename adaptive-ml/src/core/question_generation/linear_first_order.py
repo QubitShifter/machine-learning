@@ -9,6 +9,7 @@ C = sp.symbols("C")
 
 def generate_linear_first_order_question(
     difficulty: int = 1,
+    rng: random.Random | None = None,
 ) -> dict:
     """
     Generate first-order linear ODEs of the form:
@@ -35,6 +36,8 @@ def generate_linear_first_order_question(
     This makes the resulting exercises clean and suitable
     for step-by-step tutoring.
     """
+
+    chooser = rng or random
 
     if difficulty == 1:
         p_choices = [
@@ -68,7 +71,7 @@ def generate_linear_first_order_question(
             2 * x,
         ]
 
-    else:
+    elif difficulty == 3:
         p_choices = [
             x,
             2 * x,
@@ -87,11 +90,16 @@ def generate_linear_first_order_question(
             -x**2,
         ]
 
-    P = random.choice(
+    else:
+        raise ValueError(
+            "Difficulty must be 1, 2, or 3."
+        )
+
+    P = chooser.choice(
         p_choices
     )
 
-    particular_solution = random.choice(
+    particular_solution = chooser.choice(
         particular_choices
     )
 

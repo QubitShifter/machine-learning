@@ -6,6 +6,7 @@ import { TutorCard } from "@/components/TutorCard";
 import { MathContent } from "@/components/math/MathContent";
 import {
   generateProblem,
+  getAdaptiveRecommendation,
   getCatalog,
   getProblem,
   listProblems,
@@ -55,6 +56,8 @@ export default function Home() {
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] =
+    useState<string | null>(null);
+  const [adaptiveMessage, setAdaptiveMessage] =
     useState<string | null>(null);
 
   useEffect(() => {
@@ -310,6 +313,7 @@ export default function Home() {
       setSession(null);
       setCurrentPrompt("");
       setAnswer("");
+      setAdaptiveMessage(null);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -334,6 +338,10 @@ export default function Home() {
         }),
       (nextSession) => {
         setAnswer("");
+
+        if (nextSession.completed) {
+          setAdaptiveMessage(null);
+        }
 
         if (
           nextSession.status === "correct" ||
@@ -381,6 +389,94 @@ export default function Home() {
     void runRequest(() =>
       requestHint(session.session_id),
     );
+  }
+
+  async function handlePracticeNext() {
+    if (!session) {
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const recommendation =
+        await getAdaptiveRecommendation({
+          subject: selectedSubject || undefined,
+          domain: selectedDomain || undefined,
+        });
+
+      setAdaptiveMessage(recommendation.reason);
+
+      if (!recommendation.recommendation_available) {
+        return;
+      }
+
+      if (
+        recommendation.generation_available &&
+        recommendation.subject &&
+        recommendation.domain &&
+        recommendation.topic &&
+        recommendation.difficulty !== null
+      ) {
+        const generated = await generateProblem({
+          subject: recommendation.subject,
+          domain: recommendation.domain,
+          topic: recommendation.topic,
+          difficulty: recommendation.difficulty,
+        });
+        setProblems((currentProblems) => [
+          ...currentProblems,
+          generated,
+        ]);
+        setSelectedSubject(generated.subject);
+        setSelectedDomain(generated.domain);
+        setSelectedTopic(generated.topic);
+        setSelectedProblemId(generated.problem_id);
+        setSelectedProblem(generated);
+        setSelectedDifficulty(
+          typeof generated.metadata.difficulty ===
+            "number"
+            ? generated.metadata.difficulty
+            : generated.supported_difficulties[0] ??
+                1,
+        );
+
+        const nextSession = await startSession({
+          problem_id: generated.problem_id,
+        });
+        setSession(nextSession);
+        setCurrentPrompt(nextSession.feedback);
+        setAnswer("");
+        return;
+      }
+
+      if (recommendation.problem_id) {
+        const problem = await getProblem(
+          recommendation.problem_id,
+        );
+        setSelectedSubject(problem.subject);
+        setSelectedDomain(problem.domain);
+        setSelectedTopic(problem.topic);
+        setSelectedProblemId(problem.problem_id);
+        setSelectedProblem(problem);
+
+        const nextSession = await startSession({
+          problem_id: problem.problem_id,
+        });
+        setSession(nextSession);
+        setCurrentPrompt(nextSession.feedback);
+        setAnswer("");
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not start adaptive practice.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -607,9 +703,11 @@ export default function Home() {
           loading={loading}
           onAnswerChange={setAnswer}
           onRequestHint={handleRequestHint}
+          onPracticeNext={handlePracticeNext}
           onRestart={handleStart}
           onSubmitAnswer={handleSubmitAnswer}
           onSubmitQuestion={handleSubmitQuestion}
+          adaptiveMessage={adaptiveMessage}
           session={session}
         />
       )}

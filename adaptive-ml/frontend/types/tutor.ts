@@ -98,3 +98,23 @@ export interface GenerateProblemRequest {
   difficulty: number;
   seed?: number;
 }
+
+export interface AdaptiveRecommendationRequest {
+  subject?: string;
+  domain?: string;
+}
+
+export interface AdaptiveRecommendation {
+  recommendation_available: boolean;
+  reason: string;
+  subject: string | null;
+  domain: string | null;
+  topic: string | null;
+  topic_name: string | null;
+  difficulty: number | null;
+  mastery: number | null;
+  mastery_key: string | null;
+  generation_available: boolean;
+  problem_id: string | null;
+  metadata: Record<string, unknown>;
+}

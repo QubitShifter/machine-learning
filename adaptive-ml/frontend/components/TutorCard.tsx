@@ -18,6 +18,8 @@ interface TutorCardProps {
   onSubmitQuestion: (question: string) => void;
   onRequestHint: () => void;
   onRestart: () => void;
+  onPracticeNext?: () => void;
+  adaptiveMessage?: string | null;
 }
 
 interface ComparisonMetadata {
@@ -107,6 +109,8 @@ export function TutorCard({
   onSubmitQuestion,
   onRequestHint,
   onRestart,
+  onPracticeNext,
+  adaptiveMessage,
 }: TutorCardProps) {
   const [showQuestionInput, setShowQuestionInput] =
     useState(false);
@@ -144,6 +148,13 @@ export function TutorCard({
         totalSteps={session.total_steps}
       />
 
+      {adaptiveMessage ? (
+        <section className="adaptive-message">
+          <p className="eyebrow">Adaptive recommendation</p>
+          <p>{adaptiveMessage}</p>
+        </section>
+      ) : null}
+
       {session.completed ? (
         <section className="completion-card">
           <p className="eyebrow">Session complete</p>
@@ -156,6 +167,15 @@ export function TutorCard({
           >
             Start Again
           </button>
+          {onPracticeNext ? (
+            <button
+              disabled={loading}
+              onClick={onPracticeNext}
+              type="button"
+            >
+              Practice Next
+            </button>
+          ) : null}
         </section>
       ) : (
         <>

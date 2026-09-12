@@ -1,4 +1,6 @@
 import type {
+  AdaptiveRecommendation,
+  AdaptiveRecommendationRequest,
   AnswerRequest,
   CatalogResponse,
   GenerateProblemRequest,
@@ -62,6 +64,18 @@ export function generateProblem(
 ): Promise<ProblemDetail> {
   return requestJson<ProblemDetail>(
     "/problems/generate",
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
+  );
+}
+
+export function getAdaptiveRecommendation(
+  request: AdaptiveRecommendationRequest,
+): Promise<AdaptiveRecommendation> {
+  return requestJson<AdaptiveRecommendation>(
+    "/adaptive/recommendation",
     {
       method: "POST",
       body: JSON.stringify(request),

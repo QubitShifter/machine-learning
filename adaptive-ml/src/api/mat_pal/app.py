@@ -3,10 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from src.api.mat_pal import catalog
+from src.api.mat_pal import adaptive_service
 from src.api.mat_pal import session_store
 from src.api.mat_pal.schemas import (
+    AdaptiveRecommendationRequest,
+    AdaptiveRecommendationResponse,
     AnswerRequest,
     CatalogResponse,
+    GenerateProblemRequest,
     ProblemDetail,
     ProblemSummary,
     SessionResponse,
@@ -54,12 +58,67 @@ def get_catalog() -> CatalogResponse:
     return catalog.get_catalog()
 
 
+@app.post(
+    "/adaptive/recommendation",
+    response_model=AdaptiveRecommendationResponse,
+)
+def adaptive_recommendation(
+    request: AdaptiveRecommendationRequest,
+) -> AdaptiveRecommendationResponse:
+    recommendation = adaptive_service.recommend_next(
+        subject=request.subject,
+        domain=request.domain,
+    )
+
+    return AdaptiveRecommendationResponse(
+        recommendation_available=(
+            recommendation.recommendation_available
+        ),
+        reason=recommendation.reason,
+        subject=recommendation.subject,
+        domain=recommendation.domain,
+        topic=recommendation.topic,
+        topic_name=recommendation.topic_name,
+        difficulty=recommendation.difficulty,
+        mastery=recommendation.mastery,
+        mastery_key=recommendation.mastery_key,
+        generation_available=(
+            recommendation.generation_available
+        ),
+        problem_id=recommendation.problem_id,
+        metadata=recommendation.metadata,
+    )
+
+
 @app.get(
     "/problems",
     response_model=list[ProblemSummary],
 )
 def list_problems() -> list[ProblemSummary]:
     return catalog.list_problems()
+
+
+@app.post(
+    "/problems/generate",
+    response_model=ProblemDetail,
+)
+def generate_problem(
+    request: GenerateProblemRequest,
+) -> ProblemDetail:
+    try:
+        return catalog.generate_problem(
+            subject=request.subject,
+            domain=request.domain,
+            topic=request.topic,
+            difficulty=request.difficulty,
+            seed=request.seed,
+        )
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
 
 @app.get(

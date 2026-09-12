@@ -86,7 +86,33 @@ def get_skill_progress(
             "mastery": default_mastery,
             "questions_completed": 0,
             "first_attempt_streak": 0,
+            "last_total_attempts": 0,
+            "last_incorrect_attempts": 0,
+            "last_hints_used": 0,
+            "last_first_attempt_success": False,
+            "last_completed": False,
         }
+
+    skills[skill].setdefault(
+        "last_total_attempts",
+        0,
+    )
+    skills[skill].setdefault(
+        "last_incorrect_attempts",
+        0,
+    )
+    skills[skill].setdefault(
+        "last_hints_used",
+        0,
+    )
+    skills[skill].setdefault(
+        "last_first_attempt_success",
+        False,
+    )
+    skills[skill].setdefault(
+        "last_completed",
+        False,
+    )
 
     return skills[skill]
 
@@ -97,6 +123,11 @@ def update_skill_progress(
     mastery: float,
     questions_completed: int,
     first_attempt_streak: int,
+    last_total_attempts: int | None = None,
+    last_incorrect_attempts: int | None = None,
+    last_hints_used: int | None = None,
+    last_first_attempt_success: bool | None = None,
+    last_completed: bool | None = None,
 ) -> None:
     """
     Update persisted state for one skill.
@@ -107,7 +138,11 @@ def update_skill_progress(
         {}
     )
 
-    skills[skill] = {
+    previous = skills.get(
+        skill,
+        {},
+    )
+    updated = {
         "mastery": round(
             float(mastery),
             4,
@@ -119,3 +154,34 @@ def update_skill_progress(
             first_attempt_streak
         ),
     }
+
+    updated["last_total_attempts"] = int(
+        last_total_attempts
+        if last_total_attempts is not None
+        else previous.get("last_total_attempts", 0)
+    )
+    updated["last_incorrect_attempts"] = int(
+        last_incorrect_attempts
+        if last_incorrect_attempts is not None
+        else previous.get("last_incorrect_attempts", 0)
+    )
+    updated["last_hints_used"] = int(
+        last_hints_used
+        if last_hints_used is not None
+        else previous.get("last_hints_used", 0)
+    )
+    updated["last_first_attempt_success"] = bool(
+        last_first_attempt_success
+        if last_first_attempt_success is not None
+        else previous.get(
+            "last_first_attempt_success",
+            False,
+        )
+    )
+    updated["last_completed"] = bool(
+        last_completed
+        if last_completed is not None
+        else previous.get("last_completed", False)
+    )
+
+    skills[skill] = updated

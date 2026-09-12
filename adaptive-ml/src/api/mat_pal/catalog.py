@@ -6,6 +6,13 @@ from src.api.mat_pal.schemas import (
     ProblemDetail,
     ProblemSummary,
 )
+from src.api.mat_pal.generated_problem_store import (
+    add_generated_problem,
+    get_generated_problem,
+)
+from src.api.mat_pal.problem_generation import (
+    DEFAULT_PROBLEM_GENERATOR_REGISTRY,
+)
 from src.api.mat_pal.tutor_registry import (
     DEFAULT_TUTOR_REGISTRY,
     TutorRegistration,
@@ -35,6 +42,17 @@ PHYSICS_DOMAINS = [
 def _problem_summary(
     registration: TutorRegistration,
 ) -> ProblemSummary:
+    metadata = registration.metadata or {}
+    generated = bool(metadata.get("generated", False))
+    supported_difficulties = (
+        DEFAULT_PROBLEM_GENERATOR_REGISTRY
+        .supported_difficulties(
+            subject=registration.subject,
+            domain=registration.domain,
+            topic=registration.topic,
+        )
+    )
+
     return ProblemSummary(
         problem_id=registration.problem_id,
         title=registration.title,
@@ -46,6 +64,13 @@ def _problem_summary(
         total_steps=registration.total_steps,
         expected_input_type=(
             registration.expected_input_type
+        ),
+        generated=generated,
+        generation_available=bool(
+            supported_difficulties
+        ),
+        supported_difficulties=list(
+            supported_difficulties
         ),
     )
 
@@ -85,18 +110,52 @@ def list_problems() -> list[ProblemSummary]:
 def get_problem(
     problem_id: str,
 ) -> ProblemDetail:
-    registration = DEFAULT_TUTOR_REGISTRY.get(
-        problem_id
-    )
-
-    if not registration.catalog_visible:
-        raise ValueError(
-            f"Problem is not catalog-visible: {problem_id}"
+    try:
+        registration = DEFAULT_TUTOR_REGISTRY.get(
+            problem_id
         )
+
+        if not registration.catalog_visible:
+            raise ValueError(
+                "Problem is not catalog-visible: "
+                f"{problem_id}"
+            )
+
+    except ValueError:
+        registration = get_generated_problem(
+            problem_id
+        )
+
+        if registration is None:
+            raise ValueError(
+                f"Unknown problem_id: {problem_id}"
+            )
 
     return _problem_detail(
         registration
     )
+
+
+def generate_problem(
+    subject: str,
+    domain: str,
+    topic: str,
+    difficulty: int,
+    seed: int | None = None,
+) -> ProblemDetail:
+    registration = (
+        DEFAULT_PROBLEM_GENERATOR_REGISTRY
+        .generate(
+            subject=subject,
+            domain=domain,
+            topic=topic,
+            difficulty=difficulty,
+            seed=seed,
+        )
+    )
+    add_generated_problem(registration)
+
+    return _problem_detail(registration)
 
 
 def _topics_for_domain(
@@ -133,6 +192,22 @@ def _topics_for_domain(
             problem_ids=topic_record[
                 "problem_ids"
             ],
+            generation_available=(
+                DEFAULT_PROBLEM_GENERATOR_REGISTRY
+                .supports(
+                    subject="mathematics",
+                    domain=domain_id,
+                    topic=topic_id,
+                )
+            ),
+            supported_difficulties=list(
+                DEFAULT_PROBLEM_GENERATOR_REGISTRY
+                .supported_difficulties(
+                    subject="mathematics",
+                    domain=domain_id,
+                    topic=topic_id,
+                )
+            ),
         )
         for topic_id, topic_record
         in topic_records.items()

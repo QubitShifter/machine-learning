@@ -8,11 +8,14 @@ y = sp.symbols("y")
 
 
 def generate_separable_question(
-    difficulty: int = 1
+    difficulty: int = 1,
+    rng: random.Random | None = None,
 ) -> dict:
+    chooser = rng or random
+
     if difficulty == 1:
-        a = random.randint(1, 5)
-        n = random.randint(1, 3)
+        a = chooser.randint(1, 5)
+        n = chooser.randint(1, 3)
 
         rhs = a * x**n * y
 
@@ -31,7 +34,7 @@ def generate_separable_question(
         )
 
     elif difficulty == 2:
-        a = random.choice(
+        a = chooser.choice(
             [i for i in range(-6, 7) if i != 0]
         )
 
@@ -51,10 +54,10 @@ def generate_separable_question(
         )
 
     elif difficulty == 3:
-        a = random.choice(
+        a = chooser.choice(
             [i for i in range(-8, 9) if i != 0]
         )
-        n = random.randint(2, 5)
+        n = chooser.randint(2, 5)
 
         rhs = a * x**n * y
 

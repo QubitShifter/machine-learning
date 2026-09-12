@@ -267,6 +267,7 @@ button:disabled {
 }
 
 .problem-context-card,
+.adaptive-message,
 .prompt-card,
 .comparison-card,
 .completion-card,
@@ -279,6 +280,15 @@ button:disabled {
 
 .problem-context-card {
   margin-bottom: 1.25rem;
+}
+
+.adaptive-message {
+  margin-bottom: 1rem;
+}
+
+.adaptive-message p:last-child {
+  color: var(--muted);
+  margin: 0;
 }
 
 .problem-context-card h1 {

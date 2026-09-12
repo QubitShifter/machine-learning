@@ -54,6 +54,10 @@ class CatalogTopic(BaseModel):
     problem_ids: list[str] = Field(
         default_factory=list
     )
+    generation_available: bool = False
+    supported_difficulties: list[int] = Field(
+        default_factory=list
+    )
 
 
 class CatalogDomain(BaseModel):
@@ -89,12 +93,47 @@ class ProblemSummary(BaseModel):
     grade: int | None = None
     total_steps: int
     expected_input_type: InputType = "text"
+    generated: bool = False
+    generation_available: bool = False
+    supported_difficulties: list[int] = Field(
+        default_factory=list
+    )
 
 
 class ProblemDetail(ProblemSummary):
     problem_text: str
     language: str
     skills: list[str]
+    metadata: dict[str, Any] = Field(
+        default_factory=dict
+    )
+
+
+class GenerateProblemRequest(BaseModel):
+    subject: str
+    domain: str
+    topic: str
+    difficulty: int = 1
+    seed: int | None = None
+
+
+class AdaptiveRecommendationRequest(BaseModel):
+    subject: str | None = None
+    domain: str | None = None
+
+
+class AdaptiveRecommendationResponse(BaseModel):
+    recommendation_available: bool
+    reason: str
+    subject: str | None = None
+    domain: str | None = None
+    topic: str | None = None
+    topic_name: str | None = None
+    difficulty: int | None = None
+    mastery: float | None = None
+    mastery_key: str | None = None
+    generation_available: bool = False
+    problem_id: str | None = None
     metadata: dict[str, Any] = Field(
         default_factory=dict
     )
