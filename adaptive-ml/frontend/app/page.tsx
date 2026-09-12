@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { TutorCard } from "@/components/TutorCard";
 import { MathContent } from "@/components/math/MathContent";
 import {
+  generateProblem,
   getCatalog,
   getProblem,
   listProblems,
@@ -43,6 +44,8 @@ export default function Home() {
     useState("");
   const [selectedProblemId, setSelectedProblemId] =
     useState("");
+  const [selectedDifficulty, setSelectedDifficulty] =
+    useState(1);
   const [selectedProblem, setSelectedProblem] =
     useState<ProblemDetail | null>(null);
   const [session, setSession] =
@@ -163,6 +166,13 @@ export default function Home() {
       selectedTopic,
     ],
   );
+  const selectedTopicRecord = useMemo(
+    () =>
+      topics.find(
+        (topic) => topic.id === selectedTopic,
+      ) ?? null,
+    [selectedTopic, topics],
+  );
 
   async function runRequest(
     action: () => Promise<TutorSession>,
@@ -222,6 +232,9 @@ export default function Home() {
     setSelectedSubject(value);
     setSelectedDomain(domain?.id ?? "");
     setSelectedTopic(topic?.id ?? "");
+    setSelectedDifficulty(
+      topic?.supported_difficulties[0] ?? 1,
+    );
     setSelectedProblemId(
       problem?.problem_id ?? "",
     );
@@ -241,6 +254,9 @@ export default function Home() {
 
     setSelectedDomain(value);
     setSelectedTopic(topic?.id ?? "");
+    setSelectedDifficulty(
+      topic?.supported_difficulties[0] ?? 1,
+    );
     setSelectedProblemId(
       problem?.problem_id ?? "",
     );
@@ -256,10 +272,53 @@ export default function Home() {
     );
 
     setSelectedTopic(value);
+    setSelectedDifficulty(
+      topics.find((topic) => topic.id === value)
+        ?.supported_difficulties[0] ?? 1,
+    );
     setSelectedProblemId(
       problem?.problem_id ?? "",
     );
     setSelectedProblem(null);
+  }
+
+  async function handleGenerateProblem() {
+    if (!selectedTopicRecord?.generation_available) {
+      setErrorMessage(
+        "This topic does not support generated problems yet.",
+      );
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const generated = await generateProblem({
+        subject: selectedSubject,
+        domain: selectedDomain,
+        topic: selectedTopic,
+        difficulty: selectedDifficulty,
+      });
+
+      setProblems((currentProblems) => [
+        ...currentProblems,
+        generated,
+      ]);
+      setSelectedProblemId(generated.problem_id);
+      setSelectedProblem(generated);
+      setSession(null);
+      setCurrentPrompt("");
+      setAnswer("");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not generate a new problem.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleSubmitAnswer() {
@@ -458,7 +517,50 @@ export default function Home() {
                 )}
               </select>
             </label>
+
+            {selectedTopicRecord?.generation_available ? (
+              <label>
+                Difficulty
+                <select
+                  disabled={loading}
+                  onChange={(event) =>
+                    setSelectedDifficulty(
+                      Number(event.target.value),
+                    )
+                  }
+                  value={selectedDifficulty}
+                >
+                  {selectedTopicRecord
+                    .supported_difficulties.map(
+                      (difficulty) => (
+                        <option
+                          key={difficulty}
+                          value={difficulty}
+                        >
+                          {difficulty}
+                        </option>
+                      ),
+                    )}
+                </select>
+              </label>
+            ) : null}
           </div>
+
+          {selectedTopicRecord?.generation_available ? (
+            <div className="generation-panel">
+              <p>
+                This topic can generate new practice
+                problems at the selected difficulty.
+              </p>
+              <button
+                disabled={loading}
+                onClick={handleGenerateProblem}
+                type="button"
+              >
+                Generate Problem
+              </button>
+            </div>
+          ) : null}
 
           {selectedProblem ? (
             <div className="problem-preview">

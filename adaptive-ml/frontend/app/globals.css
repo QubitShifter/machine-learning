@@ -175,6 +175,23 @@ button:disabled {
   text-align: left;
 }
 
+.generation-panel {
+  align-items: center;
+  background: #eef4ff;
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0 0 1.25rem;
+  padding: 1rem;
+  text-align: left;
+}
+
+.generation-panel p {
+  margin: 0;
+}
+
 .problem-preview h3 {
   margin: 0 0 0.5rem;
 }

@@ -46,6 +46,8 @@ export interface CatalogTopic {
   name: string;
   available_problem_count: number;
   problem_ids: string[];
+  generation_available: boolean;
+  supported_difficulties: number[];
 }
 
 export interface CatalogDomain {
@@ -77,6 +79,9 @@ export interface ProblemSummary {
   grade: number | null;
   total_steps: number;
   expected_input_type: InputType;
+  generated: boolean;
+  generation_available: boolean;
+  supported_difficulties: number[];
 }
 
 export interface ProblemDetail extends ProblemSummary {
@@ -84,4 +89,12 @@ export interface ProblemDetail extends ProblemSummary {
   language: string;
   skills: string[];
   metadata: Record<string, unknown>;
+}
+
+export interface GenerateProblemRequest {
+  subject: string;
+  domain: string;
+  topic: string;
+  difficulty: number;
+  seed?: number;
 }

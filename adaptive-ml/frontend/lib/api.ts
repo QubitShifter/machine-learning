@@ -1,6 +1,7 @@
 import type {
   AnswerRequest,
   CatalogResponse,
+  GenerateProblemRequest,
   ProblemDetail,
   ProblemSummary,
   StartSessionRequest,
@@ -53,6 +54,18 @@ export function getProblem(
 ): Promise<ProblemDetail> {
   return requestJson<ProblemDetail>(
     `/problems/${problemId}`,
+  );
+}
+
+export function generateProblem(
+  request: GenerateProblemRequest,
+): Promise<ProblemDetail> {
+  return requestJson<ProblemDetail>(
+    "/problems/generate",
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
   );
 }
 
