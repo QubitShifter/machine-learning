@@ -7,6 +7,7 @@ import type {
   ProblemDetail,
   ProblemSummary,
   StartSessionRequest,
+  StudentProgress,
   TutorSession,
 } from "@/types/tutor";
 
@@ -80,6 +81,26 @@ export function getAdaptiveRecommendation(
       method: "POST",
       body: JSON.stringify(request),
     },
+  );
+}
+
+export function getStudentProgress(
+  params?: AdaptiveRecommendationRequest,
+): Promise<StudentProgress> {
+  const query = new URLSearchParams();
+
+  if (params?.subject) {
+    query.set("subject", params.subject);
+  }
+
+  if (params?.domain) {
+    query.set("domain", params.domain);
+  }
+
+  const suffix = query.toString();
+
+  return requestJson<StudentProgress>(
+    `/progress${suffix ? `?${suffix}` : ""}`,
   );
 }
 

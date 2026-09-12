@@ -65,7 +65,7 @@ the lowest mastery. Ties are deterministic:
 For ODE topics, recommendations can be fulfilled by Phase 15 generation. For a
 static-only topic such as the current Primary School word problem, the
 recommendation points at the fixed runnable problem instead of pretending
-generation exists.
+generation exists. Recommended difficulty is `null` for static topics.
 
 ## Session Summary
 

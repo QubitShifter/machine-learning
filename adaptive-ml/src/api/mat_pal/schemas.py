@@ -137,3 +137,38 @@ class AdaptiveRecommendationResponse(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict
     )
+
+
+class TopicProgress(BaseModel):
+    subject: str
+    domain: str
+    topic: str
+    topic_name: str
+    mastery_key: str
+    mastery: float
+    mastery_label: str
+    questions_completed: int
+    first_attempt_streak: int
+    last_total_attempts: int
+    last_incorrect_attempts: int
+    last_hints_used: int
+    last_first_attempt_success: bool
+    last_completed: bool
+    generation_available: bool
+    supported_difficulties: list[int] = Field(
+        default_factory=list
+    )
+    recommended_difficulty: int | None = None
+    problem_id: str | None = None
+    metadata: dict[str, Any] = Field(
+        default_factory=dict
+    )
+
+
+class StudentProgressResponse(BaseModel):
+    student_id: str
+    topics: list[TopicProgress]
+    recommendation: AdaptiveRecommendationResponse
+    metadata: dict[str, Any] = Field(
+        default_factory=dict
+    )

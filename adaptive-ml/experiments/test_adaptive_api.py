@@ -168,6 +168,7 @@ def assert_primary_school_static_recommendation():
     assert next_step["recommendation_available"] is True
     assert next_step["topic"] == "word_problems"
     assert next_step["generation_available"] is False
+    assert next_step["difficulty"] is None
     assert next_step["problem_id"] == (
         "grade4_reverse_reasoning_001"
     )

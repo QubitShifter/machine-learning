@@ -4,20 +4,24 @@ import { useEffect, useMemo, useState } from "react";
 
 import { TutorCard } from "@/components/TutorCard";
 import { MathContent } from "@/components/math/MathContent";
+import { ProgressDashboard } from "@/components/ProgressDashboard";
 import {
   generateProblem,
   getAdaptiveRecommendation,
   getCatalog,
   getProblem,
+  getStudentProgress,
   listProblems,
   requestHint,
   startSession,
   submitAnswer,
 } from "@/lib/api";
 import type {
+  AdaptiveRecommendation,
   CatalogResponse,
   ProblemDetail,
   ProblemSummary,
+  StudentProgress,
   TutorSession,
 } from "@/types/tutor";
 
@@ -51,6 +55,10 @@ export default function Home() {
     useState<ProblemDetail | null>(null);
   const [session, setSession] =
     useState<TutorSession | null>(null);
+  const [showProgress, setShowProgress] =
+    useState(false);
+  const [progress, setProgress] =
+    useState<StudentProgress | null>(null);
   const [currentPrompt, setCurrentPrompt] =
     useState("");
   const [answer, setAnswer] = useState("");
@@ -213,6 +221,7 @@ export default function Home() {
           problem_id: selectedProblemId,
         }),
       (nextSession) => {
+        setShowProgress(false);
         setCurrentPrompt(nextSession.feedback);
         setAnswer("");
       },
@@ -311,6 +320,7 @@ export default function Home() {
       setSelectedProblemId(generated.problem_id);
       setSelectedProblem(generated);
       setSession(null);
+      setShowProgress(false);
       setCurrentPrompt("");
       setAnswer("");
       setAdaptiveMessage(null);
@@ -391,6 +401,75 @@ export default function Home() {
     );
   }
 
+  async function startRecommendedPractice(
+    recommendation: AdaptiveRecommendation,
+  ) {
+    setAdaptiveMessage(recommendation.reason);
+
+    if (!recommendation.recommendation_available) {
+      return;
+    }
+
+    if (
+      recommendation.generation_available &&
+      recommendation.subject &&
+      recommendation.domain &&
+      recommendation.topic &&
+      recommendation.difficulty !== null
+    ) {
+      const generated = await generateProblem({
+        subject: recommendation.subject,
+        domain: recommendation.domain,
+        topic: recommendation.topic,
+        difficulty: recommendation.difficulty,
+      });
+      setProblems((currentProblems) => [
+        ...currentProblems,
+        generated,
+      ]);
+      setSelectedSubject(generated.subject);
+      setSelectedDomain(generated.domain);
+      setSelectedTopic(generated.topic);
+      setSelectedProblemId(generated.problem_id);
+      setSelectedProblem(generated);
+      setSelectedDifficulty(
+        typeof generated.metadata.difficulty ===
+          "number"
+          ? generated.metadata.difficulty
+          : generated.supported_difficulties[0] ??
+              1,
+      );
+
+      const nextSession = await startSession({
+        problem_id: generated.problem_id,
+      });
+      setSession(nextSession);
+      setShowProgress(false);
+      setCurrentPrompt(nextSession.feedback);
+      setAnswer("");
+      return;
+    }
+
+    if (recommendation.problem_id) {
+      const problem = await getProblem(
+        recommendation.problem_id,
+      );
+      setSelectedSubject(problem.subject);
+      setSelectedDomain(problem.domain);
+      setSelectedTopic(problem.topic);
+      setSelectedProblemId(problem.problem_id);
+      setSelectedProblem(problem);
+
+      const nextSession = await startSession({
+        problem_id: problem.problem_id,
+      });
+      setSession(nextSession);
+      setShowProgress(false);
+      setCurrentPrompt(nextSession.feedback);
+      setAnswer("");
+    }
+  }
+
   async function handlePracticeNext() {
     if (!session) {
       return;
@@ -406,73 +485,58 @@ export default function Home() {
           domain: selectedDomain || undefined,
         });
 
-      setAdaptiveMessage(recommendation.reason);
-
-      if (!recommendation.recommendation_available) {
-        return;
-      }
-
-      if (
-        recommendation.generation_available &&
-        recommendation.subject &&
-        recommendation.domain &&
-        recommendation.topic &&
-        recommendation.difficulty !== null
-      ) {
-        const generated = await generateProblem({
-          subject: recommendation.subject,
-          domain: recommendation.domain,
-          topic: recommendation.topic,
-          difficulty: recommendation.difficulty,
-        });
-        setProblems((currentProblems) => [
-          ...currentProblems,
-          generated,
-        ]);
-        setSelectedSubject(generated.subject);
-        setSelectedDomain(generated.domain);
-        setSelectedTopic(generated.topic);
-        setSelectedProblemId(generated.problem_id);
-        setSelectedProblem(generated);
-        setSelectedDifficulty(
-          typeof generated.metadata.difficulty ===
-            "number"
-            ? generated.metadata.difficulty
-            : generated.supported_difficulties[0] ??
-                1,
-        );
-
-        const nextSession = await startSession({
-          problem_id: generated.problem_id,
-        });
-        setSession(nextSession);
-        setCurrentPrompt(nextSession.feedback);
-        setAnswer("");
-        return;
-      }
-
-      if (recommendation.problem_id) {
-        const problem = await getProblem(
-          recommendation.problem_id,
-        );
-        setSelectedSubject(problem.subject);
-        setSelectedDomain(problem.domain);
-        setSelectedTopic(problem.topic);
-        setSelectedProblemId(problem.problem_id);
-        setSelectedProblem(problem);
-
-        const nextSession = await startSession({
-          problem_id: problem.problem_id,
-        });
-        setSession(nextSession);
-        setCurrentPrompt(nextSession.feedback);
-        setAnswer("");
-      }
+      await startRecommendedPractice(
+        recommendation,
+      );
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "Could not start adaptive practice.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleOpenProgress() {
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const nextProgress = await getStudentProgress();
+      setProgress(nextProgress);
+      setSession(null);
+      setShowProgress(true);
+      setAdaptiveMessage(null);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not load progress.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePracticeRecommendedFromDashboard() {
+    if (!progress) {
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      await startRecommendedPractice(
+        progress.recommendation,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not start recommended practice.",
       );
     } finally {
       setLoading(false);
@@ -487,9 +551,30 @@ export default function Home() {
         <p>
           Math And Physics Adaptive Learning
         </p>
+        <div className="top-actions">
+          <button
+            className="secondary-button"
+            disabled={loading}
+            onClick={handleOpenProgress}
+            type="button"
+          >
+            Progress
+          </button>
+        </div>
       </section>
 
-      {!session ? (
+      {showProgress ? (
+        <ProgressDashboard
+          errorMessage={errorMessage}
+          loading={loading}
+          onBack={() => setShowProgress(false)}
+          onPracticeRecommended={
+            handlePracticeRecommendedFromDashboard
+          }
+          onRefresh={handleOpenProgress}
+          progress={progress}
+        />
+      ) : !session ? (
         <section className="start-card">
           <h2>Choose a learning path</h2>
           <p>

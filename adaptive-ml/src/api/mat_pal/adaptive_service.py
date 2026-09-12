@@ -142,7 +142,7 @@ def recommend_next(
     domain: str | None = None,
     path: Path = DEFAULT_PROGRESS_PATH,
 ) -> AdaptiveRecommendation:
-    candidates = _build_topic_states(
+    candidates = list_topic_states(
         subject=subject,
         domain=domain,
         path=path,
@@ -153,7 +153,7 @@ def recommend_next(
     )
 
 
-def _build_topic_states(
+def list_topic_states(
     subject: str | None,
     domain: str | None,
     path: Path,
@@ -222,9 +222,6 @@ def _topic_state_from_registration(
         supported_difficulties
     )
 
-    if not supported_difficulties:
-        supported_difficulties = (1,)
-
     return AdaptiveTopicState(
         subject=registration.subject,
         domain=registration.domain,
@@ -261,6 +258,10 @@ def _topic_state_from_registration(
         ),
         last_first_attempt_success=skill_progress.get(
             "last_first_attempt_success",
+            False,
+        ),
+        last_completed=skill_progress.get(
+            "last_completed",
             False,
         ),
     )

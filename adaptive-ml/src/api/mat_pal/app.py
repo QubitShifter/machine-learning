@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from src.api.mat_pal import catalog
 from src.api.mat_pal import adaptive_service
 from src.api.mat_pal import session_store
+from src.api.mat_pal import progress_service
 from src.api.mat_pal.schemas import (
     AdaptiveRecommendationRequest,
     AdaptiveRecommendationResponse,
@@ -15,6 +16,7 @@ from src.api.mat_pal.schemas import (
     ProblemSummary,
     SessionResponse,
     StartSessionRequest,
+    StudentProgressResponse,
 )
 
 
@@ -87,6 +89,20 @@ def adaptive_recommendation(
         ),
         problem_id=recommendation.problem_id,
         metadata=recommendation.metadata,
+    )
+
+
+@app.get(
+    "/progress",
+    response_model=StudentProgressResponse,
+)
+def get_progress(
+    subject: str | None = None,
+    domain: str | None = None,
+) -> StudentProgressResponse:
+    return progress_service.get_student_progress(
+        subject=subject,
+        domain=domain,
     )
 
 

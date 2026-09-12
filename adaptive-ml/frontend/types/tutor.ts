@@ -118,3 +118,32 @@ export interface AdaptiveRecommendation {
   problem_id: string | null;
   metadata: Record<string, unknown>;
 }
+
+export interface TopicProgress {
+  subject: string;
+  domain: string;
+  topic: string;
+  topic_name: string;
+  mastery_key: string;
+  mastery: number;
+  mastery_label: string;
+  questions_completed: number;
+  first_attempt_streak: number;
+  last_total_attempts: number;
+  last_incorrect_attempts: number;
+  last_hints_used: number;
+  last_first_attempt_success: boolean;
+  last_completed: boolean;
+  generation_available: boolean;
+  supported_difficulties: number[];
+  recommended_difficulty: number | null;
+  problem_id: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface StudentProgress {
+  student_id: string;
+  topics: TopicProgress[];
+  recommendation: AdaptiveRecommendation;
+  metadata: Record<string, unknown>;
+}

@@ -41,6 +41,7 @@ class AdaptiveTopicState:
     last_incorrect_attempts: int = 0
     last_hints_used: int = 0
     last_first_attempt_success: bool = False
+    last_completed: bool = False
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,9 @@ class RuleBasedAdaptivePolicy:
         self,
         topic_state: AdaptiveTopicState,
     ) -> int | None:
+        if not topic_state.generation_available:
+            return None
+
         supported = sorted(
             topic_state.supported_difficulties
         )
@@ -146,16 +150,22 @@ class RuleBasedAdaptivePolicy:
             f"its current mastery is {selected.mastery:.2f}."
         )
 
-        if self._has_strong_recent_performance(
-            selected
+        if (
+            difficulty is not None
+            and self._has_strong_recent_performance(
+                selected
+            )
         ):
             reason += (
                 " Strong recent performance allows a "
                 "one-level difficulty increase."
             )
 
-        elif self._has_weak_recent_performance(
-            selected
+        elif (
+            difficulty is not None
+            and self._has_weak_recent_performance(
+                selected
+            )
         ):
             reason += (
                 " Recent hints or incorrect attempts keep "
@@ -183,8 +193,10 @@ class RuleBasedAdaptivePolicy:
                 "first_attempt_streak": (
                     selected.first_attempt_streak
                 ),
-                "supported_difficulties": list(
-                    selected.supported_difficulties
+                "supported_difficulties": (
+                    list(selected.supported_difficulties)
+                    if selected.generation_available
+                    else []
                 ),
                 "tie_breaker": (
                     "lowest mastery, then fewer completed "

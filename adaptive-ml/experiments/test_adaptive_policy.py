@@ -141,12 +141,38 @@ def assert_no_runnable_content_is_safe():
     assert recommendation.recommendation_available is False
 
 
+def assert_static_topic_has_null_difficulty():
+    policy = RuleBasedAdaptivePolicy()
+    topic = AdaptiveTopicState(
+        subject="mathematics",
+        domain="primary_school",
+        topic="word_problems",
+        topic_name="Word Problems",
+        mastery_key="grade4_reverse_reasoning",
+        mastery=0.50,
+        questions_completed=0,
+        first_attempt_streak=0,
+        supported_difficulties=(),
+        generation_available=False,
+        problem_id="grade4_reverse_reasoning_001",
+    )
+
+    assert policy.choose_difficulty(topic) is None
+
+    recommendation = policy.recommend_next([topic])
+
+    assert recommendation.topic == "word_problems"
+    assert recommendation.difficulty is None
+    assert recommendation.generation_available is False
+
+
 def main():
     assert_mastery_thresholds()
     assert_recent_performance_adjustments()
     assert_topic_selection_prefers_lower_mastery()
     assert_topic_selection_tie_breaks_deterministically()
     assert_no_runnable_content_is_safe()
+    assert_static_topic_has_null_difficulty()
 
     print("adaptive_policy tests passed")
 
