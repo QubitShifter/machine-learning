@@ -14,6 +14,9 @@ LATEX_COMMANDS = {
     r"\div": "/",
     r"\left": "",
     r"\right": "",
+    r"\middle": "",
+    r"\mleft": "",
+    r"\mright": "",
     r"\,": "",
     r"\;": "",
     r"\:": "",
@@ -21,6 +24,8 @@ LATEX_COMMANDS = {
     r"\pi": "pi",
     r"\mu": "mu",
     r"\ln": "log",
+    r"\log": "log",
+    r"\pm": "+/-",
     r"\sin": "sin",
     r"\cos": "cos",
     r"\tan": "tan",
@@ -202,7 +207,9 @@ def _replace_exponential_notation(
 
             result.append(
                 "exp("
-                + latex_to_sympy_text(exponent)
+                + latex_to_sympy_text(
+                    _normalize_nested_exponent(exponent)
+                )
                 + ")"
             )
             index = next_index
@@ -212,6 +219,23 @@ def _replace_exponential_notation(
         index += 1
 
     return "".join(result)
+
+
+def _normalize_nested_exponent(
+    exponent: str,
+) -> str:
+    """
+    MathLive can produce grouped exponents like x^{^2}
+    while the editor visually shows x^2. Inside an exponent
+    group, a leading caret is a redundant exponent marker.
+    """
+
+    stripped = exponent.strip()
+
+    if stripped.startswith("^") and len(stripped) > 1:
+        return stripped[1:].strip()
+
+    return exponent
 
 
 def _replace_grouped_powers(
@@ -234,7 +258,9 @@ def _replace_grouped_powers(
             )
             result.append(
                 "**("
-                + latex_to_sympy_text(exponent)
+                + latex_to_sympy_text(
+                    _normalize_nested_exponent(exponent)
+                )
                 + ")"
             )
             index = next_index
@@ -258,6 +284,93 @@ def _replace_latex_commands(
     return text
 
 
+def _replace_named_operator_commands(
+    text: str,
+) -> str:
+    """
+    MathLive may emit named functions as \operatorname{exp}
+    or \mathrm{exp}. Convert only known math functions into
+    the same command path handled by the rest of the parser.
+    """
+
+    return re.sub(
+        (
+            r"\\(?:operatorname|mathrm)\s*\{\s*"
+            r"(exp|ln|log|sqrt|sin|cos|tan)"
+            r"\s*\}"
+        ),
+        lambda match: "\\" + match.group(1),
+        text,
+    )
+
+
+def _replace_absolute_value_delimiters(
+    text: str,
+) -> str:
+    """
+    Normalize common paired LaTeX absolute-value delimiters
+    without treating every vertical bar as absolute value.
+    Existing separable ODE checkers already understand |y|.
+    """
+
+    delimiter_patterns = [
+        (
+            r"\\left\s*\\lvert\s*(?P<body>[^=|]+?)\s*\\right\s*\\rvert",
+            r"|\g<body>|",
+        ),
+        (
+            r"\\left\s*\\vert\s*(?P<body>[^=|]+?)\s*\\right\s*\\vert",
+            r"|\g<body>|",
+        ),
+        (
+            r"\\lvert\s*(?P<body>[^=|]+?)\s*\\rvert",
+            r"|\g<body>|",
+        ),
+        (
+            r"\\vert\s*(?P<body>[^=|]+?)\s*\\vert",
+            r"|\g<body>|",
+        ),
+        (
+            r"\\left\s*\|\s*(?P<body>[^=|]+?)\s*\\right\s*\|",
+            r"|\g<body>|",
+        ),
+    ]
+
+    for pattern, replacement in delimiter_patterns:
+        text = re.sub(
+            pattern,
+            replacement,
+            text,
+        )
+
+    return text
+
+
+def _replace_log_absolute_value_notation(
+    text: str,
+) -> str:
+    text = re.sub(
+        r"\b(?:log|ln)\s*\(\s*\|\s*([^|]+?)\s*\|\s*\)",
+        lambda match: (
+            "log(Abs("
+            + latex_to_sympy_text(match.group(1))
+            + "))"
+        ),
+        text,
+    )
+    text = re.sub(
+        r"\b(?:log|ln)\s*\|\s*([^|]+?)\s*\|",
+        lambda match: (
+            "log(Abs("
+            + latex_to_sympy_text(match.group(1))
+            + "))"
+        ),
+        text,
+    )
+
+    return text
+
+
 def _insert_implicit_multiplication(
     text: str,
 ) -> str:
@@ -266,12 +379,18 @@ def _insert_implicit_multiplication(
     )
 
     text = re.sub(
-        rf"(?<=[0-9xyC)])\s+(?=(?:{function_pattern})\()",
+        rf"\b({function_pattern})\s+\(",
+        r"\1(",
+        text,
+    )
+
+    text = re.sub(
+        rf"(?<=[0-9xyCK)])\s+(?=(?:{function_pattern})\()",
         "*",
         text,
     )
     text = re.sub(
-        r"(?<=[0-9xyC)])\s+(?=[0-9xyC(])",
+        r"(?<=[0-9xyCK)])\s+(?=[0-9xyCK(])",
         "*",
         text,
     )
@@ -281,17 +400,17 @@ def _insert_implicit_multiplication(
         text,
     )
     text = re.sub(
-        r"(?<=[xyC])(?=[xyC])",
+        r"(?<=[xyCK])(?=[xyCK])",
         "*",
         text,
     )
     text = re.sub(
-        rf"(?<=[xyC])(?=(?:{function_pattern})\()",
+        rf"(?<=[xyCK])(?=(?:{function_pattern})\()",
         "*",
         text,
     )
     text = re.sub(
-        r"(?<!/dx)(?<=[xyC])(?=\()",
+        r"(?<!/dx)(?<=[xyCK])(?=\()",
         "*",
         text,
     )
@@ -345,6 +464,8 @@ def latex_to_sympy_text(
     text = text.strip("$")
     _validate_balanced_delimiters(text)
 
+    text = _replace_named_operator_commands(text)
+    text = _replace_absolute_value_delimiters(text)
     text = _replace_derivative_fraction(text)
     text = _replace_fractions(text)
     text = _replace_exponential_notation(text)
@@ -354,6 +475,7 @@ def latex_to_sympy_text(
     text = text.replace("^", "**")
     text = text.replace("{", "(")
     text = text.replace("}", ")")
+    text = _replace_log_absolute_value_notation(text)
     text = _insert_implicit_multiplication(text)
 
     text = re.sub(

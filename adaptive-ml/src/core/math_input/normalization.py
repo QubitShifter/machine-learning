@@ -18,8 +18,8 @@ from src.core.tutor_engine.contracts import (
 )
 
 
-x, y, yp, C, mu = sp.symbols(
-    "x y yp C mu"
+x, y, yp, C, K, mu = sp.symbols(
+    "x y yp C K mu"
 )
 
 TRANSFORMATIONS = (
@@ -35,6 +35,7 @@ LOCAL_DICT = {
     "y": y,
     "yp": yp,
     "C": C,
+    "K": K,
     "mu": mu,
     "e": sp.E,
     "E": sp.E,
@@ -42,6 +43,8 @@ LOCAL_DICT = {
     "sqrt": sp.sqrt,
     "log": sp.log,
     "ln": sp.log,
+    "abs": sp.Abs,
+    "Abs": sp.Abs,
     "sin": sp.sin,
     "cos": sp.cos,
     "tan": sp.tan,

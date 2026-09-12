@@ -22,7 +22,7 @@ const katexOptions = {
 };
 
 const englishPromptWords =
-  /\b(after|and|answer|ask|calculate|check|compare|compute|correct|differentiate|do|does|everything|find|first|for|from|hint|identify|inside|left|match|next|now|place|problem|result|right|should|side|solve|start|step|substitute|substitution|that|the|then|they|this|use|using|what|where|with|work|your)\b/i;
+  /\b(after|and|answer|as|ask|calculate|check|compare|compute|correct|differentiate|do|does|everything|find|first|for|form|from|hint|identify|inside|left|like|match|next|now|place|problem|result|right|should|side|solve|something|start|step|substitute|substitution|such|that|the|then|they|this|try|use|using|what|where|with|work|write|your)\b/i;
 
 const mathTokenPattern =
   /(\\[a-zA-Z]+|\*\*|[=+\-*/^']|dy\/dx|d\/dx|exp\(|sqrt\(|integral\(|mu\(x\)|P\(x\)|Q\(x\)|e\^\{)/;
@@ -32,6 +32,7 @@ const inlineMathPatterns: RegExp[] = [
   /d\/dx\([^)]*\)\s*(?:[+\-*/^=]\s*[^,.;:!?]+)+/g,
   /dy\/dx\s*(?:[+\-*/^=]\s*[^,.;:!?]+)+/g,
   /\by\s*=\s*(?:(?!\s(?:with|where|and|so|because|from|to)\b)[^,.;:!?])+/g,
+  /\|[^|]+\|\s*(?:[+\-*/^=]\s*[^,.;:!?]+)+/g,
   /(?:mu|P|Q)\(x\)\s*(?:[+\-*/^=]\s*[^,.;:!?]+)+/g,
   /integral\(.+\)\s*dx/g,
   /exp\([^)]*\)/g,

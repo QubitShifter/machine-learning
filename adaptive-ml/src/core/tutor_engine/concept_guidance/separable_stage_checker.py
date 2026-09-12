@@ -1,4 +1,5 @@
 import sympy as sp
+from tokenize import TokenError
 
 from sympy.parsing.sympy_parser import (
     convert_xor,
@@ -41,6 +42,75 @@ def parse_expression(expression: str) -> sp.Expr:
     )
 
 
+def derive_separable_rhs_parts(
+    rhs_expression: str,
+) -> tuple[sp.Expr, sp.Expr]:
+    rhs = parse_expression(
+        rhs_expression
+    )
+    fx = sp.simplify(
+        rhs / y
+    )
+    integrated_fx = sp.integrate(
+        fx,
+        x,
+    )
+
+    return fx, integrated_fx
+
+
+def expected_separation_example(
+    rhs_expression: str,
+) -> str:
+    try:
+        fx, _integrated_fx = derive_separable_rhs_parts(
+            rhs_expression
+        )
+        return f"1/y = {sp.sstr(fx)}"
+
+    except (
+        SyntaxError,
+        TypeError,
+        ValueError,
+        NameError,
+        TokenError,
+        sp.SympifyError,
+    ):
+        return "1/y = f(x)"
+
+
+def expected_integration_example(
+    rhs_expression: str,
+) -> str:
+    try:
+        _fx, integrated_fx = derive_separable_rhs_parts(
+            rhs_expression
+        )
+        return f"ln|y| = {sp.sstr(integrated_fx)} + C"
+
+    except (
+        SyntaxError,
+        TypeError,
+        ValueError,
+        NameError,
+        TokenError,
+        sp.SympifyError,
+    ):
+        return "ln|y| = integral(f(x), x) + C"
+
+
+def normalize_log_absolute_value_y(
+    text: str,
+) -> str:
+    return text.replace(
+        "log|y|",
+        "log(Abs(y))",
+    ).replace(
+        "ln|y|",
+        "log(Abs(y))",
+    )
+
+
 def evaluate_separation_step(
     student_answer: str,
     rhs_expression: str,
@@ -56,7 +126,8 @@ def evaluate_separation_step(
             "error_type": "missing_equals",
             "feedback": (
                 "Write the separated equation using '='. "
-                "For example: 1/y = 5*x"
+                f"For example: "
+                f"{expected_separation_example(rhs_expression)}"
             ),
         }
 
@@ -91,7 +162,8 @@ def evaluate_separation_step(
             "error_type": "parse_error",
             "feedback": (
                 "I could not understand that separated form. "
-                "Try something like: 1/y = 5*x"
+                "Try something like: "
+                f"{expected_separation_example(rhs_expression)}"
             ),
         }
 
@@ -157,10 +229,9 @@ def evaluate_integration_step(
 
     Expected form:
 
-        ln(y) = integral(f(x), x) + C
+        ln|y| = integral(f(x), x) + C
 
-    For now we accept ln(y) or log(y) and do not require
-    absolute-value notation.
+    For backward compatibility we also accept ln(y) or log(y).
     """
 
     answer = normalize_math_text(
@@ -176,6 +247,36 @@ def evaluate_integration_step(
         "LN(",
         "log("
     )
+    answer = normalize_log_absolute_value_y(
+        answer
+    )
+
+    try:
+        fx, integrated_fx = derive_separable_rhs_parts(
+            rhs_expression
+        )
+
+    except (
+        SyntaxError,
+        TypeError,
+        ValueError,
+        NameError,
+        TokenError,
+        sp.SympifyError,
+    ):
+        return {
+            "correct": False,
+            "parse_error": True,
+            "error_type": "parse_error",
+            "feedback": (
+                "I could not understand the differential "
+                "equation for this integration step."
+            ),
+        }
+
+    example = expected_integration_example(
+        rhs_expression
+    )
 
     if "=" not in answer:
         return {
@@ -184,7 +285,7 @@ def evaluate_integration_step(
             "error_type": "missing_equals",
             "feedback": (
                 "Write the result after integrating both sides "
-                "using '='. For example: ln(y) = 5*x^2/2 + C"
+                f"using '='. For example: {example}"
             ),
         }
 
@@ -194,34 +295,38 @@ def evaluate_integration_step(
     )
 
     C = sp.symbols("C")
+    local_dict = {
+        "x": x,
+        "y": y,
+        "C": C,
+        "log": sp.log,
+        "abs": sp.Abs,
+        "Abs": sp.Abs,
+    }
 
     try:
+        left_text = left_text.replace(
+            "|y|",
+            "Abs(y)",
+        )
         left = parse_expr(
             left_text,
             transformations=TRANSFORMATIONS,
-            local_dict={
-                "x": x,
-                "y": y,
-                "C": C,
-                "log": sp.log,
-            },
+            local_dict=local_dict,
             evaluate=True,
         )
 
         right = parse_expr(
             right_text,
             transformations=TRANSFORMATIONS,
-            local_dict={
-                "x": x,
-                "y": y,
-                "C": C,
-                "log": sp.log,
-            },
+            local_dict=local_dict,
             evaluate=True,
         )
-
-        rhs = parse_expression(
-            rhs_expression
+        right_unevaluated = parse_expr(
+            right_text,
+            transformations=TRANSFORMATIONS,
+            local_dict=local_dict,
+            evaluate=False,
         )
 
     except (
@@ -229,6 +334,7 @@ def evaluate_integration_step(
         TypeError,
         ValueError,
         NameError,
+        TokenError,
         sp.SympifyError,
     ):
         return {
@@ -237,32 +343,32 @@ def evaluate_integration_step(
             "error_type": "parse_error",
             "feedback": (
                 "I could not understand that integration step. "
-                "Try a form such as: ln(y) = 5*x^2/2 + C"
+                f"Try a form such as: {example}"
             ),
         }
-
-    fx = sp.simplify(
-        rhs / y
-    )
-
-    integrated_fx = sp.integrate(
-        fx,
-        x
-    )
-
-    expected_left = sp.log(
-        y
-    )
 
     right_without_constant = right.subs(
         C,
         0
     )
+    unevaluated_without_constant = (
+        right_unevaluated.subs(
+            C,
+            0,
+        )
+    )
 
-    left_correct = (
+    expected_left_values = {
+        sp.log(y),
+        sp.log(sp.Abs(y)),
+    }
+
+    left_correct = any(
         sp.simplify(
             left - expected_left
-        ) == 0
+        )
+        == 0
+        for expected_left in expected_left_values
     )
 
     right_correct = (
@@ -281,6 +387,30 @@ def evaluate_integration_step(
         and right_correct
         and has_constant
     ):
+        simplified_integral = sp.simplify(
+            unevaluated_without_constant
+        )
+        suggestion = None
+
+        if (
+            sp.simplify(
+                simplified_integral
+                - integrated_fx
+            )
+            == 0
+            and sp.sstr(
+                unevaluated_without_constant
+            )
+            != sp.sstr(
+                simplified_integral
+            )
+        ):
+            suggestion = (
+                "Correct. You can simplify "
+                f"{sp.sstr(unevaluated_without_constant)} "
+                f"to {sp.sstr(simplified_integral)}."
+            )
+
         return {
             "correct": True,
             "parse_error": False,
@@ -288,6 +418,7 @@ def evaluate_integration_step(
             "feedback": (
                 "Correct. You integrated both sides successfully."
             ),
+            "suggestion": suggestion,
         }
 
     if (

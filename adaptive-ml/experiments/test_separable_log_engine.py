@@ -1,5 +1,6 @@
 import sympy as sp
 
+from src.core.math_input import normalize_math_text
 from src.core.tutor_engine.separable_log_engine import (
     SeparableLogEngine,
 )
@@ -105,6 +106,50 @@ print(
     "Feedback:",
     result["feedback"],
 )
+
+
+def assert_step_3_4_rename_constant_checker():
+    step_engine = SeparableLogEngine(
+        integrated_fx=x**2
+    )
+
+    accepted_answers = [
+        "|y| = K*exp(x^2)",
+        "|y| = exp(x^2)*K",
+        normalize_math_text(
+            r"|y|=Ke^{x^{2}}",
+            input_type="math",
+        ),
+        normalize_math_text(
+            r"\left|y\right|=Ke^{x^{^2}}",
+            input_type="math",
+        ),
+    ]
+
+    for answer in accepted_answers:
+        result = step_engine.evaluate(
+            stage=LogSolveStage.RENAME_EXP_CONSTANT,
+            student_answer=answer,
+        )
+        assert result["correct"], answer
+
+    rejected_answers = [
+        "|y| = exp(x^2)",
+        "|y| = K*x^2",
+        "|y| = K*exp(2*x^2)",
+    ]
+
+    for answer in rejected_answers:
+        result = step_engine.evaluate(
+            stage=LogSolveStage.RENAME_EXP_CONSTANT,
+            student_answer=answer,
+        )
+        assert not result["correct"], answer
+
+
+assert_step_3_4_rename_constant_checker()
+
+print("separable_log_engine tests passed")
 
 
 # ALSO OUTSIDE the for loop

@@ -3,10 +3,12 @@ from src.api.mat_pal import session_store
 from src.api.mat_pal.tutor_registry import (
     LINEAR_ODE_FIXED_PROBLEM_ID,
     MATH_INPUT_PROBE_PROBLEM_ID,
+    SEPARABLE_ODE_FIXED_PROBLEM_ID,
     build_default_tutor_registry,
 )
 from src.core.tutor_engine.adapters import (
     LinearODETutorAdapter,
+    SeparableODETutorAdapter,
 )
 from src.core.tutor_engine.contracts import (
     StudentSubmission,
@@ -105,6 +107,28 @@ def assert_linear_ode_registration():
     assert response.expected_input_type == "math"
 
 
+def assert_separable_ode_registration():
+    registry = build_default_tutor_registry()
+    registration = registry.get(
+        SEPARABLE_ODE_FIXED_PROBLEM_ID
+    )
+    engine = registry.create_engine(
+        SEPARABLE_ODE_FIXED_PROBLEM_ID
+    )
+    response = engine.get_current_response()
+
+    assert isinstance(
+        engine,
+        SeparableODETutorAdapter,
+    )
+    assert registration.subject == "mathematics"
+    assert registration.domain == "ode"
+    assert registration.topic == "separable_equations"
+    assert registration.catalog_visible is True
+    assert response.current_step == 1
+    assert response.expected_input_type == "math"
+
+
 def assert_unknown_problem_fails_cleanly():
     registry = build_default_tutor_registry()
 
@@ -130,6 +154,10 @@ def assert_catalog_uses_visible_registrations_only():
     assert PRIMARY_SCHOOL_PROBLEM_ID in problem_ids
     assert (
         LINEAR_ODE_FIXED_PROBLEM_ID
+        in problem_ids
+    )
+    assert (
+        SEPARABLE_ODE_FIXED_PROBLEM_ID
         in problem_ids
     )
     assert (
@@ -164,6 +192,7 @@ def main():
     assert_primary_school_registration()
     assert_math_probe_registration_preserves_api_path()
     assert_linear_ode_registration()
+    assert_separable_ode_registration()
     assert_unknown_problem_fails_cleanly()
     assert_catalog_uses_visible_registrations_only()
     assert_session_store_starts_primary_school_from_registry()

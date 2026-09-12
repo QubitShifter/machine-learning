@@ -78,6 +78,150 @@ assert_equivalent(
     input_type="latex",
 )
 
+assert (
+    normalize_math_text(
+        r"|y|=e^{x^2+C}",
+        input_type="latex",
+    )
+    == "|y|=exp(x**2+C)"
+)
+
+assert (
+    normalize_math_text(
+        r"\left|y\right|=e^{x^2+C}",
+        input_type="latex",
+    )
+    == "|y|=exp(x**2+C)"
+)
+
+assert (
+    normalize_math_text(
+        r"\lvert y \rvert=e^{x^2+C}",
+        input_type="latex",
+    )
+    == "|y|=exp(x**2+C)"
+)
+
+assert (
+    normalize_math_text(
+        r"\left\lvert y\right\rvert=e^{x^2+C}",
+        input_type="latex",
+    )
+    == "|y|=exp(x**2+C)"
+)
+
+assert (
+    normalize_math_text(
+        (
+            r"\exp \left(\ln \left(|y|\right)\right)"
+            r"=\exp \left(x^{2}+C\right)"
+        ),
+        input_type="latex",
+    )
+    == "exp(log(Abs(y)))=exp(x**(2)+C)"
+)
+
+assert (
+    normalize_math_text(
+        (
+            r"\operatorname{exp}\left("
+            r"\operatorname{ln}\left("
+            r"\left|y\right|\right)\right)"
+            r"=\operatorname{exp}\left(x^2+C\right)"
+        ),
+        input_type="latex",
+    )
+    == "exp(log(Abs(y)))=exp(x**2+C)"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln |y|=x^{2}+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=x**(2)+C"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln |y|=2\cdot x^{2}/2+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=2* x**(2)/2+C"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln\left|y\right|=x^{^2}+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=x**(2)+C"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln\left|y\right|=2\cdot x^{^2}/2+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=2* x**(2)/2+C"
+)
+
+assert (
+    normalize_math_text(
+        r"|y|=Ke^{x^{2}}",
+        input_type="latex",
+    )
+    == "|y|=K*exp(x**(2))"
+)
+
+assert (
+    normalize_math_text(
+        r"\left|y\right|=Ke^{x^{^2}}",
+        input_type="latex",
+    )
+    == "|y|=K*exp(x**(2))"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln\left(\left|y\right|\right)=\frac{2x^2}{2}+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=(2*x**2)/(2)+C"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln\left|y\right|=x^2+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=x**2+C"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln{|y|}=x^2+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=x**2+C"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln\left(\left\vert y\right\vert\right)=x^2+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=x**2+C"
+)
+
+assert (
+    normalize_math_text(
+        r"\ln \middle|y\middle|=x^2+C",
+        input_type="latex",
+    )
+    == "log(Abs(y))=x**2+C"
+)
+
 malformed_fraction = normalize_student_submission(
     StudentSubmission(
         answer=r"\frac{1}{2",

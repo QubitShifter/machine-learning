@@ -6,6 +6,7 @@ import sympy as sp
 
 from src.core.tutor_engine.adapters import (
     LinearODETutorAdapter,
+    SeparableODETutorAdapter,
 )
 from src.core.tutor_engine.contracts import (
     ExpectedInputType,
@@ -26,6 +27,7 @@ from src.core.tutor_engine.primary_school.reverse_reasoning_solver import (
 
 MATH_INPUT_PROBE_PROBLEM_ID = "math_input_probe_001"
 LINEAR_ODE_FIXED_PROBLEM_ID = "linear_first_order_fixed_001"
+SEPARABLE_ODE_FIXED_PROBLEM_ID = "separable_ode_fixed_001"
 
 
 class TutorEngine(Protocol):
@@ -141,6 +143,9 @@ def build_default_tutor_registry() -> TutorRegistry:
     _register_linear_ode_tutors(
         registry
     )
+    _register_separable_ode_tutors(
+        registry
+    )
 
     return registry
 
@@ -239,6 +244,39 @@ def _register_linear_ode_tutors(
                     q_expression=q_expression,
                     problem_id=(
                         LINEAR_ODE_FIXED_PROBLEM_ID
+                    ),
+                )
+            ),
+            catalog_visible=True,
+        )
+    )
+
+
+def _register_separable_ode_tutors(
+    registry: TutorRegistry,
+) -> None:
+    x, y = sp.symbols("x y")
+    rhs_expression = 2 * x * y
+
+    registry.register(
+        TutorRegistration(
+            problem_id=SEPARABLE_ODE_FIXED_PROBLEM_ID,
+            title="Separable ODE",
+            problem_statement=(
+                "Solve dy/dx = 2*x*y"
+            ),
+            subject="mathematics",
+            domain="ode",
+            topic="separable_equations",
+            topic_name="Separable Equations",
+            problem_type="separable_ode",
+            total_steps=4,
+            expected_input_type="math",
+            create_engine=(
+                lambda: SeparableODETutorAdapter(
+                    rhs_expression=rhs_expression,
+                    problem_id=(
+                        SEPARABLE_ODE_FIXED_PROBLEM_ID
                     ),
                 )
             ),

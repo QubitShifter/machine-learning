@@ -1,4 +1,5 @@
 import sympy as sp
+from tokenize import TokenError
 
 from sympy.parsing.sympy_parser import (
     convert_xor,
@@ -69,6 +70,8 @@ def parse_math(expression: str):
             "C": C,
             "exp": sp.exp,
             "log": sp.log,
+            "abs": sp.Abs,
+            "Abs": sp.Abs,
         },
         evaluate=True,
     )
@@ -122,7 +125,7 @@ def evaluate_apply_exp_step(
             ),
             "suggestion": (
                 "Try a form like: "
-                "exp(ln(y)) = exp(... + C)"
+                "exp(ln|y|) = exp(... + C)"
             ),
         }
 
@@ -132,6 +135,10 @@ def evaluate_apply_exp_step(
     )
 
     try:
+        left_text = left_text.replace(
+            "|y|",
+            "Abs(y)",
+        )
         left = parse_math(left_text)
         right = parse_math(right_text)
 
@@ -140,6 +147,7 @@ def evaluate_apply_exp_step(
         TypeError,
         ValueError,
         NameError,
+        TokenError,
         sp.SympifyError,
     ):
 
@@ -168,22 +176,26 @@ def evaluate_apply_exp_step(
             ),
             "suggestion": (
                 "Write something like: "
-                "exp(ln(y)) = exp(2*x**3 + C)"
+                f"exp(ln|y|) = exp("
+                f"{sp.sstr(integrated_fx)} + C)"
             ),
         }
 
-    expected_left = sp.exp(
-        sp.log(y)
-    )
+    expected_left_values = {
+        sp.exp(sp.log(y)),
+        sp.exp(sp.log(sp.Abs(y))),
+    }
 
     expected_right = sp.exp(
         integrated_fx + C
     )
 
-    left_correct = (
+    left_correct = any(
         sp.simplify(
             left - expected_left
-        ) == 0
+        )
+        == 0
+        for expected_left in expected_left_values
     )
 
     right_correct = (
@@ -200,7 +212,7 @@ def evaluate_apply_exp_step(
                 "Correct. You applied exp to both sides."
             ),
             "suggestion": (
-                "Next, simplify exp(ln(y)). "
+                "Next, simplify exp(ln|y|). "
                 "What does that become?"
             ),
         }
@@ -215,7 +227,7 @@ def evaluate_apply_exp_step(
             ),
             "suggestion": (
                 "The left side should look like: "
-                "exp(ln(y))"
+                "exp(ln|y|)"
             ),
         }
 
@@ -801,7 +813,7 @@ def evaluate_rename_exp_constant_step(
             ),
             "suggestion": (
                 "Try something like: "
-                "|y| = K*exp(2*x**3)"
+                f"|y| = K*exp({sp.sstr(integrated_fx)})"
             ),
         }
 
