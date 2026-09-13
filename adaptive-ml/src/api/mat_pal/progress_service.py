@@ -15,6 +15,8 @@ from src.core.adaptive.policy import (
 )
 from src.core.student_model.progress_store import (
     DEFAULT_PROGRESS_PATH,
+    DEFAULT_STUDENT_ID,
+    normalize_student_id,
 )
 
 
@@ -34,12 +36,17 @@ def get_student_progress(
     subject: str | None = None,
     domain: str | None = None,
     path: Path = DEFAULT_PROGRESS_PATH,
+    student_id: str | None = None,
 ) -> StudentProgressResponse:
+    resolved_id = normalize_student_id(
+        student_id or DEFAULT_STUDENT_ID
+    )
     policy = RuleBasedAdaptivePolicy()
     topic_states = adaptive_service.list_topic_states(
         subject=subject,
         domain=domain,
         path=path,
+        student_id=resolved_id,
     )
     sorted_topic_states = sorted(
         topic_states,
@@ -53,6 +60,7 @@ def get_student_progress(
         subject=subject,
         domain=domain,
         path=path,
+        student_id=resolved_id,
     )
 
     topics = []
@@ -125,7 +133,7 @@ def get_student_progress(
         )
 
     return StudentProgressResponse(
-        student_id=adaptive_service.DEFAULT_STUDENT_ID,
+        student_id=resolved_id,
         topics=topics,
         recommendation=AdaptiveRecommendationResponse(
             recommendation_available=(

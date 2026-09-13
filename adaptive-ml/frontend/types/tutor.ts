@@ -33,6 +33,7 @@ export interface TutorSession {
 
 export interface StartSessionRequest {
   problem_id: string;
+  student_id?: string;
 }
 
 export interface AnswerRequest {
@@ -102,6 +103,7 @@ export interface GenerateProblemRequest {
 export interface AdaptiveRecommendationRequest {
   subject?: string;
   domain?: string;
+  student_id?: string;
 }
 
 export interface AdaptiveRecommendation {

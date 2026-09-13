@@ -19,9 +19,11 @@ from src.core.adaptive.features import (
 )
 from src.core.student_model.progress_store import (
     DEFAULT_PROGRESS_PATH,
+    DEFAULT_STUDENT_ID,
     get_skill_progress,
+    get_student_record,
     load_progress,
-    save_progress,
+    save_student_record,
     update_skill_progress,
 )
 from src.core.student_model.student import (
@@ -29,7 +31,8 @@ from src.core.student_model.student import (
 )
 
 
-DEFAULT_STUDENT_ID = "local_student"
+# Re-export for existing API callers. local_student is the
+# default guest profile, not authenticated identity.
 
 TOPIC_MASTERY_KEYS = {
     (
@@ -73,15 +76,20 @@ def mastery_key_for_registration(
 def record_session_completion(
     summary: SessionPerformanceSummary,
     path: Path = DEFAULT_PROGRESS_PATH,
+    student_id: str = DEFAULT_STUDENT_ID,
 ) -> dict:
-    progress = load_progress(path)
+    file_data = load_progress(path)
+    progress = get_student_record(
+        file_data,
+        student_id,
+    )
     current = get_skill_progress(
         progress,
         summary.mastery_key,
     )
 
     student = StudentModel(
-        student_id=DEFAULT_STUDENT_ID
+        student_id=student_id
     )
     student.initialize_skill(
         skill_id=summary.mastery_key,
@@ -148,7 +156,9 @@ def record_session_completion(
         last_completed=summary.completed,
         recent_session=recent_session,
     )
-    save_progress(
+    save_student_record(
+        file_data,
+        student_id,
         progress,
         path,
     )
@@ -163,11 +173,13 @@ def recommend_next(
     subject: str | None = None,
     domain: str | None = None,
     path: Path = DEFAULT_PROGRESS_PATH,
+    student_id: str = DEFAULT_STUDENT_ID,
 ) -> AdaptiveRecommendation:
     candidates = list_topic_states(
         subject=subject,
         domain=domain,
         path=path,
+        student_id=student_id,
     )
 
     return RuleBasedAdaptivePolicy().recommend_next(
@@ -179,8 +191,13 @@ def list_topic_states(
     subject: str | None,
     domain: str | None,
     path: Path,
+    student_id: str = DEFAULT_STUDENT_ID,
 ) -> list[AdaptiveTopicState]:
-    progress = load_progress(path)
+    file_data = load_progress(path)
+    progress = get_student_record(
+        file_data,
+        student_id,
+    )
     topics: dict[
         tuple[str, str, str],
         TutorRegistration,

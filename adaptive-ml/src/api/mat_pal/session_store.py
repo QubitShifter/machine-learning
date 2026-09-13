@@ -2,6 +2,10 @@ from dataclasses import dataclass
 from uuid import uuid4
 
 from src.api.mat_pal import adaptive_service
+from src.core.student_model.progress_store import (
+    DEFAULT_STUDENT_ID,
+    normalize_student_id,
+)
 from src.api.mat_pal.schemas import (
     AnswerRequest,
     SessionResponse,
@@ -32,6 +36,7 @@ class StoredSession:
     registration: TutorRegistration
     engine: TutorEngine
     last_response: TutorResponse
+    student_id: str = DEFAULT_STUDENT_ID
     answer_submissions: int = 0
     incorrect_submissions: int = 0
     hint_requests: int = 0
@@ -60,12 +65,16 @@ def _to_session_response(
         hint_available=tutor_response.hint_available,
         expected_input_type=tutor_response.expected_input_type,
         suggestion=tutor_response.suggestion,
-        metadata=tutor_response.metadata,
+        metadata={
+            **tutor_response.metadata,
+            "student_id": stored_session.student_id,
+        },
     )
 
 
 def start_session(
     problem_id: str,
+    student_id: str = DEFAULT_STUDENT_ID,
 ) -> SessionResponse:
     try:
         registration = DEFAULT_TUTOR_REGISTRY.get(
@@ -99,6 +108,7 @@ def start_session(
         engine=engine,
         last_response=initial_response,
         registration=registration,
+        student_id=normalize_student_id(student_id),
     )
     _sessions[session_id] = stored_session
 
@@ -198,7 +208,8 @@ def _update_mastery_if_completed(
     )
     updated = (
         adaptive_service.record_session_completion(
-            summary
+            summary,
+            student_id=stored_session.student_id,
         )
     )
     tutor_response.metadata = {

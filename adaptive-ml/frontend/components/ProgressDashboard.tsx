@@ -7,6 +7,7 @@ interface ProgressDashboardProps {
   progress: StudentProgress | null;
   loading: boolean;
   errorMessage?: string | null;
+  studentName?: string;
   onBack: () => void;
   onPracticeRecommended: () => void;
   onRefresh: () => void;
@@ -148,24 +149,25 @@ export function ProgressDashboard({
   progress,
   loading,
   errorMessage,
+  studentName,
   onBack,
   onPracticeRecommended,
   onRefresh,
 }: ProgressDashboardProps) {
   const recommendation = progress?.recommendation;
+  const progressTitle = studentName
+    ? `Progress — ${studentName}`
+    : "Progress Dashboard";
 
   return (
     <section className="progress-dashboard">
       <div className="dashboard-header">
         <div>
-          <p className="eyebrow">Student Progress</p>
-          <h2>Progress Dashboard</h2>
+          <p className="eyebrow">Student progress</p>
+          <h2>{progressTitle}</h2>
           <p>
             Read-only mastery and adaptive practice
             state for runnable MAT-PAL topics.
-            {progress?.student_id
-              ? ` Profile: ${progress.student_id}.`
-              : ""}
           </p>
         </div>
         <div className="dashboard-actions">

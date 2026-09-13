@@ -84,17 +84,26 @@ export function getAdaptiveRecommendation(
   );
 }
 
+// studentId is a local profile key, not authenticated identity.
 export function getStudentProgress(
-  params?: AdaptiveRecommendationRequest,
+  studentId?: string,
+  filters?: Pick<
+    AdaptiveRecommendationRequest,
+    "subject" | "domain"
+  >,
 ): Promise<StudentProgress> {
   const query = new URLSearchParams();
 
-  if (params?.subject) {
-    query.set("subject", params.subject);
+  if (filters?.subject) {
+    query.set("subject", filters.subject);
   }
 
-  if (params?.domain) {
-    query.set("domain", params.domain);
+  if (filters?.domain) {
+    query.set("domain", filters.domain);
+  }
+
+  if (studentId) {
+    query.set("student_id", studentId);
   }
 
   const suffix = query.toString();

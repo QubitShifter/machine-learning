@@ -9,6 +9,36 @@ from src.core.adaptive.features import (
 DEFAULT_PROGRESS_PATH = Path(
     "math/ode/data/student_progress.json"
 )
+DEFAULT_STUDENT_ID = "local_student"
+
+
+def empty_skills_progress() -> dict:
+    return {
+        "skills": {},
+    }
+
+
+def normalize_student_id(
+    student_id: str | None,
+) -> str:
+    if student_id is None:
+        return DEFAULT_STUDENT_ID
+
+    cleaned = student_id.strip()
+
+    if not cleaned:
+        return DEFAULT_STUDENT_ID
+
+    return cleaned
+
+
+def is_multi_student_progress(
+    progress: dict,
+) -> bool:
+    return isinstance(
+        progress.get("students"),
+        dict,
+    )
 
 
 def load_progress(
@@ -45,6 +75,78 @@ def load_progress(
         data["skills"] = {}
 
     return data
+
+
+def get_student_record(
+    progress: dict,
+    student_id: str | None = None,
+) -> dict:
+    """
+    Return the skills-bearing record for one student.
+
+    student_id is a local storage key, not authenticated
+    identity. Unknown students receive an empty isolated
+    record. Legacy files with root-level skills continue
+    to belong to local_student.
+    """
+
+    resolved_id = normalize_student_id(student_id)
+
+    if is_multi_student_progress(progress):
+        students = progress["students"]
+        record = students.get(resolved_id)
+
+        if record is None:
+            return empty_skills_progress()
+
+        if "skills" not in record:
+            record["skills"] = {}
+
+        return record
+
+    progress.setdefault("skills", {})
+
+    if resolved_id == DEFAULT_STUDENT_ID:
+        return progress
+
+    return empty_skills_progress()
+
+
+def complete_student_record(
+    student_record: dict,
+) -> dict:
+    record = dict(student_record)
+    record.setdefault("skills", {})
+    return record
+
+
+def save_student_record(
+    progress: dict,
+    student_id: str | None,
+    student_record: dict,
+    path: Path = DEFAULT_PROGRESS_PATH,
+) -> None:
+    resolved_id = normalize_student_id(student_id)
+    record = complete_student_record(student_record)
+
+    if (
+        resolved_id == DEFAULT_STUDENT_ID
+        and not is_multi_student_progress(progress)
+    ):
+        progress.clear()
+        progress.update(record)
+        save_progress(progress, path)
+        return
+
+    if not is_multi_student_progress(progress):
+        legacy_record = complete_student_record(progress)
+        progress.clear()
+        progress["students"] = {
+            DEFAULT_STUDENT_ID: legacy_record,
+        }
+
+    progress["students"][resolved_id] = record
+    save_progress(progress, path)
 
 
 def save_progress(

@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+
+import { useStudentProfile } from "@/components/StudentProfileProvider";
 
 import { HomeHero } from "@/components/HomeHero";
 import { LearningPathSelector } from "@/components/LearningPathSelector";
@@ -68,6 +70,9 @@ export function HomePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const progressRequested = isProgressView(searchParams);
+  const { selectedStudent } = useStudentProfile();
+  const studentId = selectedStudent.studentId;
+  const previousStudentId = useRef(studentId);
 
   const [catalog, setCatalog] =
     useState<CatalogResponse | null>(null);
@@ -94,6 +99,20 @@ export function HomePage() {
     useState<string | null>(null);
   const [adaptiveMessage, setAdaptiveMessage] =
     useState<string | null>(null);
+
+  useEffect(() => {
+    if (previousStudentId.current === studentId) {
+      return;
+    }
+
+    previousStudentId.current = studentId;
+    setSession(null);
+    setCurrentPrompt("");
+    setAnswer("");
+    setAdaptiveMessage(null);
+    setProgress(null);
+    setErrorMessage(null);
+  }, [studentId]);
 
   useEffect(() => {
     async function loadCatalog() {
@@ -209,6 +228,7 @@ export function HomePage() {
       () =>
         startSession({
           problem_id: selection.problemId,
+          student_id: studentId,
         }),
       (nextSession) => {
         setCurrentPrompt(nextSession.feedback);
@@ -440,6 +460,7 @@ export function HomePage() {
 
       const nextSession = await startSession({
         problem_id: generated.problem_id,
+        student_id: studentId,
       });
       setSession(nextSession);
       setCurrentPrompt(nextSession.feedback);
@@ -461,6 +482,7 @@ export function HomePage() {
 
       const nextSession = await startSession({
         problem_id: problem.problem_id,
+        student_id: studentId,
       });
       setSession(nextSession);
       setCurrentPrompt(nextSession.feedback);
@@ -481,6 +503,7 @@ export function HomePage() {
         await getAdaptiveRecommendation({
           subject: selection.subject || undefined,
           domain: selection.domain || undefined,
+          student_id: studentId,
         });
 
       await startRecommendedPractice(recommendation);
@@ -500,7 +523,7 @@ export function HomePage() {
     setErrorMessage(null);
 
     try {
-      const nextProgress = await getStudentProgress();
+      const nextProgress = await getStudentProgress(studentId);
       setProgress(nextProgress);
       setSession(null);
       setAdaptiveMessage(null);
@@ -524,7 +547,9 @@ export function HomePage() {
 
     async function fetchProgress() {
       try {
-        const nextProgress = await getStudentProgress();
+        const nextProgress = await getStudentProgress(
+          studentId,
+        );
 
         if (!ignore) {
           setProgress(nextProgress);
@@ -547,7 +572,7 @@ export function HomePage() {
     return () => {
       ignore = true;
     };
-  }, [progressRequested]);
+  }, [progressRequested, studentId]);
 
   async function handlePracticeRecommendedFromDashboard() {
     if (!progress) {
@@ -587,6 +612,7 @@ export function HomePage() {
             void loadProgress();
           }}
           progress={progress}
+          studentName={selectedStudent.displayName}
         />
       ) : session ? (
         <TutorCard

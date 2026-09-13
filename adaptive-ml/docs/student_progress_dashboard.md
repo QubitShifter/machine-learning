@@ -43,6 +43,9 @@ Optional filters:
 
 - `subject`
 - `domain`
+- `student_id` — local profile key; defaults to `local_student`.
+  This is storage scoping, not authentication. See
+  `docs/student_profiles.md`.
 
 ## Topic Grouping
 
@@ -97,7 +100,7 @@ difficulty, and a `problem_id` for direct practice.
 
 ## Limitations
 
-- Local single-user progress only.
+- Local device profiles only. See `docs/student_profiles.md`.
 - No authentication or accounts.
 - No database.
 - No historical charts or time-series analytics.

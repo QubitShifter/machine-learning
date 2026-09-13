@@ -70,6 +70,7 @@ def adaptive_recommendation(
     recommendation = adaptive_service.recommend_next(
         subject=request.subject,
         domain=request.domain,
+        student_id=request.student_id,
     )
 
     return AdaptiveRecommendationResponse(
@@ -99,10 +100,12 @@ def adaptive_recommendation(
 def get_progress(
     subject: str | None = None,
     domain: str | None = None,
+    student_id: str | None = None,
 ) -> StudentProgressResponse:
     return progress_service.get_student_progress(
         subject=subject,
         domain=domain,
+        student_id=student_id,
     )
 
 
@@ -165,7 +168,8 @@ def start_session(
 ) -> SessionResponse:
     try:
         return session_store.start_session(
-            problem_id=request.problem_id
+            problem_id=request.problem_id,
+            student_id=request.student_id,
         )
 
     except ValueError as error:

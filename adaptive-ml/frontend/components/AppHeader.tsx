@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
+import { ProfileSelector } from "@/components/ProfileSelector";
 import {
   HOME_HREF,
   LEARN_HREF,
@@ -37,6 +38,7 @@ function HeaderNav() {
           >
             Progress
           </Link>
+          <ProfileSelector />
           <Link
             aria-current={loginOpen ? "page" : undefined}
             href={LOGIN_HREF}

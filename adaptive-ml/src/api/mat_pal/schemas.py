@@ -19,6 +19,7 @@ class StartSessionRequest(BaseModel):
     problem_id: str = Field(
         examples=["grade4_reverse_reasoning_001"]
     )
+    student_id: str = "local_student"
 
 
 class AnswerRequest(BaseModel):
@@ -120,6 +121,7 @@ class GenerateProblemRequest(BaseModel):
 class AdaptiveRecommendationRequest(BaseModel):
     subject: str | None = None
     domain: str | None = None
+    student_id: str = "local_student"
 
 
 class AdaptiveRecommendationResponse(BaseModel):
