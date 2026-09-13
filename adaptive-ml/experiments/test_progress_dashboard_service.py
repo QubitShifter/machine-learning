@@ -97,6 +97,10 @@ def assert_existing_and_legacy_progress_fields_are_returned():
     assert linear.generation_available is True
     assert linear.supported_difficulties == [1, 2, 3]
     assert linear.recommended_difficulty == 3
+    assert linear.recent_session_count == 1
+    assert linear.recent_trend == "insufficient_history"
+    assert linear.recent_first_attempt_success_rate == 1.0
+    assert linear.recent_hint_rate == 0.0
 
     assert separable.mastery == 0.45
     assert separable.mastery_label == "Developing"
@@ -105,6 +109,8 @@ def assert_existing_and_legacy_progress_fields_are_returned():
     assert separable.last_total_attempts == 0
     assert separable.last_hints_used == 0
     assert separable.recommended_difficulty == 2
+    assert separable.recent_session_count == 0
+    assert separable.recent_trend == "insufficient_history"
 
 
 def assert_static_primary_school_topic_has_problem_id():
@@ -126,6 +132,7 @@ def assert_static_primary_school_topic_has_problem_id():
     assert topic.problem_id == (
         "grade4_reverse_reasoning_001"
     )
+    assert topic.recent_trend == "insufficient_history"
 
 
 def assert_no_duplicate_topics_and_deterministic_ordering():
@@ -164,6 +171,71 @@ def assert_no_duplicate_topics_and_deterministic_ordering():
     )
 
 
+def assert_recent_history_features_come_from_backend():
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "progress.json"
+        write_progress(
+            path,
+            {
+                "skills": {
+                    "linear_first_order_ode": {
+                        "mastery": 0.62,
+                        "questions_completed": 3,
+                        "first_attempt_streak": 3,
+                        "recent_sessions": [
+                            {
+                                "completed": True,
+                                "total_attempts": 7,
+                                "incorrect_attempts": 0,
+                                "hints_used": 0,
+                                "first_attempt_success": True,
+                                "steps_completed": 7,
+                                "total_steps": 7,
+                            },
+                            {
+                                "completed": True,
+                                "total_attempts": 7,
+                                "incorrect_attempts": 0,
+                                "hints_used": 0,
+                                "first_attempt_success": True,
+                                "steps_completed": 7,
+                                "total_steps": 7,
+                            },
+                            {
+                                "completed": True,
+                                "total_attempts": 7,
+                                "incorrect_attempts": 0,
+                                "hints_used": 0,
+                                "first_attempt_success": True,
+                                "steps_completed": 7,
+                                "total_steps": 7,
+                            },
+                        ],
+                    }
+                }
+            },
+        )
+        progress = get_student_progress(
+            subject="mathematics",
+            domain="ode",
+            path=path,
+        )
+
+    linear = next(
+        topic
+        for topic in progress.topics
+        if topic.topic == "first_order_linear"
+    )
+
+    assert linear.recent_session_count == 3
+    assert linear.recent_first_attempt_success_rate == 1.0
+    assert linear.recent_hint_rate == 0.0
+    assert linear.recent_incorrect_rate == 0.0
+    assert linear.recent_average_attempts_per_step == 1.0
+    assert linear.recent_trend == "strong"
+    assert linear.recommended_difficulty == 3
+
+
 def assert_empty_filter_returns_safe_response():
     with TemporaryDirectory() as directory:
         path = Path(directory) / "progress.json"
@@ -186,6 +258,7 @@ def main():
     assert_existing_and_legacy_progress_fields_are_returned()
     assert_static_primary_school_topic_has_problem_id()
     assert_no_duplicate_topics_and_deterministic_ordering()
+    assert_recent_history_features_come_from_backend()
     assert_empty_filter_returns_safe_response()
 
     print("progress_dashboard_service tests passed")

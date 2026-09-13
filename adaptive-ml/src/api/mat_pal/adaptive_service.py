@@ -13,6 +13,10 @@ from src.core.adaptive import (
     RuleBasedAdaptivePolicy,
     SessionPerformanceSummary,
 )
+from src.core.adaptive.features import (
+    build_adaptive_features,
+    parse_recent_sessions,
+)
 from src.core.student_model.progress_store import (
     DEFAULT_PROGRESS_PATH,
     get_skill_progress,
@@ -111,6 +115,23 @@ def record_session_completion(
         if summary.first_attempt_success
         else 0
     )
+    recent_session = (
+        {
+            "completed": True,
+            "total_attempts": summary.total_attempts,
+            "incorrect_attempts": (
+                summary.incorrect_attempts
+            ),
+            "hints_used": summary.hints_used,
+            "first_attempt_success": (
+                summary.first_attempt_success
+            ),
+            "steps_completed": summary.steps_completed,
+            "total_steps": summary.total_steps,
+        }
+        if summary.completed
+        else None
+    )
 
     update_skill_progress(
         progress=progress,
@@ -125,6 +146,7 @@ def record_session_completion(
             summary.first_attempt_success
         ),
         last_completed=summary.completed,
+        recent_session=recent_session,
     )
     save_progress(
         progress,
@@ -221,6 +243,48 @@ def _topic_state_from_registration(
     generation_available = bool(
         supported_difficulties
     )
+    last_total_attempts = skill_progress.get(
+        "last_total_attempts",
+        0,
+    )
+    last_incorrect_attempts = skill_progress.get(
+        "last_incorrect_attempts",
+        0,
+    )
+    last_hints_used = skill_progress.get(
+        "last_hints_used",
+        0,
+    )
+    last_first_attempt_success = skill_progress.get(
+        "last_first_attempt_success",
+        False,
+    )
+    last_completed = skill_progress.get(
+        "last_completed",
+        False,
+    )
+    recent_sessions = parse_recent_sessions(
+        skill_progress.get("recent_sessions", [])
+    )
+    features = build_adaptive_features(
+        mastery=skill_progress["mastery"],
+        questions_completed=(
+            skill_progress["questions_completed"]
+        ),
+        first_attempt_streak=(
+            skill_progress["first_attempt_streak"]
+        ),
+        last_total_attempts=last_total_attempts,
+        last_incorrect_attempts=(
+            last_incorrect_attempts
+        ),
+        last_hints_used=last_hints_used,
+        last_first_attempt_success=(
+            last_first_attempt_success
+        ),
+        last_completed=last_completed,
+        recent_sessions=recent_sessions,
+    )
 
     return AdaptiveTopicState(
         subject=registration.subject,
@@ -244,24 +308,15 @@ def _topic_state_from_registration(
             if generation_available
             else registration.problem_id
         ),
-        last_total_attempts=skill_progress.get(
-            "last_total_attempts",
-            0,
+        last_total_attempts=last_total_attempts,
+        last_incorrect_attempts=(
+            last_incorrect_attempts
         ),
-        last_incorrect_attempts=skill_progress.get(
-            "last_incorrect_attempts",
-            0,
+        last_hints_used=last_hints_used,
+        last_first_attempt_success=(
+            last_first_attempt_success
         ),
-        last_hints_used=skill_progress.get(
-            "last_hints_used",
-            0,
-        ),
-        last_first_attempt_success=skill_progress.get(
-            "last_first_attempt_success",
-            False,
-        ),
-        last_completed=skill_progress.get(
-            "last_completed",
-            False,
-        ),
+        last_completed=last_completed,
+        recent_sessions=recent_sessions,
+        features=features,
     )

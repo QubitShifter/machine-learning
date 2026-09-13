@@ -24,6 +24,30 @@ function formatMasteryPercent(
   return `${Math.round(mastery * 100)}%`;
 }
 
+function formatRate(
+  rate: number,
+) {
+  return `${Math.round(rate * 100)}%`;
+}
+
+function formatRecentTrend(
+  trend: string,
+) {
+  if (trend === "strong") {
+    return "Strong";
+  }
+
+  if (trend === "stable") {
+    return "Stable";
+  }
+
+  if (trend === "needs_support") {
+    return "Needs support";
+  }
+
+  return "Not enough history";
+}
+
 function TopicProgressCard({
   topic,
 }: {
@@ -88,6 +112,26 @@ function TopicProgressCard({
           <dd>
             {topic.recommended_difficulty ?? "N/A"}
           </dd>
+        </div>
+        <div>
+          <dt>Recent trend</dt>
+          <dd>{formatRecentTrend(topic.recent_trend)}</dd>
+        </div>
+        <div>
+          <dt>Recent sessions</dt>
+          <dd>{topic.recent_session_count}</dd>
+        </div>
+        <div>
+          <dt>Recent first-attempt rate</dt>
+          <dd>
+            {formatRate(
+              topic.recent_first_attempt_success_rate,
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt>Recent hint rate</dt>
+          <dd>{formatRate(topic.recent_hint_rate)}</dd>
         </div>
       </dl>
 

@@ -2,16 +2,19 @@
 
 import type { ReactNode } from "react";
 import katex from "katex";
+import {
+  convertPlusMinus,
+  isMathOnlyLine,
+} from "./mathContentClassification";
+import {
+  splitInlineMath,
+  type MathSegment,
+} from "./mathContentSegmentation";
 
 interface MathContentProps {
   text: string | null | undefined;
   className?: string;
   forceMath?: boolean;
-}
-
-interface MathSegment {
-  type: "text" | "math";
-  value: string;
 }
 
 const katexOptions = {
@@ -20,37 +23,6 @@ const katexOptions = {
   trust: false,
   output: "htmlAndMathml" as const,
 };
-
-const englishPromptWords =
-  /\b(after|and|answer|as|ask|calculate|check|compare|compute|correct|differentiate|do|does|everything|find|first|for|form|from|hint|identify|inside|left|like|match|next|now|place|problem|result|right|should|side|solve|something|start|step|substitute|substitution|such|that|the|then|they|this|try|use|using|what|where|with|work|write|your)\b/i;
-
-const mathTokenPattern =
-  /(\\[a-zA-Z]+|\*\*|[=+\-*/^']|dy\/dx|d\/dx|exp\(|sqrt\(|integral\(|mu\(x\)|P\(x\)|Q\(x\)|e\^\{)/;
-
-const inlineMathPatterns: RegExp[] = [
-  /y'\s*\+\s*P\(x\)y\s*=\s*Q\(x\)/g,
-  /d\/dx\([^)]*\)\s*(?:[+\-*/^=]\s*[^,.;:!?]+)+/g,
-  /dy\/dx\s*(?:[+\-*/^=]\s*[^,.;:!?]+)+/g,
-  /\by\s*=\s*(?:(?!\s(?:with|where|and|so|because|from|to)\b)[^,.;:!?])+/g,
-  /\|[^|]+\|\s*(?:[+\-*/^=]\s*[^,.;:!?]+)+/g,
-  /(?:mu|P|Q)\(x\)\s*(?:[+\-*/^=]\s*[^,.;:!?]+)+/g,
-  /integral\(.+\)\s*dx/g,
-  /exp\([^)]*\)/g,
-  /sqrt\([^)]*\)/g,
-  /\b\d+\s*\/\s*\d+\b/g,
-  /\b[A-Za-z0-9()]+\s*\*\*\s*[-+]?[A-Za-z0-9()]+\b/g,
-  /(?:mu|P|Q)\(x\)/g,
-  /dy\/dx/g,
-];
-
-function trimTrailingPunctuation(value: string) {
-  const match = value.match(/^(.+?)([,.!?;:]+)?$/);
-
-  return {
-    body: match?.[1] ?? value,
-    punctuation: match?.[2] ?? "",
-  };
-}
 
 function convertFunctionCalls(
   value: string,
@@ -259,7 +231,7 @@ export function convertMathNotation(value: string): string {
     return trimmed;
   }
 
-  let output = trimmed
+  let output = convertPlusMinus(trimmed)
     .replace(/\\times/g, "\\cdot")
     .replace(/dy\/dx/g, "\\frac{dy}{dx}")
     .replace(/(^|[^\\])\bmu\b/g, "$1\\mu");
@@ -293,108 +265,6 @@ export function convertMathNotation(value: string): string {
   output = output.replace(/\*/g, "\\,");
 
   return output;
-}
-
-function isMathOnlyLine(line: string) {
-  const trimmed = line.trim();
-
-  if (!trimmed) {
-    return false;
-  }
-
-  if (/^([xyzC]|\d+(?:\s*\/\s*\d+)?)$/.test(trimmed)) {
-    return true;
-  }
-
-  return (
-    mathTokenPattern.test(trimmed) &&
-    !englishPromptWords.test(trimmed)
-  );
-}
-
-function findNextMathFragment(
-  text: string,
-  startIndex: number,
-) {
-  let bestMatch:
-    | { index: number; value: string }
-    | null = null;
-
-  for (const pattern of inlineMathPatterns) {
-    pattern.lastIndex = startIndex;
-    const match = pattern.exec(text);
-
-    if (!match) {
-      continue;
-    }
-
-    const value = match[0].trim();
-
-    if (!value || englishPromptWords.test(value)) {
-      continue;
-    }
-
-    if (
-      bestMatch === null ||
-      match.index < bestMatch.index ||
-      (match.index === bestMatch.index &&
-        value.length > bestMatch.value.length)
-    ) {
-      bestMatch = {
-        index: match.index,
-        value,
-      };
-    }
-  }
-
-  return bestMatch;
-}
-
-function splitInlineMath(line: string): MathSegment[] {
-  const segments: MathSegment[] = [];
-  let cursor = 0;
-
-  while (cursor < line.length) {
-    const nextMatch = findNextMathFragment(line, cursor);
-
-    if (!nextMatch) {
-      segments.push({
-        type: "text",
-        value: line.slice(cursor),
-      });
-      break;
-    }
-
-    if (nextMatch.index > cursor) {
-      segments.push({
-        type: "text",
-        value: line.slice(cursor, nextMatch.index),
-      });
-    }
-
-    const rawValue = line.slice(
-      nextMatch.index,
-      nextMatch.index + nextMatch.value.length,
-    );
-    const { body, punctuation } =
-      trimTrailingPunctuation(rawValue);
-
-    segments.push({
-      type: "math",
-      value: body,
-    });
-
-    if (punctuation) {
-      segments.push({
-        type: "text",
-        value: punctuation,
-      });
-    }
-
-    cursor = nextMatch.index + rawValue.length;
-  }
-
-  return segments.filter((segment) => segment.value.length > 0);
 }
 
 function KatexSpan({
@@ -464,23 +334,6 @@ function renderLine(
           displayMode
           latex={convertMathNotation(trimmed)}
         />
-      </p>
-    );
-  }
-
-  const solveMatch = trimmed.match(
-    /^(Solve|Find|Calculate|Compute|Simplify|Verify)\s+(.+?)([.!?])?$/i,
-  );
-
-  if (solveMatch && mathTokenPattern.test(solveMatch[2])) {
-    return (
-      <p key={`line-${index}`}>
-        {solveMatch[1]}{" "}
-        <KatexSpan
-          displayMode={false}
-          latex={convertMathNotation(solveMatch[2])}
-        />
-        {solveMatch[3] ?? ""}
       </p>
     );
   }

@@ -160,6 +160,12 @@ class TopicProgress(BaseModel):
     )
     recommended_difficulty: int | None = None
     problem_id: str | None = None
+    recent_session_count: int = 0
+    recent_first_attempt_success_rate: float = 0.0
+    recent_hint_rate: float = 0.0
+    recent_incorrect_rate: float = 0.0
+    recent_average_attempts_per_step: float = 0.0
+    recent_trend: str = "insufficient_history"
     metadata: dict[str, Any] = Field(
         default_factory=dict
     )

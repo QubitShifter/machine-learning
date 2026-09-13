@@ -158,6 +158,82 @@ def advance_to_log_stage(adapter):
     assert "simplify" in response.suggestion
 
 
+def advance_through_log_answers(
+    adapter,
+    answers,
+):
+    for answer in answers:
+        response = submit(adapter, answer)
+        assert response.status == "correct"
+        current = response
+
+    return current
+
+
+def assert_log_stage_hints_are_specific():
+    adapter = make_adapter()
+    advance_to_log_stage(adapter)
+
+    submit(adapter, "exp(ln(y)) = exp(x^2 + C)")
+    cancel_prompt = adapter.get_current_response()
+    assert cancel_prompt.metadata["log_stage"] == (
+        "cancel_log"
+    )
+    assert "Simplify the expression" in (
+        cancel_prompt.feedback
+    )
+    assert "exp(ln|y|)" in cancel_prompt.feedback
+
+    advance_through_log_answers(
+        adapter,
+        [
+            "|y| = exp(x^2 + C)",
+            "|y| = exp(x^2)*exp(C)",
+        ],
+    )
+
+    rename_prompt = adapter.get_current_response()
+    assert rename_prompt.metadata["log_stage"] == (
+        "rename_exp_constant"
+    )
+
+    rename_hint = adapter.request_hint()
+    rename_text = rename_hint.feedback.lower()
+
+    assert rename_hint.status == "hint"
+    assert "positive constant" in rename_text
+    assert "rename" in rename_text
+    assert "k" in rename_text
+    assert "absolute value" not in rename_text
+
+    submit(adapter, "|y| = K*exp(x^2)")
+    remove_prompt = adapter.get_current_response()
+    assert remove_prompt.metadata["log_stage"] == (
+        "remove_absolute_value"
+    )
+
+    remove_hint = adapter.request_hint()
+    remove_text = remove_hint.feedback.lower()
+
+    assert remove_hint.status == "hint"
+    assert remove_hint.feedback != rename_hint.feedback
+    assert "sign" in remove_text
+    assert "+/-" in remove_hint.feedback
+    assert "absorb" not in remove_text
+    assert "arbitrary constant c" not in remove_text
+    assert "use exp to undo ln" not in remove_text
+
+    submit(adapter, "y = +/- K*exp(x^2)")
+    absorb_prompt = adapter.get_current_response()
+    assert absorb_prompt.metadata["log_stage"] == (
+        "absorb_constant"
+    )
+    assert "Combine +/- K" in absorb_prompt.feedback
+    assert "into one new arbitrary constant C." in (
+        absorb_prompt.feedback
+    )
+
+
 def assert_concept_question_does_not_advance():
     adapter = make_adapter()
     advance_to_log_stage(adapter)
@@ -367,6 +443,7 @@ def main():
     assert_latex_derivative_reaches_checker()
     assert_browser_absolute_value_latex_is_accepted()
     assert_browser_rename_constant_latex_advances()
+    assert_log_stage_hints_are_specific()
 
     print("separable_ode_adapter tests passed")
 

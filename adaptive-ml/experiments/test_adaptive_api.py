@@ -172,6 +172,13 @@ def assert_primary_school_static_recommendation():
     assert next_step["problem_id"] == (
         "grade4_reverse_reasoning_001"
     )
+    assert next_step["metadata"][
+        "recommended_difficulty"
+    ] is None
+    assert next_step["metadata"][
+        "adjustment_reason"
+    ] == "static_topic"
+    assert "difficulty" not in next_step["reason"].lower()
 
 
 def assert_no_available_content_is_safe():
@@ -271,11 +278,185 @@ def assert_generated_completion_updates_mastery_and_difficulty():
     assert separable["questions_completed"] == 2
     assert separable["first_attempt_streak"] == 2
     assert separable["last_first_attempt_success"] is True
+    assert len(separable["recent_sessions"]) == 1
+    assert separable["recent_sessions"][0][
+        "completed"
+    ] is True
+    assert "steps_completed" in separable[
+        "recent_sessions"
+    ][0]
+    assert "total_steps" in separable[
+        "recent_sessions"
+    ][0]
 
     next_step = recommendation()
 
     assert next_step["topic"] == "separable_equations"
     assert next_step["difficulty"] == 3
+    assert next_step["metadata"][
+        "recent_session_count"
+    ] == 1
+    assert next_step["metadata"][
+        "adjustment_reason"
+    ] == "last_session_strong"
+
+
+def assert_recommendation_metadata_for_history_profiles():
+    write_progress({"skills": {}})
+    fresh = recommendation()
+
+    assert fresh["recommendation_available"] is True
+    assert fresh["metadata"]["recent_session_count"] == 0
+    assert fresh["metadata"]["recent_trend"] == (
+        "insufficient_history"
+    )
+    assert "recent_first_attempt_success_rate" in (
+        fresh["metadata"]
+    )
+    assert "base_difficulty" in fresh["metadata"]
+
+    write_progress(
+        {
+            "skills": {
+                "linear_first_order_ode": {
+                    "mastery": 0.80,
+                    "questions_completed": 3,
+                    "first_attempt_streak": 1,
+                    "last_total_attempts": 2,
+                    "last_incorrect_attempts": 0,
+                    "last_hints_used": 0,
+                    "last_first_attempt_success": True,
+                    "last_completed": True,
+                },
+                "separable_equations": {
+                    "mastery": 0.45,
+                    "questions_completed": 1,
+                    "first_attempt_streak": 0,
+                },
+            }
+        }
+    )
+    legacy = recommendation()
+
+    assert legacy["topic"] == "separable_equations"
+    assert legacy["difficulty"] == 2
+    assert legacy["metadata"]["recent_session_count"] == 0
+    assert legacy["metadata"]["adjustment_reason"] == (
+        "insufficient_history"
+    )
+
+    write_progress(
+        {
+            "skills": {
+                "linear_first_order_ode": {
+                    "mastery": 0.80,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 3,
+                    "recent_sessions": [
+                        {
+                            "completed": True,
+                            "total_attempts": 1,
+                            "incorrect_attempts": 0,
+                            "hints_used": 0,
+                            "first_attempt_success": True,
+                        },
+                        {
+                            "completed": True,
+                            "total_attempts": 1,
+                            "incorrect_attempts": 0,
+                            "hints_used": 0,
+                            "first_attempt_success": True,
+                        },
+                        {
+                            "completed": True,
+                            "total_attempts": 1,
+                            "incorrect_attempts": 0,
+                            "hints_used": 0,
+                            "first_attempt_success": True,
+                        },
+                    ],
+                },
+                "separable_equations": {
+                    "mastery": 0.62,
+                    "questions_completed": 3,
+                    "first_attempt_streak": 3,
+                    "recent_sessions": [
+                        {
+                            "completed": True,
+                            "total_attempts": 1,
+                            "incorrect_attempts": 0,
+                            "hints_used": 0,
+                            "first_attempt_success": True,
+                        },
+                        {
+                            "completed": True,
+                            "total_attempts": 1,
+                            "incorrect_attempts": 0,
+                            "hints_used": 0,
+                            "first_attempt_success": True,
+                        },
+                        {
+                            "completed": True,
+                            "total_attempts": 1,
+                            "incorrect_attempts": 0,
+                            "hints_used": 0,
+                            "first_attempt_success": True,
+                        },
+                    ],
+                },
+            }
+        }
+    )
+    strong = recommendation()
+
+    assert strong["topic"] == "separable_equations"
+    assert strong["difficulty"] == 3
+    assert strong["metadata"]["recent_trend"] == "strong"
+    assert strong["metadata"]["adjustment"] == 1
+    assert strong["metadata"]["recent_session_count"] == 3
+    assert "strong" in strong["reason"].lower()
+
+    write_progress(
+        {
+            "skills": {
+                "linear_first_order_ode": {
+                    "mastery": 0.80,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 0,
+                },
+                "separable_equations": {
+                    "mastery": 0.48,
+                    "questions_completed": 3,
+                    "first_attempt_streak": 0,
+                    "recent_sessions": [
+                        {
+                            "completed": True,
+                            "total_attempts": 4,
+                            "incorrect_attempts": 2,
+                            "hints_used": 2,
+                            "first_attempt_success": False,
+                        },
+                        {
+                            "completed": True,
+                            "total_attempts": 3,
+                            "incorrect_attempts": 2,
+                            "hints_used": 1,
+                            "first_attempt_success": False,
+                        },
+                    ],
+                },
+            }
+        }
+    )
+    weak = recommendation()
+
+    assert weak["topic"] == "separable_equations"
+    assert weak["difficulty"] == 1
+    assert weak["metadata"]["recent_trend"] == (
+        "needs_support"
+    )
+    assert weak["metadata"]["adjustment"] == -1
+    assert "hints" in weak["reason"]
 
 
 def main():
@@ -294,6 +475,7 @@ def main():
         assert_primary_school_static_recommendation()
         assert_no_available_content_is_safe()
         assert_generated_completion_updates_mastery_and_difficulty()
+        assert_recommendation_metadata_for_history_profiles()
 
     finally:
         if had_progress and original_progress is not None:

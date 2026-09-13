@@ -1,6 +1,10 @@
 import json
 from pathlib import Path
 
+from src.core.adaptive.features import (
+    bound_recent_sessions,
+)
+
 
 DEFAULT_PROGRESS_PATH = Path(
     "math/ode/data/student_progress.json"
@@ -91,6 +95,7 @@ def get_skill_progress(
             "last_hints_used": 0,
             "last_first_attempt_success": False,
             "last_completed": False,
+            "recent_sessions": [],
         }
 
     skills[skill].setdefault(
@@ -113,6 +118,15 @@ def get_skill_progress(
         "last_completed",
         False,
     )
+    skills[skill]["recent_sessions"] = (
+        bound_recent_sessions(
+            skills[skill].get(
+                "recent_sessions",
+                [],
+            )
+            or []
+        )
+    )
 
     return skills[skill]
 
@@ -128,6 +142,7 @@ def update_skill_progress(
     last_hints_used: int | None = None,
     last_first_attempt_success: bool | None = None,
     last_completed: bool | None = None,
+    recent_session: dict | None = None,
 ) -> None:
     """
     Update persisted state for one skill.
@@ -183,5 +198,15 @@ def update_skill_progress(
         if last_completed is not None
         else previous.get("last_completed", False)
     )
+
+    sessions = bound_recent_sessions(
+        previous.get("recent_sessions", []) or []
+    )
+    if recent_session is not None:
+        sessions = bound_recent_sessions(
+            [*sessions, recent_session]
+        )
+
+    updated["recent_sessions"] = sessions
 
     skills[skill] = updated

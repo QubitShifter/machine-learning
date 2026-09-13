@@ -101,7 +101,7 @@ class SeparableLogEngine:
             LogSolveStage.CANCEL_LOG: (
                 "Current equation:\n"
                 f"    exp(ln|y|) = exp({fx_text} + C)\n\n"
-                "Simplify exp(ln|y|).\n"
+                "Simplify the expression exp(ln|y|).\n"
                 "Write the complete equation."
             ),
 

@@ -138,6 +138,12 @@ export interface TopicProgress {
   supported_difficulties: number[];
   recommended_difficulty: number | null;
   problem_id: string | null;
+  recent_session_count: number;
+  recent_first_attempt_success_rate: number;
+  recent_hint_rate: number;
+  recent_incorrect_rate: number;
+  recent_average_attempts_per_step: number;
+  recent_trend: string;
   metadata: Record<string, unknown>;
 }
 

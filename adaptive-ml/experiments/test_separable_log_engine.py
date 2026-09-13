@@ -147,7 +147,33 @@ def assert_step_3_4_rename_constant_checker():
         assert not result["correct"], answer
 
 
+def assert_step_3_2_instruction_names_the_expression():
+    prompt = engine.get_prompt(
+        LogSolveStage.CANCEL_LOG
+    )
+
+    assert "Simplify the expression" in prompt
+    assert "exp(ln|y|)" in prompt
+    assert "Simplify exp(ln|y|)." not in prompt
+
+
+def assert_step_3_6_instruction_is_spaced_prose():
+    prompt = engine.get_prompt(
+        LogSolveStage.ABSORB_CONSTANT
+    )
+
+    assert "Combine +/- K" in prompt
+    assert "into one new arbitrary constant C." in prompt
+    assert "intoonenewarbitraryconstant" not in prompt
+    assert prompt.splitlines()[-1] == (
+        "Combine +/- K into one new arbitrary "
+        "constant C."
+    )
+
+
 assert_step_3_4_rename_constant_checker()
+assert_step_3_2_instruction_names_the_expression()
+assert_step_3_6_instruction_is_spaced_prose()
 
 print("separable_log_engine tests passed")
 

@@ -32,6 +32,12 @@ Each topic contains:
 - generation availability and supported difficulties
 - recommended difficulty for generatable topics
 - static problem id for static-only runnable topics
+- recent session count, first-attempt rate, hint rate, incorrect rate,
+  average attempts per completed step, and display-only recent trend
+
+Recent trend values are `strong`, `stable`, `needs_support`, and
+`insufficient_history`. They come from the shared adaptive feature builder and
+are not a mastery-completion label.
 
 Optional filters:
 
@@ -58,6 +64,10 @@ value, a rounded percentage for the bar, and a display-only label:
 - `>= 0.75` -> `Strong`
 
 These labels are display-only and do not affect adaptive policy behavior.
+
+The dashboard may also show a display-only recent-performance trend from the
+same backend feature builder used by the recommendation policy. Mastery level
+and recent trend are different concepts.
 
 ## Recommendation Integration
 

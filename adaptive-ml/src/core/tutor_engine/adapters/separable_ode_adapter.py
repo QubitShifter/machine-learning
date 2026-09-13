@@ -537,6 +537,60 @@ class SeparableODETutorAdapter:
 
         return self.solution_session.get_prompt()
 
+    def _log_stage_hint_text(
+        self,
+        log_stage: LogSolveStage,
+    ) -> str:
+        if log_stage == LogSolveStage.APPLY_EXP:
+            return (
+                "Apply exp to both sides to undo ln."
+            )
+
+        if log_stage == LogSolveStage.CANCEL_LOG:
+            return (
+                "Simplify the expression exp(ln|y|) "
+                "to |y|."
+            )
+
+        if (
+            log_stage
+            == LogSolveStage.SPLIT_EXPONENTIAL
+        ):
+            return (
+                "Use exp(a + b) = exp(a)*exp(b) to "
+                "separate the + C in the exponent."
+            )
+
+        if (
+            log_stage
+            == LogSolveStage.RENAME_EXP_CONSTANT
+        ):
+            return (
+                "Since C is arbitrary, exp(C) is just "
+                "a positive constant. Rename it as K."
+            )
+
+        if (
+            log_stage
+            == LogSolveStage.REMOVE_ABSOLUTE_VALUE
+        ):
+            return (
+                "If |y| equals a positive expression, "
+                "then y can have either sign. Use +/- "
+                "to represent both possibilities."
+            )
+
+        if log_stage == LogSolveStage.ABSORB_CONSTANT:
+            return (
+                "Combine +/- K into one new arbitrary "
+                "constant C."
+            )
+
+        return (
+            "Use exp to undo ln, then handle the "
+            "absolute value and arbitrary constant."
+        )
+
     def _hint_text(self) -> str:
         stage = self.solution_session.get_stage()
 
@@ -560,9 +614,8 @@ class SeparableODETutorAdapter:
             stage
             == SeparableStage.SOLVE_LOG_EQUATION
         ):
-            return (
-                "Use exp to undo ln, then handle the "
-                "absolute value and arbitrary constant."
+            return self._log_stage_hint_text(
+                self.solution_session.get_log_stage()
             )
 
         return (

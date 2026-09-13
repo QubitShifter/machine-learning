@@ -55,9 +55,10 @@ def get_student_progress(
         path=path,
     )
 
-    return StudentProgressResponse(
-        student_id=adaptive_service.DEFAULT_STUDENT_ID,
-        topics=[
+    topics = []
+    for topic in sorted_topic_states:
+        features = policy.features_for(topic)
+        topics.append(
             TopicProgress(
                 subject=topic.subject,
                 domain=topic.domain,
@@ -99,14 +100,33 @@ def get_student_progress(
                     else None
                 ),
                 problem_id=topic.problem_id,
+                recent_session_count=(
+                    features.recent_session_count
+                ),
+                recent_first_attempt_success_rate=(
+                    features.recent_first_attempt_success_rate
+                ),
+                recent_hint_rate=(
+                    features.recent_hint_rate
+                ),
+                recent_incorrect_rate=(
+                    features.recent_incorrect_rate
+                ),
+                recent_average_attempts_per_step=(
+                    features.recent_average_attempts_per_step
+                ),
+                recent_trend=features.recent_trend,
                 metadata={
                     "ordering": (
                         "subject, domain, topic_name"
                     ),
                 },
             )
-            for topic in sorted_topic_states
-        ],
+        )
+
+    return StudentProgressResponse(
+        student_id=adaptive_service.DEFAULT_STUDENT_ID,
+        topics=topics,
         recommendation=AdaptiveRecommendationResponse(
             recommendation_available=(
                 recommendation.recommendation_available

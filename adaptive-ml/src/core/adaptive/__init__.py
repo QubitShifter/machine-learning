@@ -1,3 +1,8 @@
+from src.core.adaptive.features import (
+    AdaptivePerformanceFeatures,
+    RecentSession,
+    build_adaptive_features,
+)
 from src.core.adaptive.policy import (
     AdaptiveRecommendation,
     AdaptiveTopicState,
@@ -6,8 +11,11 @@ from src.core.adaptive.policy import (
 )
 
 __all__ = [
+    "AdaptivePerformanceFeatures",
     "AdaptiveRecommendation",
     "AdaptiveTopicState",
+    "RecentSession",
     "RuleBasedAdaptivePolicy",
     "SessionPerformanceSummary",
+    "build_adaptive_features",
 ]

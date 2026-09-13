@@ -1,7 +1,28 @@
 from src.core.adaptive import (
     AdaptiveTopicState,
+    RecentSession,
     RuleBasedAdaptivePolicy,
 )
+
+
+def make_session(
+    completed: bool = True,
+    total_attempts: int = 1,
+    incorrect_attempts: int = 0,
+    hints_used: int = 0,
+    first_attempt_success: bool = True,
+    steps_completed: int = 1,
+    total_steps: int = 1,
+) -> RecentSession:
+    return RecentSession(
+        completed=completed,
+        total_attempts=total_attempts,
+        incorrect_attempts=incorrect_attempts,
+        hints_used=hints_used,
+        first_attempt_success=first_attempt_success,
+        steps_completed=steps_completed,
+        total_steps=total_steps,
+    )
 
 
 def make_topic(
@@ -12,6 +33,12 @@ def make_topic(
     last_incorrect_attempts: int = 0,
     last_hints_used: int = 0,
     last_first_attempt_success: bool = False,
+    last_total_attempts: int = 0,
+    last_completed: bool = False,
+    supported_difficulties: tuple[int, ...] = (1, 2, 3),
+    generation_available: bool = True,
+    problem_id: str | None = None,
+    recent_sessions: tuple[RecentSession, ...] = (),
 ) -> AdaptiveTopicState:
     return AdaptiveTopicState(
         subject="mathematics",
@@ -22,13 +49,17 @@ def make_topic(
         mastery=mastery,
         questions_completed=questions_completed,
         first_attempt_streak=first_attempt_streak,
-        supported_difficulties=(1, 2, 3),
-        generation_available=True,
+        supported_difficulties=supported_difficulties,
+        generation_available=generation_available,
+        problem_id=problem_id,
+        last_total_attempts=last_total_attempts,
         last_incorrect_attempts=last_incorrect_attempts,
         last_hints_used=last_hints_used,
         last_first_attempt_success=(
             last_first_attempt_success
         ),
+        last_completed=last_completed,
+        recent_sessions=recent_sessions,
     )
 
 
@@ -141,6 +172,239 @@ def assert_no_runnable_content_is_safe():
     assert recommendation.recommendation_available is False
 
 
+def assert_insufficient_history_keeps_base_difficulty():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=(make_session(),),
+    )
+
+    assert policy.choose_difficulty(topic) == 2
+
+
+def assert_strong_recent_history_increases_one_level():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        questions_completed=3,
+        recent_sessions=(
+            make_session(),
+            make_session(),
+            make_session(),
+        ),
+    )
+
+    assert policy.choose_difficulty(topic) == 3
+
+
+def assert_clean_multistep_sessions_do_not_look_weak():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        questions_completed=2,
+        recent_sessions=(
+            make_session(
+                total_attempts=7,
+                steps_completed=7,
+                total_steps=7,
+            ),
+            make_session(
+                total_attempts=8,
+                steps_completed=8,
+                total_steps=8,
+            ),
+        ),
+    )
+
+    assert policy.choose_difficulty(topic) == 3
+    recommendation = policy.recommend_next([topic])
+    assert recommendation.metadata[
+        "recent_average_attempts_per_step"
+    ] == 1.0
+    assert recommendation.metadata["adjustment"] == 1
+
+
+def assert_weak_recent_history_decreases_one_level():
+    policy = RuleBasedAdaptivePolicy()
+    weak_session = make_session(
+        total_attempts=4,
+        incorrect_attempts=2,
+        hints_used=2,
+        first_attempt_success=False,
+    )
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=(weak_session, weak_session),
+    )
+
+    assert policy.choose_difficulty(topic) == 1
+
+
+def assert_mixed_recent_history_keeps_base_level():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=(
+            make_session(),
+            make_session(
+                total_attempts=3,
+                incorrect_attempts=1,
+                hints_used=1,
+                first_attempt_success=False,
+            ),
+            make_session(),
+        ),
+    )
+
+    assert policy.choose_difficulty(topic) == 2
+
+
+def assert_supported_bounds_are_respected():
+    policy = RuleBasedAdaptivePolicy()
+    strong = make_topic(
+        "first_order_linear",
+        mastery=0.90,
+        recent_sessions=(
+            make_session(),
+            make_session(),
+        ),
+    )
+    weak = make_topic(
+        "first_order_linear",
+        mastery=0.20,
+        recent_sessions=(
+            make_session(
+                total_attempts=4,
+                incorrect_attempts=2,
+                hints_used=2,
+                first_attempt_success=False,
+            ),
+            make_session(
+                total_attempts=5,
+                incorrect_attempts=3,
+                hints_used=2,
+                first_attempt_success=False,
+            ),
+        ),
+    )
+
+    assert policy.choose_difficulty(strong) == 3
+    assert policy.choose_difficulty(weak) == 1
+
+
+def assert_noncontiguous_supported_levels():
+    policy = RuleBasedAdaptivePolicy()
+    strong = make_topic(
+        "first_order_linear",
+        mastery=0.20,
+        supported_difficulties=(1, 3),
+        recent_sessions=(
+            make_session(),
+            make_session(),
+        ),
+    )
+    weak = make_topic(
+        "first_order_linear",
+        mastery=0.90,
+        supported_difficulties=(1, 3),
+        recent_sessions=(
+            make_session(
+                total_attempts=4,
+                incorrect_attempts=2,
+                hints_used=2,
+                first_attempt_success=False,
+            ),
+            make_session(
+                total_attempts=3,
+                incorrect_attempts=2,
+                hints_used=1,
+                first_attempt_success=False,
+            ),
+        ),
+    )
+    stepped = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        supported_difficulties=(2, 4, 7),
+        recent_sessions=(
+            make_session(),
+            make_session(),
+        ),
+    )
+    weak_stepped = make_topic(
+        "first_order_linear",
+        mastery=0.90,
+        supported_difficulties=(2, 4, 7),
+        recent_sessions=(
+            make_session(
+                total_attempts=4,
+                incorrect_attempts=2,
+                hints_used=2,
+                first_attempt_success=False,
+            ),
+            make_session(
+                total_attempts=3,
+                incorrect_attempts=2,
+                hints_used=1,
+                first_attempt_success=False,
+            ),
+        ),
+    )
+
+    assert policy.choose_difficulty(strong) == 3
+    assert policy.choose_difficulty(weak) == 1
+    assert policy.choose_difficulty(stepped) == 4
+    assert policy.choose_difficulty(weak_stepped) in (
+        2,
+        4,
+        7,
+    )
+    assert policy.choose_difficulty(weak_stepped) == 2
+    assert policy.choose_difficulty(stepped) not in (
+        1,
+        3,
+        5,
+        6,
+    )
+
+
+def assert_topic_ranking_uses_weaker_recent_performance():
+    policy = RuleBasedAdaptivePolicy()
+    recommendation = policy.recommend_next(
+        [
+            make_topic(
+                "separable_equations",
+                mastery=0.50,
+                recent_sessions=(
+                    make_session(),
+                    make_session(),
+                ),
+            ),
+            make_topic(
+                "first_order_linear",
+                mastery=0.50,
+                recent_sessions=(
+                    make_session(
+                        first_attempt_success=False,
+                        incorrect_attempts=1,
+                    ),
+                    make_session(
+                        first_attempt_success=False,
+                        incorrect_attempts=1,
+                    ),
+                ),
+            ),
+        ]
+    )
+
+    assert recommendation.topic == "first_order_linear"
+
+
 def assert_static_topic_has_null_difficulty():
     policy = RuleBasedAdaptivePolicy()
     topic = AdaptiveTopicState(
@@ -155,6 +419,10 @@ def assert_static_topic_has_null_difficulty():
         supported_difficulties=(),
         generation_available=False,
         problem_id="grade4_reverse_reasoning_001",
+        recent_sessions=(
+            make_session(),
+            make_session(),
+        ),
     )
 
     assert policy.choose_difficulty(topic) is None
@@ -164,6 +432,88 @@ def assert_static_topic_has_null_difficulty():
     assert recommendation.topic == "word_problems"
     assert recommendation.difficulty is None
     assert recommendation.generation_available is False
+    assert recommendation.problem_id == (
+        "grade4_reverse_reasoning_001"
+    )
+    assert "difficulty" not in recommendation.reason.lower()
+    assert "increased" not in recommendation.reason
+    assert "reduced" not in recommendation.reason
+
+
+def assert_recommendation_reason_and_metadata():
+    policy = RuleBasedAdaptivePolicy()
+    strong = policy.recommend_next(
+        [
+            make_topic(
+                "first_order_linear",
+                mastery=0.62,
+                recent_sessions=(
+                    make_session(),
+                    make_session(),
+                    make_session(),
+                ),
+            )
+        ]
+    )
+
+    assert "0.62" in strong.reason
+    assert "strong" in strong.reason.lower()
+    assert strong.metadata["recent_session_count"] == 3
+    assert strong.metadata["adjustment"] == 1
+    assert strong.metadata["adjustment_reason"] == (
+        "recent_strong"
+    )
+    assert strong.metadata["base_difficulty"] == 2
+    assert strong.metadata["recommended_difficulty"] == 3
+    assert strong.metadata["supported_difficulties"] == [
+        1,
+        2,
+        3,
+    ]
+
+    weak = policy.recommend_next(
+        [
+            make_topic(
+                "separable_equations",
+                mastery=0.48,
+                recent_sessions=(
+                    make_session(
+                        total_attempts=4,
+                        incorrect_attempts=2,
+                        hints_used=2,
+                        first_attempt_success=False,
+                    ),
+                    make_session(
+                        total_attempts=3,
+                        incorrect_attempts=1,
+                        hints_used=2,
+                        first_attempt_success=False,
+                    ),
+                ),
+            )
+        ]
+    )
+
+    assert "0.48" in weak.reason
+    assert "hints" in weak.reason
+    assert weak.metadata["adjustment"] == -1
+    assert weak.metadata["adjustment_reason"] == (
+        "recent_weak"
+    )
+
+    limited = policy.recommend_next(
+        [
+            make_topic(
+                "separable_equations",
+                mastery=0.48,
+            )
+        ]
+    )
+
+    assert "not yet enough recent history" in limited.reason
+    assert limited.metadata["adjustment_reason"] == (
+        "insufficient_history"
+    )
 
 
 def main():
@@ -172,7 +522,16 @@ def main():
     assert_topic_selection_prefers_lower_mastery()
     assert_topic_selection_tie_breaks_deterministically()
     assert_no_runnable_content_is_safe()
+    assert_insufficient_history_keeps_base_difficulty()
+    assert_strong_recent_history_increases_one_level()
+    assert_clean_multistep_sessions_do_not_look_weak()
+    assert_weak_recent_history_decreases_one_level()
+    assert_mixed_recent_history_keeps_base_level()
+    assert_supported_bounds_are_respected()
+    assert_noncontiguous_supported_levels()
+    assert_topic_ranking_uses_weaker_recent_performance()
     assert_static_topic_has_null_difficulty()
+    assert_recommendation_reason_and_metadata()
 
     print("adaptive_policy tests passed")
 
