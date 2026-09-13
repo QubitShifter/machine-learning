@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AppHeader } from "@/components/AppHeader";
 import "../node_modules/katex/dist/katex.min.css";
 import "../node_modules/mathlive/mathlive-fonts.css";
 import "../node_modules/mathlive/mathlive-static.css";
@@ -18,7 +19,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AppHeader />
+        {children}
+      </body>
     </html>
   );
 }
