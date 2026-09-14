@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
+import { useLanguage } from "@/components/LanguageProvider";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { ProfileSelector } from "@/components/ProfileSelector";
 import {
   HOME_HREF,
@@ -16,6 +18,7 @@ import {
 function HeaderNav() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { t } = useLanguage();
   const progressOpen =
     pathname === "/" && isProgressView(searchParams);
   const loginOpen = pathname === LOGIN_HREF;
@@ -26,24 +29,28 @@ function HeaderNav() {
         <Link className="brand-lockup" href={HOME_HREF}>
           <span className="brand-name">MAT-PAL</span>
           <span className="brand-subtitle">
-            Math &amp; Physics Adaptive Learning
+            {t("brand.subtitle")}
           </span>
         </Link>
 
-        <nav aria-label="Primary" className="app-nav">
-          <Link href={LEARN_HREF}>Learn</Link>
+        <div className="app-header-controls">
+          <ProfileSelector />
+          <LanguageSwitcher />
+        </div>
+
+        <nav aria-label={t("nav.primary")} className="app-nav">
+          <Link href={LEARN_HREF}>{t("nav.learn")}</Link>
           <Link
             aria-current={progressOpen ? "page" : undefined}
             href={PROGRESS_HREF}
           >
-            Progress
+            {t("nav.progress")}
           </Link>
-          <ProfileSelector />
           <Link
             aria-current={loginOpen ? "page" : undefined}
             href={LOGIN_HREF}
           >
-            Log in
+            {t("nav.login")}
           </Link>
         </nav>
       </div>
@@ -59,15 +66,7 @@ export function AppHeader() {
           <div className="app-header-inner">
             <a className="brand-lockup" href={HOME_HREF}>
               <span className="brand-name">MAT-PAL</span>
-              <span className="brand-subtitle">
-                Math &amp; Physics Adaptive Learning
-              </span>
             </a>
-            <nav aria-label="Primary" className="app-nav">
-              <a href={LEARN_HREF}>Learn</a>
-              <a href={PROGRESS_HREF}>Progress</a>
-              <a href={LOGIN_HREF}>Log in</a>
-            </nav>
           </div>
         </header>
       }

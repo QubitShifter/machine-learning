@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { useLanguage } from "@/components/LanguageProvider";
 import type { AnswerEditorProps } from "@/components/answer-input/types";
 
 type MathfieldElement = HTMLElement & {
@@ -16,6 +17,7 @@ export function MathAnswerInput({
   onChange,
   onSubmit,
 }: AnswerEditorProps) {
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement | null>(
     null,
   );
@@ -100,9 +102,7 @@ export function MathAnswerInput({
         mathfieldRef.current = mathfield;
         setEditorReady(true);
       } catch {
-        setLoadError(
-          "The MathLive editor could not be loaded.",
-        );
+        setLoadError("mathlive");
       }
     }
 
@@ -124,6 +124,13 @@ export function MathAnswerInput({
     };
   }, []);
 
+  useEffect(() => {
+    mathfieldRef.current?.setAttribute(
+      "aria-label",
+      t("tutor.mathAria"),
+    );
+  }, [t]);
+
   return (
     <form
       className="answer-form"
@@ -133,7 +140,7 @@ export function MathAnswerInput({
       }}
     >
       <label htmlFor="math-answer">
-        Your answer
+        {t("tutor.yourAnswer")}
       </label>
       <div
         className="math-answer-field"
@@ -143,12 +150,14 @@ export function MathAnswerInput({
 
       {!editorReady && !loadError ? (
         <p className="math-answer-loading">
-          Loading math editor...
+          {t("tutor.mathLoading")}
         </p>
       ) : null}
 
       {loadError ? (
-        <p className="error-message">{loadError}</p>
+        <p className="error-message">
+          {t("tutor.mathLoadError")}
+        </p>
       ) : null}
 
       <div className="math-answer-actions">
@@ -160,14 +169,12 @@ export function MathAnswerInput({
           }
           type="submit"
         >
-          Submit Answer
+          {t("tutor.submit")}
         </button>
       </div>
 
       <p className="input-type-note">
-        Expected input: {expectedInputType}. MAT-PAL
-        will submit the LaTeX string produced by the
-        editor.
+        {t("tutor.expectedMath", { type: expectedInputType })}
       </p>
     </form>
   );

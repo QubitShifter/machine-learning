@@ -1,17 +1,19 @@
+"use client";
+
 import { PlaceholderAnswerInput } from "@/components/answer-input/PlaceholderAnswerInput";
+import { useLanguage } from "@/components/LanguageProvider";
 import type { AnswerEditorProps } from "@/components/answer-input/types";
 
 export function MatrixAnswerInput(
   props: AnswerEditorProps,
 ) {
+  const { t } = useLanguage();
+
   return (
     <PlaceholderAnswerInput
       {...props}
-      description={
-        "A future matrix editor can capture rows and columns " +
-        "and submit them through the shared answer payload."
-      }
-      title="Matrix input editor coming later"
+      description={t("tutor.matrixBody")}
+      title={t("tutor.matrixTitle")}
     />
   );
 }

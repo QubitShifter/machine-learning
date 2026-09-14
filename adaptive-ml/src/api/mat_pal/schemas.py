@@ -20,6 +20,7 @@ class StartSessionRequest(BaseModel):
         examples=["grade4_reverse_reasoning_001"]
     )
     student_id: str = "local_student"
+    language: str = "en"
 
 
 class AnswerRequest(BaseModel):
@@ -116,6 +117,7 @@ class GenerateProblemRequest(BaseModel):
     topic: str
     difficulty: int = 1
     seed: int | None = None
+    language: str = "en"
 
 
 class AdaptiveRecommendationRequest(BaseModel):

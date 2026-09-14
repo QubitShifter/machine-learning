@@ -16,6 +16,7 @@ from src.core.physics.kinematics.problems import (
     build_find_t_steps,
     build_find_v_steps,
     build_v_and_dx_steps,
+    localize_kinematics_problem,
 )
 
 
@@ -34,6 +35,7 @@ def generate_kinematics_problem(
     difficulty: int = 1,
     seed: int | None = None,
     rng: random.Random | None = None,
+    language: str | None = None,
 ) -> KinematicsProblem:
     if difficulty not in {1, 2, 3}:
         raise KinematicsGenerationError(
@@ -47,7 +49,10 @@ def generate_kinematics_problem(
         try:
             problem = _attempt_problem(difficulty, chooser)
             validate_kinematics_problem(problem)
-            return problem
+            return localize_kinematics_problem(
+                problem,
+                language,
+            )
         except ValueError as error:
             last_error = str(error)
 

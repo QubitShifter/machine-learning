@@ -222,4 +222,148 @@ assert(
   "ODE statements without dollars must still segment",
 );
 
+const bulgarianKinematics =
+  "Тяло тръгва от покой и се движи с постоянно ускорение $3\\ \\mathrm{m/s^2}$ в продължение на $4\\ \\mathrm{s}$.";
+const bulgarianSegments = splitInlineMath(
+  bulgarianKinematics,
+);
+
+assert(
+  bulgarianSegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value.includes("постоянно ускорение"),
+  ),
+  "Cyrillic prose around math must stay visible text",
+);
+assert(
+  firstMathValue(bulgarianKinematics) ===
+    "3\\ \\mathrm{m/s^2}",
+  "Bulgarian kinematics statements must still extract math",
+);
+assert(
+  bulgarianSegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value.includes(" в продължение на "),
+  ),
+  "Cyrillic spacing around math must be preserved",
+);
+
+const bulgarianIdentifyPq =
+  "След това определете P(x) и Q(x).";
+const bulgarianIdentifySegments = splitInlineMath(
+  bulgarianIdentifyPq,
+);
+
+assert(
+  isMathOnlyLine(bulgarianIdentifyPq) === false,
+  "Bulgarian P(x) Q(x) suggestion must not be one math line",
+);
+assert(
+  bulgarianIdentifySegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value === "След това определете ",
+  ),
+  "Cyrillic prose before P(x) must keep its trailing space",
+);
+assert(
+  bulgarianIdentifySegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value === " и ",
+  ),
+  "The Cyrillic conjunction around Q(x) must keep both spaces",
+);
+assert(
+  bulgarianIdentifySegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value === ".",
+  ),
+  "The closing period must remain a text segment",
+);
+assert(
+  bulgarianIdentifySegments.filter(
+    (segment) => segment.type === "math",
+  ).map((segment) => segment.value).join(",") ===
+    "P(x),Q(x)",
+  "P(x) and Q(x) must be the only math fragments",
+);
+
+const englishIdentifyPq =
+  "Next, identify P(x) and Q(x).";
+const englishIdentifySegments = splitInlineMath(
+  englishIdentifyPq,
+);
+
+assert(
+  isMathOnlyLine(englishIdentifyPq) === false,
+  "English P(x) Q(x) suggestion must remain mixed content",
+);
+assert(
+  textBeforeFirstMath(englishIdentifyPq) ===
+    "Next, identify ",
+  "English prose before P(x) must keep its trailing space",
+);
+assert(
+  englishIdentifySegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value === " and ",
+  ),
+  "English and between P(x) and Q(x) must keep both spaces",
+);
+
+const bulgarianCompareQ =
+  "Сравнете резултата с Q(x).";
+assert(
+  isMathOnlyLine(bulgarianCompareQ) === false,
+  "Bulgarian compare-with-Q(x) must remain mixed content",
+);
+assert(
+  textBeforeFirstMath(bulgarianCompareQ) ===
+    "Сравнете резултата с ",
+  "Prose before a single Q(x) must keep its trailing space",
+);
+assert(
+  firstMathValue(bulgarianCompareQ) === "Q(x)",
+  "Q(x) must be the inline math fragment",
+);
+
+const bulgarianVelocity =
+  "Скоростта е $v = v_0 + at$.";
+const velocitySegments = splitInlineMath(
+  bulgarianVelocity,
+);
+assert(
+  firstMathValue(bulgarianVelocity) === "v = v_0 + at",
+  "Explicit $...$ inline math must still be extracted",
+);
+assert(
+  velocitySegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value.includes("Скоростта е "),
+  ),
+  "Cyrillic prose before $...$ must keep its trailing space",
+);
+assert(
+  velocitySegments.every(
+    (segment) => !segment.value.includes("$"),
+  ),
+  "Dollar delimiters must not remain after explicit math",
+);
+
+assert(
+  isMathOnlyLine("y' + P(x)y = Q(x)") === true,
+  "Standalone standard-form equation must remain math-only",
+);
+assert(
+  lineUsesMathOnlyRenderer("y' + P(x)y = Q(x)") ===
+    true,
+  "Standalone standard-form equation must use math-only rendering",
+);
+
 console.log("math_content_segmentation tests passed");

@@ -1,4 +1,14 @@
+"use client";
+
+import { useLanguage } from "@/components/LanguageProvider";
+import {
+  catalogDisplayName,
+  localizeRecommendationReason,
+  masteryDisplayLabel,
+  trendDisplayLabel,
+} from "@/i18n";
 import type {
+  AdaptiveRecommendation,
   StudentProgress,
   TopicProgress,
 } from "@/types/tutor";
@@ -31,22 +41,20 @@ function formatRate(
   return `${Math.round(rate * 100)}%`;
 }
 
-function formatRecentTrend(
-  trend: string,
+function readAdjustmentReason(
+  recommendation: AdaptiveRecommendation | undefined,
 ) {
-  if (trend === "strong") {
-    return "Strong";
-  }
+  const reason = recommendation?.metadata.adjustment_reason;
 
-  if (trend === "stable") {
-    return "Stable";
-  }
+  return typeof reason === "string" ? reason : undefined;
+}
 
-  if (trend === "needs_support") {
-    return "Needs support";
-  }
+function readSessionCount(
+  recommendation: AdaptiveRecommendation | undefined,
+) {
+  const count = recommendation?.metadata.recent_session_count;
 
-  return "Not enough history";
+  return typeof count === "number" ? count : undefined;
 }
 
 function TopicProgressCard({
@@ -54,6 +62,13 @@ function TopicProgressCard({
 }: {
   topic: TopicProgress;
 }) {
+  const { locale, t } = useLanguage();
+  const topicName = catalogDisplayName(
+    "topic",
+    topic.topic,
+    topic.topic_name,
+    locale,
+  );
   const masteryPercent = Math.round(
     topic.mastery * 100,
   );
@@ -62,18 +77,34 @@ function TopicProgressCard({
     <article className="progress-topic-card">
       <div>
         <p className="eyebrow">
-          {topic.subject} / {topic.domain}
+          {catalogDisplayName(
+            "subject",
+            topic.subject,
+            topic.subject,
+            locale,
+          )}{" "}
+          /{" "}
+          {catalogDisplayName(
+            "domain",
+            topic.domain,
+            topic.domain,
+            locale,
+          )}
         </p>
-        <h3>{topic.topic_name}</h3>
+        <h3>{topicName}</h3>
         <p>
-          Mastery: {formatMasteryValue(topic.mastery)}{" "}
+          {t("progress.mastery")}:{" "}
+          {formatMasteryValue(topic.mastery)}{" "}
           ({formatMasteryPercent(topic.mastery)},{" "}
-          {topic.mastery_label})
+          {masteryDisplayLabel(topic.mastery_label, locale)})
         </p>
       </div>
 
       <div
-        aria-label={`${topic.topic_name} mastery ${masteryPercent}%`}
+        aria-label={t("progress.masteryAria", {
+          topic: topicName,
+          percent: masteryPercent,
+        })}
         aria-valuemax={100}
         aria-valuemin={0}
         aria-valuenow={masteryPercent}
@@ -89,41 +120,41 @@ function TopicProgressCard({
 
       <dl className="progress-stats">
         <div>
-          <dt>Completed</dt>
+          <dt>{t("progress.completed")}</dt>
           <dd>{topic.questions_completed}</dd>
         </div>
         <div>
-          <dt>First-attempt streak</dt>
+          <dt>{t("progress.streak")}</dt>
           <dd>{topic.first_attempt_streak}</dd>
         </div>
         <div>
-          <dt>Last attempts</dt>
+          <dt>{t("progress.lastAttempts")}</dt>
           <dd>{topic.last_total_attempts}</dd>
         </div>
         <div>
-          <dt>Last incorrect</dt>
+          <dt>{t("progress.lastIncorrect")}</dt>
           <dd>{topic.last_incorrect_attempts}</dd>
         </div>
         <div>
-          <dt>Last hints</dt>
+          <dt>{t("progress.lastHints")}</dt>
           <dd>{topic.last_hints_used}</dd>
         </div>
         <div>
-          <dt>Recommended difficulty</dt>
+          <dt>{t("progress.recommendedDifficulty")}</dt>
           <dd>
-            {topic.recommended_difficulty ?? "N/A"}
+            {topic.recommended_difficulty ?? t("progress.na")}
           </dd>
         </div>
         <div>
-          <dt>Recent trend</dt>
-          <dd>{formatRecentTrend(topic.recent_trend)}</dd>
+          <dt>{t("progress.recentTrend")}</dt>
+          <dd>{trendDisplayLabel(topic.recent_trend, locale)}</dd>
         </div>
         <div>
-          <dt>Recent sessions</dt>
+          <dt>{t("progress.recentSessions")}</dt>
           <dd>{topic.recent_session_count}</dd>
         </div>
         <div>
-          <dt>Recent first-attempt rate</dt>
+          <dt>{t("progress.recentFirstAttempt")}</dt>
           <dd>
             {formatRate(
               topic.recent_first_attempt_success_rate,
@@ -131,15 +162,17 @@ function TopicProgressCard({
           </dd>
         </div>
         <div>
-          <dt>Recent hint rate</dt>
+          <dt>{t("progress.recentHintRate")}</dt>
           <dd>{formatRate(topic.recent_hint_rate)}</dd>
         </div>
       </dl>
 
       <p className="progress-capability">
         {topic.generation_available
-          ? `Adaptive generation available: ${topic.supported_difficulties.join(", ")}`
-          : "Static practice only"}
+          ? t("progress.adaptiveGeneration", {
+              levels: topic.supported_difficulties.join(", "),
+            })
+          : t("progress.staticOnly")}
       </p>
     </article>
   );
@@ -154,21 +187,36 @@ export function ProgressDashboard({
   onPracticeRecommended,
   onRefresh,
 }: ProgressDashboardProps) {
+  const { locale, t } = useLanguage();
   const recommendation = progress?.recommendation;
   const progressTitle = studentName
-    ? `Progress — ${studentName}`
-    : "Progress Dashboard";
+    ? t("progress.titleNamed", { name: studentName })
+    : t("progress.title");
+  const topicName = recommendation?.topic
+    ? catalogDisplayName(
+        "topic",
+        recommendation.topic,
+        recommendation.topic_name ?? recommendation.topic,
+        locale,
+      )
+    : recommendation?.topic_name ?? "";
+  const localizedReason = recommendation
+    ? localizeRecommendationReason(
+        locale,
+        topicName,
+        recommendation.mastery,
+        readAdjustmentReason(recommendation),
+        readSessionCount(recommendation),
+      )
+    : t("progress.noRecommendation");
 
   return (
     <section className="progress-dashboard">
       <div className="dashboard-header">
         <div>
-          <p className="eyebrow">Student progress</p>
+          <p className="eyebrow">{t("progress.eyebrow")}</p>
           <h2>{progressTitle}</h2>
-          <p>
-            Read-only mastery and adaptive practice
-            state for runnable MAT-PAL topics.
-          </p>
+          <p>{t("progress.intro")}</p>
         </div>
         <div className="dashboard-actions">
           <button
@@ -177,7 +225,7 @@ export function ProgressDashboard({
             onClick={onRefresh}
             type="button"
           >
-            Refresh
+            {t("progress.refresh")}
           </button>
           <button
             className="secondary-button"
@@ -185,41 +233,42 @@ export function ProgressDashboard({
             onClick={onBack}
             type="button"
           >
-            Back to Practice
+            {t("progress.back")}
           </button>
         </div>
       </div>
 
       <section className="recommendation-card">
         <p className="eyebrow">
-          Recommended Next Practice
+          {t("progress.recommended")}
         </p>
         {recommendation?.recommendation_available ? (
           <>
-            <h3>{recommendation.topic_name}</h3>
+            <h3>{topicName}</h3>
             <p>
-              Mastery:{" "}
+              {t("progress.mastery")}:{" "}
               {recommendation.mastery === null
-                ? "N/A"
+                ? t("progress.na")
                 : `${formatMasteryValue(recommendation.mastery)} (${formatMasteryPercent(recommendation.mastery)})`}
             </p>
             <p>
-              Recommended difficulty:{" "}
-              {recommendation.difficulty ?? "N/A"}
+              {t("progress.recommendedDifficulty")}:{" "}
+              {recommendation.difficulty ?? t("progress.na")}
             </p>
-            <p>{recommendation.reason}</p>
+            <p>{localizedReason}</p>
             <button
               disabled={loading}
               onClick={onPracticeRecommended}
               type="button"
             >
-              Practice Recommended Topic
+              {t("progress.practiceRecommended")}
             </button>
           </>
         ) : (
           <p>
-            {recommendation?.reason ??
-              "No recommendation is available yet."}
+            {recommendation
+              ? localizedReason
+              : t("progress.noRecommendation")}
           </p>
         )}
       </section>
@@ -233,7 +282,7 @@ export function ProgressDashboard({
             />
           ))
         ) : (
-          <p>No runnable topics are available yet.</p>
+          <p>{t("progress.empty")}</p>
         )}
       </div>
       {errorMessage ? (

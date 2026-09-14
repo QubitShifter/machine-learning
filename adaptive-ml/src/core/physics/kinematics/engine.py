@@ -1,3 +1,5 @@
+from src.core.i18n.kinematics import kt
+from src.core.i18n.locale import normalize_locale
 from src.core.physics.kinematics.checker import (
     evaluate_step,
 )
@@ -71,7 +73,10 @@ class KinematicsTutorEngine:
             return TutorResponse(
                 status="correct",
                 feedback=evaluation["feedback"],
-                suggestion="Good. Let's continue.",
+                suggestion=kt(
+                    self._language(),
+                    "continue",
+                ),
                 current_step=self.index + 1,
                 total_steps=self.problem.total_steps(),
                 completed=False,
@@ -139,9 +144,9 @@ class KinematicsTutorEngine:
         last = self.problem.steps[-1]
         return TutorResponse(
             status="complete",
-            feedback=(
-                "Excellent. You solved the "
-                "kinematics problem."
+            feedback=kt(
+                self._language(),
+                "complete",
             ),
             current_step=self.problem.total_steps(),
             total_steps=self.problem.total_steps(),
@@ -158,6 +163,11 @@ class KinematicsTutorEngine:
                     ),
                 }
             ),
+        )
+
+    def _language(self) -> str:
+        return normalize_locale(
+            self.problem.metadata.get("language")
         )
 
     def _metadata(

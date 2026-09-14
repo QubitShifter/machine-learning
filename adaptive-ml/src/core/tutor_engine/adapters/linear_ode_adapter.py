@@ -3,6 +3,8 @@ import re
 
 import sympy as sp
 
+from src.core.i18n.locale import normalize_locale
+from src.core.i18n.ode import ot
 from src.core.math_input import (
     MathInputError,
     normalize_math_text,
@@ -71,11 +73,14 @@ class LinearODETutorAdapter:
         p_expression,
         q_expression,
         problem_id: str = "linear_first_order_fixed_001",
+        language: str | None = None,
     ):
         self.problem_id = problem_id
+        self.language = normalize_locale(language)
         self.engine = LinearFirstOrderEngine(
             p_expression=p_expression,
             q_expression=q_expression,
+            language=self.language,
         )
         self.solution_session = (
             LinearODESolutionSession()
@@ -84,22 +89,28 @@ class LinearODETutorAdapter:
 
     @property
     def problem_title(self) -> str:
-        return "First-Order Linear ODE"
+        return ot(self.language, "linear.title")
 
     @property
     def problem_statement(self) -> str:
-        return (
-            "Solve "
-            f"dy/dx + ({sp.sstr(self.engine.p_expression)})*y "
+        equation = (
+            "dy/dx + "
+            f"({sp.sstr(self.engine.p_expression)})*y "
             f"= {sp.sstr(self.engine.q_expression)}"
+        )
+        return ot(
+            self.language,
+            "linear.statement",
+            equation=equation,
         )
 
     def get_current_response(self) -> TutorResponse:
         if self.solution_session.is_complete():
             return TutorResponse(
                 status="complete",
-                feedback=(
-                    "Excellent. The linear ODE has been solved."
+                feedback=ot(
+                    self.language,
+                    "linear.complete",
                 ),
                 current_step=TOTAL_LINEAR_ODE_STEPS,
                 total_steps=TOTAL_LINEAR_ODE_STEPS,
@@ -143,6 +154,7 @@ class LinearODETutorAdapter:
                 student_message=submission.answer,
                 stage=stage,
                 p_expression=self.engine.p_expression,
+                language=self.language,
             )
         )
 
@@ -150,9 +162,9 @@ class LinearODETutorAdapter:
             return TutorResponse(
                 status="concept",
                 feedback=concept_response,
-                suggestion=(
-                    "When you're ready, continue with "
-                    "the mathematical step."
+                suggestion=ot(
+                    self.language,
+                    "linear.continue",
                 ),
                 current_step=self._current_step_number(),
                 total_steps=TOTAL_LINEAR_ODE_STEPS,
@@ -191,11 +203,13 @@ class LinearODETutorAdapter:
             if not student_p or not student_q:
                 return TutorResponse(
                     status="incorrect",
-                    feedback=(
-                        "Please identify both P(x) and Q(x)."
+                    feedback=ot(
+                        self.language,
+                        "linear.identify_pq",
                     ),
-                    suggestion=(
-                        "You can write: P = ..., Q = ..."
+                    suggestion=ot(
+                        self.language,
+                        "linear.identify_pq_example",
                     ),
                     current_step=self._current_step_number(),
                     total_steps=TOTAL_LINEAR_ODE_STEPS,
@@ -235,10 +249,9 @@ class LinearODETutorAdapter:
 
         return TutorResponse(
             status="hint",
-            feedback=(
-                "Ask a conceptual question such as "
-                "'why do we use an integrating factor?' "
-                "or use the current prompt as your guide."
+            feedback=ot(
+                self.language,
+                "linear.concept_hint",
             ),
             current_step=self._current_step_number(),
             total_steps=TOTAL_LINEAR_ODE_STEPS,
@@ -264,6 +277,7 @@ class LinearODETutorAdapter:
                         self.engine
                         .get_general_solution()
                     ),
+                    language=self.language,
                 )
             )
 
@@ -276,20 +290,6 @@ class LinearODETutorAdapter:
         verification_stage = (
             verification_engine.get_stage()
         )
-        metadata = self._metadata(
-            extra={
-                "verification_stage": (
-                    verification_stage.value
-                ),
-            }
-        )
-        comparison = self._comparison_metadata(
-            verification_engine=verification_engine,
-            verification_stage=verification_stage,
-        )
-
-        if comparison is not None:
-            metadata["comparison"] = comparison
 
         return TutorResponse(
             status="waiting_for_answer",
@@ -303,7 +303,13 @@ class LinearODETutorAdapter:
             expected_input_type=VERIFICATION_INPUT_TYPES[
                 verification_stage
             ],
-            metadata=metadata,
+            metadata=self._metadata(
+                extra={
+                    "verification_stage": (
+                        verification_stage.value
+                    ),
+                }
+            ),
         )
 
     def _submit_verification(
@@ -385,8 +391,9 @@ class LinearODETutorAdapter:
         except MathInputError as error:
             return TutorResponse(
                 status="incorrect",
-                feedback=(
-                    "I could not understand the mathematical input."
+                feedback=ot(
+                    self.language,
+                    "linear.parse_error",
                 ),
                 suggestion=str(error),
                 current_step=self._current_step_number(),
@@ -530,24 +537,24 @@ class LinearODETutorAdapter:
             verification_stage
             == LinearVerificationStage.DIFFERENTIATE
         ):
-            return (
-                "Differentiate the proposed solution "
-                f"y = {solution} with respect to x."
+            return ot(
+                self.language,
+                "linear.verify.diff",
+                solution=solution,
             )
 
         if (
             verification_stage
             == LinearVerificationStage.SUBSTITUTE
         ):
-            return (
-                "Substitute y and y' into the left-hand "
-                f"side y' + ({p_expression})*y."
+            return ot(
+                self.language,
+                "linear.verify.substitute",
             )
 
-        return (
-            "After substitution, compare the simplified "
-            f"left-hand side with Q(x) = {q_expression}. "
-            "Do they match?"
+        return ot(
+            self.language,
+            "linear.verify.compare",
         )
 
     def _comparison_metadata(
@@ -564,19 +571,29 @@ class LinearODETutorAdapter:
 
         return {
             "kind": "expression_comparison",
-            "title": "Verification comparison",
-            "left_label": (
-                "Simplified left-hand side"
+            "title": ot(
+                self.language,
+                "linear.compare.title",
+            ),
+            "left_label": ot(
+                self.language,
+                "linear.compare.left",
             ),
             "left": sp.sstr(
                 verification_engine
                 .get_expected_lhs()
             ),
-            "right_label": "Right-hand side Q(x)",
+            "right_label": ot(
+                self.language,
+                "linear.compare.right",
+            ),
             "right": sp.sstr(
                 verification_engine.q_expression
             ),
-            "question": "Do they match?",
+            "question": ot(
+                self.language,
+                "linear.compare.question",
+            ),
         }
 
     def _expected_input_type(self) -> str:
@@ -628,6 +645,26 @@ class LinearODETutorAdapter:
                 self.engine.q_expression
             ),
         }
+
+        if (
+            self.solution_session.get_stage()
+            == LinearODEStage.VERIFY_SOLUTION
+        ):
+            verification_engine = (
+                self._ensure_verification_engine()
+            )
+            verification_stage = (
+                verification_engine.get_stage()
+            )
+            metadata["verification_stage"] = (
+                verification_stage.value
+            )
+            comparison = self._comparison_metadata(
+                verification_engine=verification_engine,
+                verification_stage=verification_stage,
+            )
+            if comparison is not None:
+                metadata["comparison"] = comparison
 
         if extra:
             metadata.update(extra)

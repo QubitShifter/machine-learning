@@ -2,9 +2,11 @@
 
 import { FormEvent, useState } from "react";
 
+import { useLanguage } from "@/components/LanguageProvider";
 import { useStudentProfile } from "@/components/StudentProfileProvider";
 
 export function ProfileSelector() {
+  const { t } = useLanguage();
   const {
     profiles,
     selectedStudent,
@@ -24,11 +26,18 @@ export function ProfileSelector() {
     }
   }
 
+  function profileLabel(
+    displayName: string,
+    isGuest?: boolean,
+  ) {
+    return isGuest ? t("profile.guest") : displayName;
+  }
+
   return (
     <div className="profile-selector">
       <label className="profile-select-label">
         <span className="visually-hidden">
-          Student profile
+          {t("profile.select")}
         </span>
         <select
           onChange={(event) =>
@@ -41,7 +50,10 @@ export function ProfileSelector() {
               key={profile.studentId}
               value={profile.studentId}
             >
-              {profile.displayName}
+              {profileLabel(
+                profile.displayName,
+                profile.isGuest,
+              )}
             </option>
           ))}
         </select>
@@ -53,18 +65,20 @@ export function ProfileSelector() {
         >
           <label>
             <span className="visually-hidden">
-              Display name
+              {t("profile.displayName")}
             </span>
             <input
               autoFocus
               onChange={(event) =>
                 setName(event.target.value)
               }
-              placeholder="Display name"
+              placeholder={t("profile.displayName")}
               value={name}
             />
           </label>
-          <button type="submit">Add</button>
+          <button type="submit">
+            {t("profile.addSubmit")}
+          </button>
           <button
             className="secondary-button"
             onClick={() => {
@@ -73,7 +87,7 @@ export function ProfileSelector() {
             }}
             type="button"
           >
-            Cancel
+            {t("profile.cancel")}
           </button>
         </form>
       ) : (
@@ -82,7 +96,7 @@ export function ProfileSelector() {
           onClick={() => setAdding(true)}
           type="button"
         >
-          Add profile
+          {t("profile.add")}
         </button>
       )}
     </div>

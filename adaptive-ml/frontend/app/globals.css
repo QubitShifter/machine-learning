@@ -20,6 +20,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -77,11 +78,53 @@ button:disabled {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem 1.5rem;
-  justify-content: space-between;
+  gap: 0.75rem 1.25rem;
+  justify-content: flex-start;
   margin: 0 auto;
   max-width: 72rem;
+  min-width: 0;
+  overflow-x: hidden;
   padding: 0.85rem 1.25rem;
+}
+
+.app-header-controls {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  min-width: 0;
+}
+
+.language-switcher {
+  align-items: center;
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 0.15rem;
+}
+
+.language-option {
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  min-height: 2.25rem;
+  min-width: 2.5rem;
+  padding: 0.35rem 0.55rem;
+}
+
+.language-option:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--primary);
+}
+
+.language-option-active {
+  color: var(--primary);
+}
+
+.language-divider {
+  color: var(--muted);
+  font-weight: 700;
+  padding: 0 0.1rem;
 }
 
 .brand-lockup {
@@ -106,6 +149,7 @@ button:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem 1.1rem;
+  margin-left: auto;
 }
 
 .app-nav a {
@@ -123,6 +167,7 @@ button:disabled {
 .hero-progress-link:focus-visible,
 .login-local-link:focus-visible,
 .text-button:focus-visible,
+.language-option:focus-visible,
 .profile-selector select:focus-visible,
 .profile-selector button:focus-visible,
 .profile-add-form input:focus-visible {
@@ -1155,10 +1200,16 @@ a.secondary-button:hover {
 
 @media (max-width: 640px) {
   .app-header-inner,
+  .app-header-controls,
   .app-nav,
   .profile-selector,
   .profile-add-form {
     min-width: 0;
+    width: 100%;
+  }
+
+  .app-nav {
+    margin-left: 0;
   }
 
   .profile-selector select,

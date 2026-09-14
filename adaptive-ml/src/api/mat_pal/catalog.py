@@ -77,15 +77,31 @@ def _problem_summary(
 
 def _problem_detail(
     registration: TutorRegistration,
+    language: str = "en",
 ) -> ProblemDetail:
+    from src.core.i18n.locale import normalize_locale
+
+    locale = normalize_locale(language)
+    engine = registration.create_engine(locale)
+    title = getattr(
+        engine,
+        "problem_title",
+        registration.title,
+    )
+    statement = getattr(
+        engine,
+        "problem_statement",
+        registration.problem_statement,
+    )
     summary = _problem_summary(
         registration
     )
+    summary.title = title
 
     return ProblemDetail(
         **summary.model_dump(),
-        problem_text=registration.problem_statement,
-        language=registration.language,
+        problem_text=statement,
+        language=locale,
         skills=list(registration.skills),
         metadata=registration.metadata or {},
     )
@@ -109,6 +125,7 @@ def list_problems() -> list[ProblemSummary]:
 
 def get_problem(
     problem_id: str,
+    language: str = "en",
 ) -> ProblemDetail:
     try:
         registration = DEFAULT_TUTOR_REGISTRY.get(
@@ -132,7 +149,8 @@ def get_problem(
             )
 
     return _problem_detail(
-        registration
+        registration,
+        language=language,
     )
 
 
@@ -142,6 +160,7 @@ def generate_problem(
     topic: str,
     difficulty: int,
     seed: int | None = None,
+    language: str = "en",
 ) -> ProblemDetail:
     registration = (
         DEFAULT_PROBLEM_GENERATOR_REGISTRY
@@ -151,11 +170,15 @@ def generate_problem(
             topic=topic,
             difficulty=difficulty,
             seed=seed,
+            language=language,
         )
     )
     add_generated_problem(registration)
 
-    return _problem_detail(registration)
+    return _problem_detail(
+        registration,
+        language=language,
+    )
 
 
 def _topics_for_domain(

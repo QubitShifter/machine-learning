@@ -1,4 +1,8 @@
+"use client";
+
+import { useLanguage } from "@/components/LanguageProvider";
 import { MathContent } from "@/components/math/MathContent";
+import { catalogDisplayName } from "@/i18n";
 import type {
   CatalogResponse,
   CatalogTopic,
@@ -49,6 +53,7 @@ export function LearningPathSelector({
   onGenerateProblem,
   onStart,
 }: LearningPathSelectorProps) {
+  const { locale, t } = useLanguage();
   const subjects = catalog?.subjects ?? [];
   const domains = domainsForSubject(
     catalog,
@@ -71,15 +76,12 @@ export function LearningPathSelector({
 
   return (
     <section className="start-card" id="learn">
-      <h2>Choose your learning path</h2>
-      <p>
-        Select a subject, then a domain, topic, and
-        problem from the MAT-PAL catalog.
-      </p>
+      <h2>{t("path.title")}</h2>
+      <p>{t("path.description")}</p>
 
       <div className="selector-grid">
         <label>
-          Subject
+          {t("path.subject")}
           <select
             disabled={loading}
             onChange={(event) =>
@@ -88,7 +90,7 @@ export function LearningPathSelector({
             value={selection.subject}
           >
             <option value="">
-              Choose a subject
+              {t("path.chooseSubject")}
             </option>
             {subjects.map((subject) => (
               <option
@@ -98,10 +100,17 @@ export function LearningPathSelector({
                 key={subject.id}
                 value={subject.id}
               >
-                {subject.name}
+                {catalogDisplayName(
+                  "subject",
+                  subject.id,
+                  subject.name,
+                  locale,
+                )}
                 {subject.available_problem_count === 0
-                  ? " — Coming soon"
-                  : ` (${subject.available_problem_count} available)`}
+                  ? t("home.comingSoonSuffix")
+                  : t("home.availableCount", {
+                      count: subject.available_problem_count,
+                    })}
               </option>
             ))}
           </select>
@@ -109,7 +118,7 @@ export function LearningPathSelector({
 
         {selection.subject ? (
           <label>
-            Domain
+            {t("path.domain")}
             <select
               disabled={
                 loading || availableDomains.length === 0
@@ -120,16 +129,22 @@ export function LearningPathSelector({
               value={selection.domain}
             >
               <option value="">
-                Choose a domain
+                {t("path.chooseDomain")}
               </option>
               {availableDomains.map((domain) => (
                 <option
                   key={domain.id}
                   value={domain.id}
                 >
-                  {domain.name} (
-                  {domain.available_problem_count}{" "}
-                  available)
+                  {catalogDisplayName(
+                    "domain",
+                    domain.id,
+                    domain.name,
+                    locale,
+                  )}
+                  {t("home.availableCount", {
+                    count: domain.available_problem_count,
+                  })}
                 </option>
               ))}
               {unavailableDomains.map((domain) => (
@@ -138,7 +153,13 @@ export function LearningPathSelector({
                   key={domain.id}
                   value={domain.id}
                 >
-                  {domain.name} — Coming soon
+                  {catalogDisplayName(
+                    "domain",
+                    domain.id,
+                    domain.name,
+                    locale,
+                  )}
+                  {t("home.comingSoonSuffix")}
                 </option>
               ))}
             </select>
@@ -147,7 +168,7 @@ export function LearningPathSelector({
 
         {selection.domain ? (
           <label>
-            Topic
+            {t("path.topic")}
             <select
               disabled={loading || topics.length === 0}
               onChange={(event) =>
@@ -156,7 +177,7 @@ export function LearningPathSelector({
               value={selection.topic}
             >
               <option value="">
-                Choose a topic
+                {t("path.chooseTopic")}
               </option>
               {topics.length > 0 ? (
                 topics.map((topic) => (
@@ -164,14 +185,20 @@ export function LearningPathSelector({
                     key={topic.id}
                     value={topic.id}
                   >
-                    {topic.name} (
-                    {topic.available_problem_count}{" "}
-                    available)
+                    {catalogDisplayName(
+                      "topic",
+                      topic.id,
+                      topic.name,
+                      locale,
+                    )}
+                    {t("home.availableCount", {
+                      count: topic.available_problem_count,
+                    })}
                   </option>
                 ))
               ) : (
                 <option value="">
-                  No topics available yet
+                  {t("path.noTopics")}
                 </option>
               )}
             </select>
@@ -180,7 +207,7 @@ export function LearningPathSelector({
 
         {selection.topic ? (
           <label>
-            Problem
+            {t("path.problem")}
             <select
               disabled={
                 loading || filteredProblems.length === 0
@@ -191,7 +218,7 @@ export function LearningPathSelector({
               value={selection.problemId}
             >
               <option value="">
-                Choose a problem
+                {t("path.chooseProblem")}
               </option>
               {filteredProblems.length > 0 ? (
                 filteredProblems.map((problem) => (
@@ -199,12 +226,17 @@ export function LearningPathSelector({
                     key={problem.problem_id}
                     value={problem.problem_id}
                   >
-                    {problem.title}
+                    {catalogDisplayName(
+                      "problem",
+                      problem.problem_id,
+                      problem.title,
+                      locale,
+                    )}
                   </option>
                 ))
               ) : (
                 <option value="">
-                  No problems available yet
+                  {t("path.noProblems")}
                 </option>
               )}
             </select>
@@ -213,7 +245,7 @@ export function LearningPathSelector({
 
         {selectedTopicRecord?.generation_available ? (
           <label>
-            Difficulty
+            {t("path.difficulty")}
             <select
               disabled={loading}
               onChange={(event) =>
@@ -240,16 +272,13 @@ export function LearningPathSelector({
 
       {selectedTopicRecord?.generation_available ? (
         <div className="generation-panel">
-          <p>
-            This topic can generate new practice
-            problems at the selected difficulty.
-          </p>
+          <p>{t("path.generateHelp")}</p>
           <button
             disabled={loading}
             onClick={onGenerateProblem}
             type="button"
           >
-            Generate Problem
+            {t("path.generate")}
           </button>
         </div>
       ) : null}
@@ -257,17 +286,42 @@ export function LearningPathSelector({
       {selectedProblem ? (
         <div className="problem-preview">
           <p className="eyebrow">
-            {selectedProblem.subject} /{" "}
-            {selectedProblem.domain} /{" "}
-            {selectedProblem.topic}
+            {catalogDisplayName(
+              "subject",
+              selectedProblem.subject,
+              selectedProblem.subject,
+              locale,
+            )}{" "}
+            /{" "}
+            {catalogDisplayName(
+              "domain",
+              selectedProblem.domain,
+              selectedProblem.domain,
+              locale,
+            )}{" "}
+            /{" "}
+            {catalogDisplayName(
+              "topic",
+              selectedProblem.topic,
+              selectedProblem.topic,
+              locale,
+            )}
           </p>
-          <h3>{selectedProblem.title}</h3>
+          <h3>
+            {catalogDisplayName(
+              "problem",
+              selectedProblem.problem_id,
+              selectedProblem.title,
+              locale,
+            )}
+          </h3>
           <MathContent
             text={selectedProblem.problem_text}
           />
           <span>
-            {selectedProblem.total_steps} tutor
-            steps
+            {t("path.steps", {
+              count: selectedProblem.total_steps,
+            })}
           </span>
         </div>
       ) : null}
@@ -277,9 +331,7 @@ export function LearningPathSelector({
         onClick={onStart}
         type="button"
       >
-        {loading
-          ? "Loading..."
-          : "Start Selected Problem"}
+        {loading ? t("path.loading") : t("path.start")}
       </button>
       {errorMessage ? (
         <p className="error-message">{errorMessage}</p>

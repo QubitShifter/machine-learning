@@ -1,16 +1,11 @@
 import { Suspense } from "react";
 
 import { HomePage } from "@/components/HomePage";
+import { PageLoadingFallback } from "@/components/PageLoadingFallback";
 
 export default function Home() {
   return (
-    <Suspense
-      fallback={
-        <main className="page-shell">
-          <p>Loading MAT-PAL…</p>
-        </main>
-      }
-    >
+    <Suspense fallback={<PageLoadingFallback />}>
       <HomePage />
     </Suspense>
   );

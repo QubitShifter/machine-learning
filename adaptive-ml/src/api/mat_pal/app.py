@@ -131,6 +131,7 @@ def generate_problem(
             topic=request.topic,
             difficulty=request.difficulty,
             seed=request.seed,
+            language=request.language,
         )
 
     except ValueError as error:
@@ -146,10 +147,12 @@ def generate_problem(
 )
 def get_problem(
     problem_id: str,
+    language: str = "en",
 ) -> ProblemDetail:
     try:
         return catalog.get_problem(
-            problem_id
+            problem_id,
+            language=language,
         )
 
     except ValueError as error:
@@ -170,6 +173,7 @@ def start_session(
         return session_store.start_session(
             problem_id=request.problem_id,
             student_id=request.student_id,
+            language=request.language,
         )
 
     except ValueError as error:

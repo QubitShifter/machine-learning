@@ -61,7 +61,7 @@ class TutorRegistration:
     problem_type: str
     total_steps: int
     expected_input_type: ExpectedInputType
-    create_engine: Callable[[], TutorEngine]
+    create_engine: Callable[[str], TutorEngine]
     grade: int | None = None
     language: str = "en"
     skills: tuple[str, ...] = ()
@@ -108,12 +108,15 @@ class TutorRegistry:
     def create_engine(
         self,
         problem_id: str,
+        language: str = "en",
     ) -> TutorEngine:
+        from src.core.i18n.locale import normalize_locale
+
         registration = self.get(
             problem_id
         )
-
-        return registration.create_engine()
+        locale = normalize_locale(language)
+        return registration.create_engine(locale)
 
     def list_registrations(
         self,
@@ -189,11 +192,12 @@ def _register_primary_school_tutors(
                     "unknown": problem.unknown,
                 },
                 create_engine=(
-                    lambda problem_id=problem_id:
+                    lambda language="en", problem_id=problem_id:
                         PrimarySchoolTutorEngine(
                             problem=(
                                 load_reverse_reasoning_problem(
-                                    problem_id
+                                    problem_id,
+                                    language=language,
                                 )
                             )
                         )
@@ -219,7 +223,7 @@ def _register_math_input_probe(
             problem_type="math_input_probe",
             total_steps=1,
             expected_input_type="math",
-            create_engine=MathInputProbeEngine,
+            create_engine=lambda language="en": MathInputProbeEngine(),
             catalog_visible=False,
         )
     )
@@ -247,12 +251,13 @@ def _register_linear_ode_tutors(
             total_steps=8,
             expected_input_type="text",
             create_engine=(
-                lambda: LinearODETutorAdapter(
+                lambda language="en": LinearODETutorAdapter(
                     p_expression=p_expression,
                     q_expression=q_expression,
                     problem_id=(
                         LINEAR_ODE_FIXED_PROBLEM_ID
                     ),
+                    language=language,
                 )
             ),
             catalog_visible=True,
@@ -281,11 +286,12 @@ def _register_separable_ode_tutors(
             total_steps=4,
             expected_input_type="math",
             create_engine=(
-                lambda: SeparableODETutorAdapter(
+                lambda language="en": SeparableODETutorAdapter(
                     rhs_expression=rhs_expression,
                     problem_id=(
                         SEPARABLE_ODE_FIXED_PROBLEM_ID
                     ),
+                    language=language,
                 )
             ),
             catalog_visible=True,
@@ -321,7 +327,9 @@ def _register_kinematics_tutors(
             },
             catalog_visible=True,
             create_engine=(
-                lambda: KinematicsTutorAdapter(problem)
+                lambda language="en": KinematicsTutorAdapter(
+                    language=language,
+                )
             ),
         )
     )

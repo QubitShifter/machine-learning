@@ -9,6 +9,8 @@ from sympy.parsing.sympy_parser import (
     standard_transformations,
 )
 
+from src.core.i18n.ode import ot
+
 ANSI_ESCAPE_RE = re.compile(
     r"\x1b\[[0-?]*[ -/]*[@-~]"
 )
@@ -122,6 +124,7 @@ def evaluate_p_q_identification(
     student_q: str,
     expected_p,
     expected_q,
+    language: str | None = None,
 ) -> dict:
     """
     Validate the student's identification of:
@@ -187,13 +190,13 @@ def evaluate_p_q_identification(
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct. You identified both "
-                "P(x) and Q(x)."
+            "feedback": ot(
+                language,
+                "linear.feedback.pq.correct",
             ),
-            "suggestion": (
-                "Next, use P(x) to construct "
-                "the integrating factor."
+            "suggestion": ot(
+                language,
+                "linear.suggestion.pq.next",
             ),
         }
 
@@ -241,6 +244,7 @@ def evaluate_p_q_identification(
 def evaluate_integrating_factor(
     student_answer: str,
     expected_p,
+    language: str | None = None,
 ) -> dict:
     """
     Validate the integrating factor: mu(x) = exp(integral(P(x)) dx)
@@ -310,12 +314,13 @@ def evaluate_integrating_factor(
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct. You found the integrating factor."
+            "feedback": ot(
+                language,
+                "linear.feedback.mu.correct",
             ),
-            "suggestion": (
-                "Next, multiply every term in the differential "
-                "equation by the integrating factor."
+            "suggestion": ot(
+                language,
+                "linear.suggestion.mu.next",
             ),
         }
 
@@ -336,6 +341,7 @@ def evaluate_multiply_by_integrating_factor(
     student_answer: str,
     expected_p,
     expected_q,
+    language: str | None = None,
 ) -> dict:
     """
     Validate multiplication of the whole ODE
@@ -456,13 +462,13 @@ def evaluate_multiply_by_integrating_factor(
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct. You multiplied every term in the "
-                "differential equation by the integrating factor."
+            "feedback": ot(
+                language,
+                "linear.feedback.multiply.correct",
             ),
-            "suggestion": (
-                "Next, look at the two terms on the left. "
-                "They form the derivative of a product."
+            "suggestion": ot(
+                language,
+                "linear.suggestion.multiply.next",
             ),
         }
 
@@ -509,6 +515,7 @@ def evaluate_product_derivative(
     student_answer: str,
     expected_p,
     expected_q,
+    language: str | None = None,
 ) -> dict:
     """
     Validate recognition that  mu*y' + mu*P*y  is the derivative d/dx(mu*y)
@@ -699,12 +706,13 @@ def evaluate_product_derivative(
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct. The two left-hand terms are "
-                "the derivative of the product mu(x)*y."
+            "feedback": ot(
+                language,
+                "linear.feedback.product.correct",
             ),
-            "suggestion": (
-                "Next, integrate both sides with respect to x."
+            "suggestion": ot(
+                language,
+                "linear.suggestion.product.next",
             ),
         }
 
@@ -751,6 +759,7 @@ def evaluate_linear_integration_step(
     student_answer: str,
     expected_p,
     expected_q,
+    language: str | None = None,
 ) -> dict:
     """
     Validate integration of
@@ -887,13 +896,13 @@ def evaluate_linear_integration_step(
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct. You integrated both sides and included "
-                "the arbitrary constant C."
+            "feedback": ot(
+                language,
+                "linear.feedback.integrate.correct",
             ),
-            "suggestion": (
-                "Next, divide by the integrating factor to "
-                "solve explicitly for y."
+            "suggestion": ot(
+                language,
+                "linear.suggestion.integrate.next",
             ),
         }
 
@@ -963,6 +972,7 @@ def evaluate_linear_solve_for_y(
     student_answer: str,
     expected_p,
     expected_q,
+    language: str | None = None,
 ) -> dict:
     """
     Validate the final general solution obtained from
@@ -1092,13 +1102,13 @@ def evaluate_linear_solve_for_y(
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct. You divided by the integrating factor "
-                "and solved explicitly for y."
+            "feedback": ot(
+                language,
+                "linear.feedback.solve_y.correct",
             ),
-            "suggestion": (
-                "Next, verify the solution by substituting it "
-                "back into the original differential equation."
+            "suggestion": ot(
+                language,
+                "linear.suggestion.solve_y.next",
             ),
         }
 

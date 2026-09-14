@@ -1,9 +1,15 @@
 from src.api.mat_pal import catalog
 from src.api.mat_pal import session_store
+from src.api.mat_pal.problem_generation import (
+    GeneratorRegistration,
+    ProblemGeneratorRegistry,
+)
 from src.api.mat_pal.tutor_registry import (
     LINEAR_ODE_FIXED_PROBLEM_ID,
     MATH_INPUT_PROBE_PROBLEM_ID,
     SEPARABLE_ODE_FIXED_PROBLEM_ID,
+    TutorRegistration,
+    TutorRegistry,
     build_default_tutor_registry,
 )
 from src.core.tutor_engine.adapters import (
@@ -192,6 +198,168 @@ def assert_session_store_starts_primary_school_from_registry():
     assert response.expected_input_type == "text"
 
 
+def _contract_registration(problem_id, create_engine):
+    return TutorRegistration(
+        problem_id=problem_id,
+        title="Factory contract probe",
+        problem_statement="Factory contract probe",
+        subject="mathematics",
+        domain="developer_tools",
+        topic="factory_contract",
+        topic_name="Factory Contract",
+        problem_type="factory_contract",
+        total_steps=1,
+        expected_input_type="text",
+        create_engine=create_engine,
+        catalog_visible=False,
+    )
+
+
+def assert_create_engine_passes_normalized_language():
+    received = []
+
+    def tracking_factory(language="en"):
+        received.append(language)
+        return MathInputProbeEngine()
+
+    registry = TutorRegistry()
+    registry.register(
+        _contract_registration(
+            "factory_language_probe",
+            tracking_factory,
+        )
+    )
+
+    registry.create_engine("factory_language_probe")
+    registry.create_engine(
+        "factory_language_probe",
+        language="bg",
+    )
+    registry.create_engine(
+        "factory_language_probe",
+        language="de",
+    )
+
+    assert received == ["en", "bg", "en"]
+
+
+def assert_internal_typeerror_propagates_once():
+    received = []
+
+    def broken_factory(language="en"):
+        received.append(language)
+        raise TypeError("internal factory bug")
+
+    registry = TutorRegistry()
+    registry.register(
+        _contract_registration(
+            "broken_factory_probe",
+            broken_factory,
+        )
+    )
+
+    try:
+        registry.create_engine("broken_factory_probe")
+    except TypeError as error:
+        assert str(error) == "internal factory bug"
+    else:
+        raise AssertionError(
+            "internal TypeError must propagate"
+        )
+
+    assert received == ["en"]
+
+
+def assert_generator_language_contract():
+    received = []
+
+    def tracking_create(difficulty, seed, language="en"):
+        received.append((difficulty, seed, language))
+        return _contract_registration(
+            "generated_language_probe",
+            lambda language="en": MathInputProbeEngine(),
+        )
+
+    generators = ProblemGeneratorRegistry()
+    generators.register(
+        GeneratorRegistration(
+            subject="mathematics",
+            domain="developer_tools",
+            topic="factory_contract",
+            topic_name="Factory Contract",
+            generator_name="factory_contract",
+            supported_difficulties=(1,),
+            create_problem=tracking_create,
+        )
+    )
+
+    generators.generate(
+        subject="mathematics",
+        domain="developer_tools",
+        topic="factory_contract",
+        difficulty=1,
+    )
+    generators.generate(
+        subject="mathematics",
+        domain="developer_tools",
+        topic="factory_contract",
+        difficulty=1,
+        seed=7,
+        language="bg",
+    )
+    generators.generate(
+        subject="mathematics",
+        domain="developer_tools",
+        topic="factory_contract",
+        difficulty=1,
+        language="zz",
+    )
+
+    assert received == [
+        (1, None, "en"),
+        (1, 7, "bg"),
+        (1, None, "en"),
+    ]
+
+
+def assert_generator_internal_typeerror_propagates_once():
+    received = []
+
+    def broken_create(difficulty, seed, language="en"):
+        received.append((difficulty, seed, language))
+        raise TypeError("internal generator bug")
+
+    generators = ProblemGeneratorRegistry()
+    generators.register(
+        GeneratorRegistration(
+            subject="mathematics",
+            domain="developer_tools",
+            topic="broken_generator",
+            topic_name="Broken Generator",
+            generator_name="broken_generator",
+            supported_difficulties=(1,),
+            create_problem=broken_create,
+        )
+    )
+
+    try:
+        generators.generate(
+            subject="mathematics",
+            domain="developer_tools",
+            topic="broken_generator",
+            difficulty=1,
+            language="bg",
+        )
+    except TypeError as error:
+        assert str(error) == "internal generator bug"
+    else:
+        raise AssertionError(
+            "internal TypeError must propagate"
+        )
+
+    assert received == [(1, None, "bg")]
+
+
 def main():
     assert_primary_school_registration()
     assert_math_probe_registration_preserves_api_path()
@@ -200,6 +368,10 @@ def main():
     assert_unknown_problem_fails_cleanly()
     assert_catalog_uses_visible_registrations_only()
     assert_session_store_starts_primary_school_from_registry()
+    assert_create_engine_passes_normalized_language()
+    assert_internal_typeerror_propagates_once()
+    assert_generator_language_contract()
+    assert_generator_internal_typeerror_propagates_once()
 
     print("tutor_registry tests passed")
 

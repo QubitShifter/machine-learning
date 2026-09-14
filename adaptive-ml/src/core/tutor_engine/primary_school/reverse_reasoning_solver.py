@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+from src.core.i18n.primary_school import (
+    localize_primary_school_problem,
+)
 from src.core.tutor_engine.primary_school.problem_types import (
     PrimarySchoolProblem,
     ProblemType,
@@ -149,6 +152,7 @@ def load_reverse_reasoning_problems(
 def load_reverse_reasoning_problem(
     problem_id: str,
     file_path: Path | None = None,
+    language: str | None = None,
 ) -> PrimarySchoolProblem:
     """
     Load one reverse-reasoning problem by id.
@@ -162,7 +166,10 @@ def load_reverse_reasoning_problem(
 
     for problem in problems:
         if problem.problem_id == problem_id:
-            return problem
+            return localize_primary_school_problem(
+                problem,
+                language,
+            )
 
     raise ValueError(
         f"Problem not found: {problem_id}"

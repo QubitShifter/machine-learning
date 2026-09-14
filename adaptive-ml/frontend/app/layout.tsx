@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AppHeader } from "@/components/AppHeader";
+import { LanguageProvider } from "@/components/LanguageProvider";
 import { StudentProfileProvider } from "@/components/StudentProfileProvider";
 import "../node_modules/katex/dist/katex.min.css";
 import "../node_modules/mathlive/mathlive-fonts.css";
@@ -22,8 +23,10 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <StudentProfileProvider>
-          <AppHeader />
-          {children}
+          <LanguageProvider>
+            <AppHeader />
+            {children}
+          </LanguageProvider>
         </StudentProfileProvider>
       </body>
     </html>

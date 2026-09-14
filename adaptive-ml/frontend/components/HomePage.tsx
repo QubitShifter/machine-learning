@@ -7,6 +7,7 @@ import { useStudentProfile } from "@/components/StudentProfileProvider";
 
 import { HomeHero } from "@/components/HomeHero";
 import { LearningPathSelector } from "@/components/LearningPathSelector";
+import { useLanguage } from "@/components/LanguageProvider";
 import { ProgressDashboard } from "@/components/ProgressDashboard";
 import { SubjectCard } from "@/components/SubjectCard";
 import { TutorCard } from "@/components/TutorCard";
@@ -36,6 +37,12 @@ import {
   selectSubject,
   selectTopic,
 } from "@/lib/learningPath";
+import {
+  DEFAULT_LOCALE,
+  catalogDisplayName,
+  localizeRecommendationReason,
+  translate,
+} from "@/i18n";
 import type {
   LandingEntry,
   LearningPathSelection,
@@ -71,8 +78,10 @@ export function HomePage() {
   const searchParams = useSearchParams();
   const progressRequested = isProgressView(searchParams);
   const { selectedStudent } = useStudentProfile();
+  const { locale, t } = useLanguage();
   const studentId = selectedStudent.studentId;
   const previousStudentId = useRef(studentId);
+  const previousLocale = useRef(locale);
 
   const [catalog, setCatalog] =
     useState<CatalogResponse | null>(null);
@@ -115,6 +124,19 @@ export function HomePage() {
   }, [studentId]);
 
   useEffect(() => {
+    if (previousLocale.current === locale) {
+      return;
+    }
+
+    previousLocale.current = locale;
+    setSession(null);
+    setCurrentPrompt("");
+    setAnswer("");
+    setAdaptiveMessage(null);
+    setErrorMessage(null);
+  }, [locale]);
+
+  useEffect(() => {
     async function loadCatalog() {
       setLoading(true);
       setErrorMessage(null);
@@ -130,9 +152,9 @@ export function HomePage() {
         setProblems(nextProblems);
       } catch (error) {
         setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Could not load the MAT-PAL catalog.",
+            error instanceof Error
+              ? error.message
+              : translate(DEFAULT_LOCALE, "error.catalog"),
         );
       } finally {
         setLoading(false);
@@ -153,6 +175,7 @@ export function HomePage() {
       try {
         const problem = await getProblem(
           selection.problemId,
+          locale,
         );
 
         if (!ignore) {
@@ -164,7 +187,7 @@ export function HomePage() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Could not load the selected problem.",
+              : translate(locale, "error.problem"),
           );
         }
       }
@@ -175,7 +198,7 @@ export function HomePage() {
     return () => {
       ignore = true;
     };
-  }, [selection.problemId]);
+  }, [selection.problemId, locale]);
 
   const visibleProblem =
     selection.problemId &&
@@ -209,7 +232,7 @@ export function HomePage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Something went wrong while contacting MAT-PAL.",
+          : t("error.generic"),
       );
     } finally {
       setLoading(false);
@@ -219,7 +242,7 @@ export function HomePage() {
   function handleStart() {
     if (!selection.problemId || !visibleProblem) {
       setErrorMessage(
-        "Choose an available problem before starting.",
+        t("path.chooseProblemFirst"),
       );
       return;
     }
@@ -229,6 +252,7 @@ export function HomePage() {
         startSession({
           problem_id: selection.problemId,
           student_id: studentId,
+          language: locale,
         }),
       (nextSession) => {
         setCurrentPrompt(nextSession.feedback);
@@ -320,7 +344,7 @@ export function HomePage() {
   async function handleGenerateProblem() {
     if (!selectedTopicRecord?.generation_available) {
       setErrorMessage(
-        "This topic does not support generated problems yet.",
+        t("path.noGeneration"),
       );
       return;
     }
@@ -334,6 +358,7 @@ export function HomePage() {
         domain: selection.domain,
         topic: selection.topic,
         difficulty: selectedDifficulty,
+        language: locale,
       });
 
       setProblems((currentProblems) => [
@@ -352,7 +377,7 @@ export function HomePage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Could not generate a new problem.",
+          : t("error.generate"),
       );
     } finally {
       setLoading(false);
@@ -422,7 +447,34 @@ export function HomePage() {
   async function startRecommendedPractice(
     recommendation: AdaptiveRecommendation,
   ) {
-    setAdaptiveMessage(recommendation.reason);
+    const topicName = recommendation.topic
+      ? catalogDisplayName(
+          "topic",
+          recommendation.topic,
+          recommendation.topic_name ?? recommendation.topic,
+          locale,
+        )
+      : recommendation.topic_name ?? "";
+    const adjustmentReason =
+      typeof recommendation.metadata.adjustment_reason ===
+      "string"
+        ? recommendation.metadata.adjustment_reason
+        : undefined;
+    const sessionCount =
+      typeof recommendation.metadata.recent_session_count ===
+      "number"
+        ? recommendation.metadata.recent_session_count
+        : undefined;
+
+    setAdaptiveMessage(
+      localizeRecommendationReason(
+        locale,
+        topicName,
+        recommendation.mastery,
+        adjustmentReason,
+        sessionCount,
+      ),
+    );
 
     if (!recommendation.recommendation_available) {
       return;
@@ -440,6 +492,7 @@ export function HomePage() {
         domain: recommendation.domain,
         topic: recommendation.topic,
         difficulty: recommendation.difficulty,
+        language: locale,
       });
       setProblems((currentProblems) => [
         ...currentProblems,
@@ -461,6 +514,7 @@ export function HomePage() {
       const nextSession = await startSession({
         problem_id: generated.problem_id,
         student_id: studentId,
+        language: locale,
       });
       setSession(nextSession);
       setCurrentPrompt(nextSession.feedback);
@@ -471,6 +525,7 @@ export function HomePage() {
     if (recommendation.problem_id) {
       const problem = await getProblem(
         recommendation.problem_id,
+        locale,
       );
       setSelection({
         subject: problem.subject,
@@ -483,6 +538,7 @@ export function HomePage() {
       const nextSession = await startSession({
         problem_id: problem.problem_id,
         student_id: studentId,
+        language: locale,
       });
       setSession(nextSession);
       setCurrentPrompt(nextSession.feedback);
@@ -511,7 +567,7 @@ export function HomePage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Could not start adaptive practice.",
+          : t("adaptive.practiceError"),
       );
     } finally {
       setLoading(false);
@@ -531,7 +587,7 @@ export function HomePage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Could not load progress.",
+          : t("progress.loadError"),
       );
     } finally {
       setLoading(false);
@@ -561,7 +617,7 @@ export function HomePage() {
           setErrorMessage(
             error instanceof Error
               ? error.message
-              : "Could not load progress.",
+              : translate(locale, "progress.loadError"),
           );
         }
       }
@@ -572,7 +628,7 @@ export function HomePage() {
     return () => {
       ignore = true;
     };
-  }, [progressRequested, studentId]);
+  }, [progressRequested, studentId, locale]);
 
   async function handlePracticeRecommendedFromDashboard() {
     if (!progress) {
@@ -591,7 +647,7 @@ export function HomePage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Could not start recommended practice.",
+          : t("progress.practiceError"),
       );
     } finally {
       setLoading(false);
@@ -612,7 +668,11 @@ export function HomePage() {
             void loadProgress();
           }}
           progress={progress}
-          studentName={selectedStudent.displayName}
+          studentName={
+            selectedStudent.isGuest
+              ? t("profile.guest")
+              : selectedStudent.displayName
+          }
         />
       ) : session ? (
         <TutorCard
@@ -636,11 +696,12 @@ export function HomePage() {
           />
 
           <section className="subject-section">
-            <h2>Choose where to begin</h2>
+            <h2>{t("home.chooseBegin")}</h2>
             {catalog ? (
               <div className="subject-grid">
                 {landingEntries(catalog).map((entry) => (
                   <SubjectCard
+                    catalog={catalog}
                     entry={entry}
                     key={entry.key}
                     onExplore={enterLearningPath}
@@ -648,7 +709,7 @@ export function HomePage() {
                 ))}
               </div>
             ) : (
-              <p>Loading available subjects from the catalog…</p>
+              <p>{t("home.loadingCatalog")}</p>
             )}
           </section>
 

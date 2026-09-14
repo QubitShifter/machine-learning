@@ -1,3 +1,6 @@
+"use client";
+
+import { useLanguage } from "@/components/LanguageProvider";
 import { MathContent } from "@/components/math/MathContent";
 
 interface FeedbackPanelProps {
@@ -13,10 +16,16 @@ export function FeedbackPanel({
   status,
   errorMessage,
 }: FeedbackPanelProps) {
+  const { t } = useLanguage();
+  const statusKey = `status.${status}`;
+  const statusLabel = t(statusKey);
+
   return (
     <section className="feedback-panel">
       <div className={`status-pill status-${status}`}>
-        {status.replaceAll("_", " ")}
+        {statusLabel === statusKey
+          ? status.replaceAll("_", " ")
+          : statusLabel}
       </div>
 
       {errorMessage ? (
@@ -24,13 +33,13 @@ export function FeedbackPanel({
       ) : null}
 
       <div>
-        <h2>Feedback</h2>
+        <h2>{t("tutor.feedback")}</h2>
         <MathContent text={feedback} />
       </div>
 
       {suggestion ? (
         <div className="suggestion">
-          <h2>Suggestion</h2>
+          <h2>{t("tutor.suggestion")}</h2>
           <MathContent text={suggestion} />
         </div>
       ) : null}

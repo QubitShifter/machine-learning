@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 
 import { EquationShowcase } from "@/components/EquationShowcase";
+import { useLanguage } from "@/components/LanguageProvider";
 import { PROGRESS_HREF } from "@/lib/learningPath";
 
 interface HomeHeroProps {
@@ -10,30 +13,31 @@ interface HomeHeroProps {
 export function HomeHero({
   onStartLearning,
 }: HomeHeroProps) {
+  const { t } = useLanguage();
+
   return (
     <section className="landing-hero">
       <div className="home-hero-copy">
-        <p className="eyebrow">Adaptive STEM tutor</p>
-        <h1>MAT-PAL</h1>
+        <p className="eyebrow">{t("home.hero.eyebrow")}</p>
+        <h1>{t("home.hero.title")}</h1>
         <p className="hero-tagline">
-          Math &amp; Physics Adaptive Learning
+          {t("home.hero.tagline")}
         </p>
         <p className="hero-lead">
-          Learn mathematics and physics with
-          adaptive, step-by-step guidance.
+          {t("home.hero.description")}
         </p>
         <div className="hero-actions">
           <button
             onClick={onStartLearning}
             type="button"
           >
-            Start Learning
+            {t("home.start")}
           </button>
           <Link
             className="secondary-button hero-progress-link"
             href={PROGRESS_HREF}
           >
-            View Progress
+            {t("home.viewProgress")}
           </Link>
         </div>
       </div>

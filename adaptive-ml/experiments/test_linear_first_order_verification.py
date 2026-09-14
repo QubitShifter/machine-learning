@@ -182,10 +182,76 @@ def assert_malformed_derivative_returns_feedback():
     )
 
 
+def reach_compare(language="en"):
+    engine = LinearFirstOrderVerificationEngine(
+        p_expression=2 * x,
+        q_expression=x,
+        solution_expression=(
+            C * sp.exp(-(x**2))
+            + sp.Rational(1, 2)
+        ),
+        language=language,
+    )
+    derivative = engine.evaluate("-2*x*C*exp(-x**2)")
+    assert derivative["correct"]
+    engine.advance()
+    substitution = engine.evaluate("x")
+    assert substitution["correct"]
+    engine.advance()
+    return engine
+
+
+def assert_english_compare_yes_still_works():
+    engine = reach_compare("en")
+    result = engine.evaluate("they match")
+    assert result["correct"] is True
+    assert result["error_type"] is None
+
+
+def assert_bulgarian_compare_yes_no_phrases():
+    yes_answers = (
+        "да",
+        "да, съвпадат",
+        "да съвпадат",
+        "съвпадат",
+        "равни са",
+        "ДА, СЪВПАДАТ!",
+        "те съвпадат",
+        "еднакви са",
+        "да, равни са",
+    )
+    for answer in yes_answers:
+        engine = reach_compare("bg")
+        result = engine.evaluate(answer)
+        assert result["correct"] is True, answer
+
+    no_answers = (
+        "не",
+        "не съвпадат",
+        "не, не съвпадат",
+        "различни са",
+        "не са равни",
+    )
+    for answer in no_answers:
+        engine = reach_compare("bg")
+        result = engine.evaluate(answer)
+        assert result["correct"] is False, answer
+        assert result["error_type"] == "comparison_error"
+
+    unrelated = reach_compare("bg")
+    result = unrelated.evaluate("не знам")
+    assert result["correct"] is False
+    assert "The two expressions are mathematically equal." not in (
+        result["feedback"]
+    )
+
+
 def main():
     assert_stage_8_derivative_inputs_parse()
     assert_existing_ode_stage_inputs_still_parse()
     assert_malformed_derivative_returns_feedback()
+    assert_english_compare_yes_still_works()
+    assert_bulgarian_compare_yes_no_phrases()
 
     print(
         "linear_first_order_verification tests passed"

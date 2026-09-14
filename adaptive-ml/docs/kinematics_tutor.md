@@ -105,6 +105,12 @@ progress state, not hardcoded.
 Student profiles isolate Kinematics progress the same
 way they isolate ODE progress.
 
+Kinematics statements, prompts, hints, and unit feedback
+localize through `src/core/i18n/kinematics.py`. Session
+and generated-problem requests pass `language`. Math
+values, SI symbols, and expected answers stay the same
+across locales.
+
 ## Current Limitations
 
 - 1D motion only
@@ -124,5 +130,4 @@ way they isolate ODE progress.
 - momentum
 - rotational mechanics
 
-Deferred to Phase 22 — Internationalization & Bulgarian
-Language Support
+Deferred to later Physics phases.

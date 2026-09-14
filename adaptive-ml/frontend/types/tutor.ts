@@ -34,6 +34,7 @@ export interface TutorSession {
 export interface StartSessionRequest {
   problem_id: string;
   student_id?: string;
+  language?: "en" | "bg";
 }
 
 export interface AnswerRequest {
@@ -98,6 +99,7 @@ export interface GenerateProblemRequest {
   topic: string;
   difficulty: number;
   seed?: number;
+  language?: "en" | "bg";
 }
 
 export interface AdaptiveRecommendationRequest {

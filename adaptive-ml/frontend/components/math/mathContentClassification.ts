@@ -27,7 +27,7 @@ export function convertPlusMinus(
 export function ordinaryLanguageWords(
   line: string,
 ) {
-  const tokens = line.match(/\b[A-Za-z]+\b/g) ?? [];
+  const tokens = line.match(/\p{L}+/gu) ?? [];
 
   return tokens.filter((token) => {
     if (token.length === 1) {
@@ -43,7 +43,15 @@ export function ordinaryLanguageWords(
 export function looksLikeEnglishProse(
   line: string,
 ) {
-  return ordinaryLanguageWords(line).length >= 2;
+  const words = ordinaryLanguageWords(line);
+
+  if (words.length >= 2) {
+    return true;
+  }
+
+  return words.some(
+    (word) => !/^[A-Za-z]+$/.test(word),
+  );
 }
 
 export function isMathOnlyLine(

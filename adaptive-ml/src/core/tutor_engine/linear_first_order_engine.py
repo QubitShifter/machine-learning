@@ -1,5 +1,11 @@
 import sympy as sp
 
+from src.core.i18n.concept import (
+    CANONICAL_YES,
+    normalize_concept_answer,
+)
+from src.core.i18n.locale import normalize_locale
+from src.core.i18n.ode import ot
 from src.core.tutor_engine.linear_first_order_session import (
     LinearODEStage,
 )
@@ -36,7 +42,9 @@ class LinearFirstOrderEngine:
         self,
         p_expression,
         q_expression,
+        language: str | None = None,
     ):
+        self.language = normalize_locale(language)
         self.p_expression = sp.sympify(
             p_expression
         )
@@ -100,36 +108,37 @@ class LinearFirstOrderEngine:
 
         titles = {
             LinearODEStage.IDENTIFY_STANDARD_FORM:
-                "Stage 1 — Recognize the linear form",
+                "linear.title.stage.identify_form",
 
             LinearODEStage.IDENTIFY_P_Q:
-                "Stage 2 — Identify P(x) and Q(x)",
+                "linear.title.stage.identify_pq",
 
             LinearODEStage.FIND_INTEGRATING_FACTOR:
-                "Stage 3 — Find the integrating factor",
+                "linear.title.stage.mu",
 
             LinearODEStage.MULTIPLY_BY_INTEGRATING_FACTOR:
-                "Stage 4 — Multiply by the integrating factor",
+                "linear.title.stage.multiply",
 
             LinearODEStage.RECOGNIZE_PRODUCT_DERIVATIVE:
-                "Stage 5 — Recognize the product derivative",
+                "linear.title.stage.product",
 
             LinearODEStage.INTEGRATE_BOTH_SIDES:
-                "Stage 6 — Integrate both sides",
+                "linear.title.stage.integrate",
 
             LinearODEStage.SOLVE_FOR_Y:
-                "Stage 7 — Solve for y",
+                "linear.title.stage.solve_y",
 
             LinearODEStage.VERIFY_SOLUTION:
-                "Stage 8 — Verify the solution",
+                "linear.title.stage.verify",
 
             LinearODEStage.COMPLETE:
-                "Complete",
+                "linear.title.stage.complete",
         }
 
-        return titles[
-            stage
-        ]
+        return ot(
+            self.language,
+            titles[stage],
+        )
 
     def get_stage_prompt(
         self,
@@ -161,66 +170,57 @@ class LinearFirstOrderEngine:
         )
 
         prompts = {
-            LinearODEStage.IDENTIFY_STANDARD_FORM: (
-                "A first-order linear ODE has the standard form:\n\n"
-                "    y' + P(x)y = Q(x)\n\n"
-                "Is the current equation already in this form?"
+            LinearODEStage.IDENTIFY_STANDARD_FORM: ot(
+                self.language,
+                "linear.stage.identify_form",
             ),
 
-            LinearODEStage.IDENTIFY_P_Q: (
-                "Compare the equation with:\n\n"
-                "    y' + P(x)y = Q(x)\n\n"
-                "Identify P(x) and Q(x)."
+            LinearODEStage.IDENTIFY_P_Q: ot(
+                self.language,
+                "linear.stage.identify_pq",
             ),
 
-            LinearODEStage.FIND_INTEGRATING_FACTOR: (
-                f"We have:\n\n"
-                f"    P(x) = {P}\n\n"
-                "Use:\n\n"
-                "    mu(x) = exp(integral(P(x)) dx)\n\n"
-                f"Here integral(P(x)) dx = {integrated_p}\n\n"
-                "Find mu(x)."
+            LinearODEStage.FIND_INTEGRATING_FACTOR: ot(
+                self.language,
+                "linear.stage.mu",
+                P=P,
+                integrated_p=integrated_p,
             ),
 
-            LinearODEStage.MULTIPLY_BY_INTEGRATING_FACTOR: (
-                f"The integrating factor is:\n\n"
-                f"    mu(x) = {mu}\n\n"
-                "Multiply EVERY term of\n\n"
-                f"    y' + ({P})*y = {Q}\n\n"
-                "by the integrating factor."
+            LinearODEStage.MULTIPLY_BY_INTEGRATING_FACTOR: ot(
+                self.language,
+                "linear.stage.multiply",
+                mu=mu,
+                P=P,
+                Q=Q,
             ),
 
-            LinearODEStage.RECOGNIZE_PRODUCT_DERIVATIVE: (
-                "The left-hand side now has the form:\n\n"
-                "    mu*y' + mu*P(x)*y\n\n"
-                "Use the product rule backward and rewrite "
-                "the complete equation using:\n\n"
-                "    d/dx(mu*y)"
+            LinearODEStage.RECOGNIZE_PRODUCT_DERIVATIVE: ot(
+                self.language,
+                "linear.stage.product",
             ),
 
-            LinearODEStage.INTEGRATE_BOTH_SIDES: (
-                "We now have the derivative of a product.\n\n"
-                "Integrate both sides with respect to x.\n\n"
-                f"The right-hand integrand is:\n"
-                f"    {integrand}\n\n"
-                "Remember the arbitrary constant C."
+            LinearODEStage.INTEGRATE_BOTH_SIDES: ot(
+                self.language,
+                "linear.stage.integrate",
+                integrand=integrand,
             ),
 
-            LinearODEStage.SOLVE_FOR_Y: (
-                "After integration we have:\n\n"
-                f"    ({mu})*y = "
-                f"{antiderivative} + C\n\n"
-                "Divide by the integrating factor "
-                "and solve explicitly for y."
+            LinearODEStage.SOLVE_FOR_Y: ot(
+                self.language,
+                "linear.stage.solve_y",
+                mu=mu,
+                antiderivative=antiderivative,
             ),
 
-            LinearODEStage.VERIFY_SOLUTION: (
-                "Verify that the proposed solution satisfies "
-                "the original differential equation."
+            LinearODEStage.VERIFY_SOLUTION: ot(
+                self.language,
+                "linear.stage.verify",
             ),
 
-            LinearODEStage.COMPLETE: (
-                "The linear ODE has been solved."
+            LinearODEStage.COMPLETE: ot(
+                self.language,
+                "linear.stage.complete",
             ),
         }
 
@@ -246,6 +246,7 @@ class LinearFirstOrderEngine:
                     student_message=student_answer,
                     stage=stage,
                     p_expression=self.p_expression,
+                    language=self.language,
                 )
             )
 
@@ -256,9 +257,9 @@ class LinearFirstOrderEngine:
                     "advance": False,
                     "error_type": None,
                     "feedback": concept_response,
-                    "suggestion": (
-                        "When you're ready, continue with "
-                        "the mathematical step."
+                    "suggestion": ot(
+                        self.language,
+                        "linear.continue",
                     ),
                 }
 
@@ -273,12 +274,14 @@ class LinearFirstOrderEngine:
                 student_q=student_q,
                 expected_p=self.p_expression,
                 expected_q=self.q_expression,
+                language=self.language,
             )
 
         if stage == LinearODEStage.FIND_INTEGRATING_FACTOR:
             return evaluate_integrating_factor(
                 student_answer=student_answer,
                 expected_p=self.p_expression,
+                language=self.language,
             )
 
         if stage == LinearODEStage.MULTIPLY_BY_INTEGRATING_FACTOR:
@@ -286,6 +289,7 @@ class LinearFirstOrderEngine:
                 student_answer=student_answer,
                 expected_p=self.p_expression,
                 expected_q=self.q_expression,
+                language=self.language,
             )
 
         if stage == LinearODEStage.RECOGNIZE_PRODUCT_DERIVATIVE:
@@ -293,6 +297,7 @@ class LinearFirstOrderEngine:
                 student_answer=student_answer,
                 expected_p=self.p_expression,
                 expected_q=self.q_expression,
+                language=self.language,
             )
 
         if stage == LinearODEStage.INTEGRATE_BOTH_SIDES:
@@ -300,6 +305,7 @@ class LinearFirstOrderEngine:
                 student_answer=student_answer,
                 expected_p=self.p_expression,
                 expected_q=self.q_expression,
+                language=self.language,
             )
 
         if stage == LinearODEStage.SOLVE_FOR_Y:
@@ -307,6 +313,7 @@ class LinearFirstOrderEngine:
                 student_answer=student_answer,
                 expected_p=self.p_expression,
                 expected_q=self.q_expression,
+                language=self.language,
             )
 
         if stage == LinearODEStage.VERIFY_SOLUTION:
@@ -342,52 +349,45 @@ class LinearFirstOrderEngine:
             return {
                 "correct": False,
                 "error_type": "missing_answer",
-                "feedback": (
-                    "Please answer whether the equation is "
-                    "already in standard linear form."
+                "feedback": ot(
+                    self.language,
+                    "linear.feedback.standard_form.missing",
                 ),
-                "suggestion": (
-                    "Compare it with y' + P(x)y = Q(x)."
+                "suggestion": ot(
+                    self.language,
+                    "linear.suggestion.standard_form.compare",
                 ),
             }
 
-        answer = (
-            student_answer
-            .strip()
-            .lower()
-        )
-
-        positive_answers = {
-            "yes",
-            "y",
-            "true",
-            "correct",
-            "it is",
-            "yes it is",
-        }
-
-        if answer in positive_answers:
+        if (
+            normalize_concept_answer(
+                student_answer,
+                self.language,
+            )
+            == CANONICAL_YES
+        ):
             return {
                 "correct": True,
                 "error_type": None,
-                "feedback": (
-                    "Correct. The equation is already written "
-                    "in first-order linear standard form."
+                "feedback": ot(
+                    self.language,
+                    "linear.feedback.standard_form.correct",
                 ),
-                "suggestion": (
-                    "Next, identify P(x) and Q(x)."
+                "suggestion": ot(
+                    self.language,
+                    "linear.suggestion.identify_pq",
                 ),
             }
 
         return {
             "correct": False,
             "error_type": "standard_form_not_recognized",
-            "feedback": (
-                "This equation is already in first-order "
-                "linear standard form."
+            "feedback": ot(
+                self.language,
+                "linear.feedback.standard_form.incorrect",
             ),
-            "suggestion": (
-                "Compare it directly with "
-                "y' + P(x)y = Q(x)."
+            "suggestion": ot(
+                self.language,
+                "linear.suggestion.standard_form.compare_direct",
             ),
         }

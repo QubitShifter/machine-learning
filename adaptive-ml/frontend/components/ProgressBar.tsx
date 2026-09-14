@@ -1,3 +1,7 @@
+"use client";
+
+import { useLanguage } from "@/components/LanguageProvider";
+
 interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
@@ -9,6 +13,7 @@ export function ProgressBar({
   totalSteps,
   completed,
 }: ProgressBarProps) {
+  const { t } = useLanguage();
   const completedSteps = completed
     ? totalSteps
     : Math.max(0, currentStep - 1);
@@ -21,12 +26,17 @@ export function ProgressBar({
     <div className="progress">
       <div className="progress-label">
         <span>
-          Step {currentStep} of {totalSteps}
+          {t("tutor.stepOf", {
+            current: currentStep,
+            total: totalSteps,
+          })}
         </span>
-        <span>{progress}% complete</span>
+        <span>
+          {t("tutor.percentComplete", { percent: progress })}
+        </span>
       </div>
       <div
-        aria-label="Tutor progress"
+        aria-label={t("tutor.progressAria")}
         aria-valuemax={100}
         aria-valuemin={0}
         aria-valuenow={progress}

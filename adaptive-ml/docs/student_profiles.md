@@ -60,6 +60,9 @@ Scoped today:
 
 Catalog and problem endpoints stay identity-free.
 
+Language (`matpal_locale`) is a separate browser preference.
+It does not identify a student and is not stored in progress.
+
 ## Progress Storage
 
 Legacy files keep a root `skills` object. That record belongs

@@ -14,9 +14,14 @@ def normalize_student_answer(
     )
 
 
+from src.core.i18n.locale import normalize_locale
+from src.core.i18n.primary_school import pst
+
+
 def evaluate_step_answer(
     student_answer: str,
     expected_answer,
+    language: str | None = None,
 ) -> dict:
     """
     Check a student's answer for one solution step.
@@ -25,6 +30,7 @@ def evaluate_step_answer(
     simple integers or numeric values.
     """
 
+    locale = normalize_locale(language)
     answer_text = normalize_student_answer(
         student_answer
     )
@@ -33,9 +39,7 @@ def evaluate_step_answer(
         return {
             "correct": False,
             "error_type": "empty_answer",
-            "feedback": (
-                "Please enter an answer."
-            ),
+            "feedback": pst(locale, "empty_answer"),
         }
 
     try:
@@ -47,9 +51,7 @@ def evaluate_step_answer(
         return {
             "correct": False,
             "error_type": "not_numeric",
-            "feedback": (
-                "I could not understand that as a number."
-            ),
+            "feedback": pst(locale, "not_numeric"),
         }
 
     try:
@@ -64,24 +66,18 @@ def evaluate_step_answer(
         return {
             "correct": False,
             "error_type": "invalid_expected_answer",
-            "feedback": (
-                "The tutor could not validate this step."
-            ),
+            "feedback": pst(locale, "invalid_expected"),
         }
 
     if student_value == expected_value:
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct."
-            ),
+            "feedback": pst(locale, "correct"),
         }
 
     return {
         "correct": False,
         "error_type": "incorrect_answer",
-        "feedback": (
-            "That is not the correct answer yet."
-        ),
+            "feedback": pst(locale, "incorrect"),
     }

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from uuid import uuid4
 
+from src.core.i18n.locale import normalize_locale
 from src.api.mat_pal import adaptive_service
 from src.core.student_model.progress_store import (
     DEFAULT_STUDENT_ID,
@@ -75,13 +76,16 @@ def _to_session_response(
 def start_session(
     problem_id: str,
     student_id: str = DEFAULT_STUDENT_ID,
+    language: str = "en",
 ) -> SessionResponse:
+    locale = normalize_locale(language)
     try:
         registration = DEFAULT_TUTOR_REGISTRY.get(
             problem_id
         )
         engine = DEFAULT_TUTOR_REGISTRY.create_engine(
-            problem_id
+            problem_id,
+            language=locale,
         )
 
     except ValueError:
@@ -92,8 +96,18 @@ def start_session(
         if registration is None:
             raise
 
-        engine = registration.create_engine()
+        engine = registration.create_engine(locale)
     initial_response = engine.get_current_response()
+    problem_title = getattr(
+        engine,
+        "problem_title",
+        registration.title,
+    )
+    problem_statement = getattr(
+        engine,
+        "problem_statement",
+        registration.problem_statement,
+    )
 
     session_id = str(
         uuid4()
@@ -101,10 +115,8 @@ def start_session(
     stored_session = StoredSession(
         session_id=session_id,
         problem_id=problem_id,
-        problem_title=registration.title,
-        problem_statement=(
-            registration.problem_statement
-        ),
+        problem_title=problem_title,
+        problem_statement=problem_statement,
         engine=engine,
         last_response=initial_response,
         registration=registration,

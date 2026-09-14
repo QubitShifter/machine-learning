@@ -1,3 +1,5 @@
+from src.core.i18n.kinematics import kt
+from src.core.i18n.locale import normalize_locale
 from src.core.physics.kinematics.models import (
     KinematicsProblem,
     KinematicsQuantities,
@@ -49,7 +51,14 @@ def summary_step(prompt: str, hint: str) -> KinematicsStep:
     )
 
 
-def load_fixed_kinematics_problem() -> KinematicsProblem:
+def _lang(language: str | None) -> str:
+    return normalize_locale(language)
+
+
+def load_fixed_kinematics_problem(
+    language: str | None = None,
+) -> KinematicsProblem:
+    locale = _lang(language)
     quantities = KinematicsQuantities(
         v0=0.0,
         v=12.0,
@@ -59,225 +68,308 @@ def load_fixed_kinematics_problem() -> KinematicsProblem:
     )
     return KinematicsProblem(
         problem_id=KINEMATICS_FIXED_PROBLEM_ID,
-        title="Car accelerating from rest",
-        statement=(
-            "A car starts from rest and accelerates "
-            "uniformly at $3\\ \\mathrm{m/s^2}$ for "
-            "$4\\ \\mathrm{s}$.\n\n"
-            "Find:\n"
-            "1. the final velocity\n"
-            "2. the distance traveled"
-        ),
+        title=kt(locale, "title.fixed"),
+        statement=kt(locale, "statement.fixed"),
         difficulty=2,
         quantities=quantities,
         unknown="v_and_dx",
-        steps=build_v_and_dx_steps(quantities),
+        steps=build_v_and_dx_steps(quantities, locale),
         metadata={
             "generated": False,
             "subject": "physics",
             "domain": "classical_mechanics",
             "topic": "kinematics",
+            "language": locale,
+            "variant": "fixed",
         },
     )
 
 
 def build_v_and_dx_steps(
     quantities: KinematicsQuantities,
+    language: str | None = None,
 ) -> tuple[KinematicsStep, ...]:
+    locale = _lang(language)
     return (
         quantity_step(
             "v0",
-            "Identify the initial velocity $v_0$.",
-            "Read the starting velocity. Rest means $v_0 = 0$.",
+            kt(locale, "step.identify_v0"),
+            kt(locale, "hint.identify_v0_rest"),
         ),
         quantity_step(
             "a",
-            "Identify the acceleration $a$.",
-            "Acceleration is the given constant rate "
-            "of change of velocity.",
+            kt(locale, "step.identify_a"),
+            kt(locale, "hint.identify_a"),
         ),
         quantity_step(
             "t",
-            "Identify the elapsed time $t$.",
-            "Use the time interval stated in the problem.",
+            kt(locale, "step.identify_t"),
+            kt(locale, "hint.identify_t"),
         ),
         formula_step(
             "velocity",
-            "Choose the equation for final velocity "
-            "when acceleration is constant.",
-            "Which equation connects initial velocity, "
-            "acceleration, and time directly?",
+            kt(locale, "step.formula_velocity_long"),
+            kt(locale, "hint.formula_velocity_long"),
         ),
         quantity_step(
             "v",
-            "Calculate the final velocity $v$.",
-            "Substitute the known $v_0$, $a$, and $t$ "
-            "into $v = v_0 + at$.",
+            kt(locale, "step.calculate_v"),
+            kt(locale, "hint.calculate_v"),
         ),
         formula_step(
             "displacement",
-            "Choose the equation for displacement "
-            "when $v_0$, $a$, and $t$ are known.",
-            "Since acceleration is constant and time "
-            "is known, use the equation containing "
-            "$v_0$, $a$, and $t$.",
+            kt(locale, "step.formula_displacement_long"),
+            kt(locale, "hint.formula_displacement_long"),
         ),
         quantity_step(
             "dx",
-            "Calculate the displacement $\\Delta x$.",
-            "Substitute into "
-            "$\\Delta x = v_0 t + \\frac{1}{2} a t^2$.",
+            kt(locale, "step.calculate_dx"),
+            kt(locale, "hint.calculate_dx"),
         ),
         summary_step(
-            "State the final velocity and the "
-            "distance traveled, including SI units.",
-            "Report both $v$ and $\\Delta x$ with units.",
+            kt(locale, "step.summary_v_dx"),
+            kt(locale, "hint.summary_v_dx"),
         ),
     )
 
 
 def build_find_v_steps(
     quantities: KinematicsQuantities,
+    language: str | None = None,
 ) -> tuple[KinematicsStep, ...]:
+    locale = _lang(language)
     return (
         quantity_step(
             "v0",
-            "Identify the initial velocity $v_0$.",
-            "Read $v_0$ from the problem statement.",
+            kt(locale, "step.identify_v0"),
+            kt(locale, "hint.identify_v0"),
         ),
         quantity_step(
             "a",
-            "Identify the acceleration $a$.",
-            "Acceleration is given and constant.",
+            kt(locale, "step.identify_a"),
+            kt(locale, "hint.identify_a_short"),
         ),
         quantity_step(
             "t",
-            "Identify the elapsed time $t$.",
-            "Use the given time interval.",
+            kt(locale, "step.identify_t"),
+            kt(locale, "hint.identify_t_short"),
         ),
         formula_step(
             "velocity",
-            "Choose the equation for final velocity.",
-            "Which equation connects $v_0$, $a$, and $t$?",
+            kt(locale, "step.formula_velocity"),
+            kt(locale, "hint.formula_velocity"),
         ),
         quantity_step(
             "v",
-            "Calculate the final velocity $v$.",
-            "Substitute the known values into "
-            "$v = v_0 + at$.",
+            kt(locale, "step.calculate_v"),
+            kt(locale, "hint.calculate_v_short"),
         ),
         summary_step(
-            "State the final velocity with its SI unit.",
-            "Include both the number and m/s.",
+            kt(locale, "step.summary_v"),
+            kt(locale, "hint.summary_v"),
         ),
     )
 
 
 def build_constant_velocity_steps(
     quantities: KinematicsQuantities,
+    language: str | None = None,
 ) -> tuple[KinematicsStep, ...]:
+    locale = _lang(language)
     return (
         quantity_step(
             "v",
-            "Identify the constant velocity $v$.",
-            "Speed does not change in this problem.",
+            kt(locale, "step.identify_v_const"),
+            kt(locale, "hint.identify_v_const"),
         ),
         quantity_step(
             "t",
-            "Identify the elapsed time $t$.",
-            "Use the given time interval.",
+            kt(locale, "step.identify_t"),
+            kt(locale, "hint.identify_t_short"),
         ),
         formula_step(
             "constant_velocity",
-            "Choose the displacement equation for "
-            "constant velocity.",
-            "With $a = 0$, displacement is velocity "
-            "times time.",
+            kt(locale, "step.formula_const_v"),
+            kt(locale, "hint.formula_const_v"),
         ),
         quantity_step(
             "dx",
-            "Calculate the displacement $\\Delta x$.",
-            "Use $\\Delta x = v t$.",
+            kt(locale, "step.calculate_dx"),
+            kt(locale, "hint.calculate_dx_vt"),
         ),
         summary_step(
-            "State the displacement with its SI unit.",
-            "Include both the number and m.",
+            kt(locale, "step.summary_dx"),
+            kt(locale, "hint.summary_dx"),
         ),
     )
 
 
 def build_find_t_steps(
     quantities: KinematicsQuantities,
+    language: str | None = None,
 ) -> tuple[KinematicsStep, ...]:
+    locale = _lang(language)
     return (
         quantity_step(
             "v0",
-            "Identify the initial velocity $v_0$.",
-            "Read $v_0$ from the problem statement.",
+            kt(locale, "step.identify_v0"),
+            kt(locale, "hint.identify_v0"),
         ),
         quantity_step(
             "v",
-            "Identify the final velocity $v$.",
-            "Read the later velocity from the statement.",
+            kt(locale, "step.identify_v"),
+            kt(locale, "hint.identify_v"),
         ),
         quantity_step(
             "a",
-            "Identify the acceleration $a$.",
-            "Pay attention to the sign of acceleration.",
+            kt(locale, "step.identify_a"),
+            kt(locale, "hint.identify_a_sign"),
         ),
         formula_step(
             "time",
-            "Choose the equation that finds $t$ "
-            "from $v$, $v_0$, and $a$.",
-            "Rearrange $v = v_0 + at$ to solve for time.",
+            kt(locale, "step.formula_time"),
+            kt(locale, "hint.formula_time"),
         ),
         quantity_step(
             "t",
-            "Calculate the elapsed time $t$.",
-            "Use $t = (v - v_0)/a$. Time must be positive.",
+            kt(locale, "step.calculate_t"),
+            kt(locale, "hint.calculate_t"),
         ),
         summary_step(
-            "State the elapsed time with its SI unit.",
-            "Include both the number and s.",
+            kt(locale, "step.summary_t"),
+            kt(locale, "hint.summary_t"),
         ),
     )
 
 
 def build_find_dx_from_velocities_steps(
     quantities: KinematicsQuantities,
+    language: str | None = None,
 ) -> tuple[KinematicsStep, ...]:
+    locale = _lang(language)
     return (
         quantity_step(
             "v0",
-            "Identify the initial velocity $v_0$.",
-            "Read $v_0$ from the problem statement.",
+            kt(locale, "step.identify_v0"),
+            kt(locale, "hint.identify_v0"),
         ),
         quantity_step(
             "v",
-            "Identify the final velocity $v$.",
-            "Read the later velocity from the statement.",
+            kt(locale, "step.identify_v"),
+            kt(locale, "hint.identify_v"),
         ),
         quantity_step(
             "a",
-            "Identify the acceleration $a$.",
-            "Pay attention to the sign of acceleration.",
+            kt(locale, "step.identify_a"),
+            kt(locale, "hint.identify_a_sign"),
         ),
         formula_step(
             "velocity_sq",
-            "Choose an equation for $\\Delta x$ that "
-            "does not require time.",
-            "Use $v^2 = v_0^2 + 2 a \\Delta x$ when "
-            "$t$ is unknown.",
+            kt(locale, "step.formula_velocity_sq"),
+            kt(locale, "hint.formula_velocity_sq"),
         ),
         quantity_step(
             "dx",
-            "Calculate the displacement $\\Delta x$.",
-            "Rearrange to "
-            "$\\Delta x = (v^2 - v_0^2)/(2a)$.",
+            kt(locale, "step.calculate_dx"),
+            kt(locale, "hint.calculate_dx_no_t"),
         ),
         summary_step(
-            "State the displacement with its SI unit.",
-            "Include both the number and m.",
+            kt(locale, "step.summary_dx"),
+            kt(locale, "hint.summary_dx"),
         ),
     )
 
+
+def localize_kinematics_problem(
+    problem: KinematicsProblem,
+    language: str | None,
+) -> KinematicsProblem:
+    locale = _lang(language)
+    variant = problem.metadata.get("variant", "fixed")
+    quantities = problem.quantities
+    builders = {
+        "fixed": build_v_and_dx_steps,
+        "from_rest": build_find_v_steps,
+        "constant_velocity": build_constant_velocity_steps,
+        "v_and_dx": build_v_and_dx_steps,
+        "solve_t": build_find_t_steps,
+        "solve_dx": build_find_dx_from_velocities_steps,
+    }
+    builder = builders.get(variant, build_v_and_dx_steps)
+    title = (
+        kt(locale, "title.fixed")
+        if variant == "fixed"
+        else kt(locale, "title.generated")
+    )
+    return KinematicsProblem(
+        problem_id=problem.problem_id,
+        title=title,
+        statement=_localized_statement(problem, locale),
+        difficulty=problem.difficulty,
+        quantities=quantities,
+        steps=builder(quantities, locale),
+        unknown=problem.unknown,
+        metadata={
+            **problem.metadata,
+            "language": locale,
+        },
+    )
+
+
+def _localized_statement(
+    problem: KinematicsProblem,
+    locale: str,
+) -> str:
+    values = problem.quantities
+    from src.core.physics.kinematics.checker import (
+        format_number,
+    )
+
+    variant = problem.metadata.get("variant", "fixed")
+    if variant == "fixed":
+        return kt(locale, "statement.fixed")
+
+    a = format_number(values.a or 0)
+    t = format_number(values.t or 0)
+    v = format_number(values.v or 0)
+    v0 = format_number(values.v0 or 0)
+    if variant == "from_rest":
+        return kt(locale, "statement.from_rest", a=a, t=t)
+    if variant == "constant_velocity":
+        return kt(
+            locale,
+            "statement.constant_velocity",
+            v=v,
+            t=t,
+        )
+    if variant == "v_and_dx":
+        motion = (
+            kt(locale, "motion.slows")
+            if (values.a or 0) < 0
+            else kt(locale, "motion.accelerates")
+        )
+        return kt(
+            locale,
+            "statement.v_and_dx",
+            v0=v0,
+            motion=motion,
+            a=a,
+            t=t,
+        )
+    if variant == "solve_t":
+        return kt(
+            locale,
+            "statement.solve_t",
+            v0=v0,
+            v=v,
+            a=a,
+        )
+    if variant == "solve_dx":
+        return kt(
+            locale,
+            "statement.solve_dx",
+            v0=v0,
+            v=v,
+            a=a,
+        )
+    return problem.statement

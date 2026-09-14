@@ -1,8 +1,90 @@
+import re
+
 import sympy as sp
 
+from src.core.i18n.locale import normalize_locale
+from src.core.i18n.ode import ot
 from src.core.tutor_engine.linear_first_order_session import (
     LinearODEStage,
 )
+
+
+_QUESTION_PHRASES = (
+    "why",
+    "what is",
+    "what does",
+    "what are",
+    "how does",
+    "how do",
+    "how can",
+    "why do",
+    "why does",
+    "why is",
+    "explain",
+    "i don't understand",
+    "i dont understand",
+    "i do not understand",
+    "what's",
+    "whats",
+    "where does",
+    "where do",
+    "защо",
+    "какво е",
+    "каква е",
+    "какъв е",
+    "какво представлява",
+    "обясни",
+    "не разбирам",
+    "как се",
+    "как да",
+    "за какво",
+    "дали",
+    "трябва ли",
+)
+
+_DIVIDE_MARKERS = (
+    "why divide",
+    "why do we divide",
+    "divide by mu",
+    "divide by the integrating factor",
+    "divide both sides",
+    "раздел",
+    "делим",
+    "деля",
+    "дели на",
+)
+
+_BOTH_SIDES_MARKERS = (
+    "both sides",
+    "двете страни",
+)
+
+_DIVIDE_MU_MARKERS = (
+    "integrating factor",
+    "интегриращ",
+    "mu",
+)
+
+
+def _fold_message(student_message: str) -> str:
+    text = student_message.strip().lower()
+    for mark in (",", ".", "!", "?", ";", ":", "„", "“", "”"):
+        text = text.replace(mark, " ")
+    return " ".join(text.split())
+
+
+def _mentions(message: str, phrases: tuple[str, ...]) -> bool:
+    return any(phrase in message for phrase in phrases)
+
+
+def _asks_about_dividing(message: str) -> bool:
+    if _mentions(message, _DIVIDE_MARKERS):
+        return True
+
+    return _mentions(message, _BOTH_SIDES_MARKERS) and _mentions(
+        message,
+        _DIVIDE_MU_MARKERS,
+    )
 
 
 def looks_like_linear_concept_question(
@@ -13,41 +95,20 @@ def looks_like_linear_concept_question(
     rather than submitting a mathematical answer.
     """
 
-    message = (
-        student_message
-        .strip()
-        .lower()
-    )
+    message = _fold_message(student_message)
 
-    question_phrases = [
-        "why",
-        "what is",
-        "what does",
-        "what are",
-        "how does",
-        "how do",
-        "how can",
-        "why do",
-        "why does",
-        "why is",
-        "explain",
-        "i don't understand",
-        "i dont understand",
-        "i do not understand",
-        "what's",
-        "whats",
-        "where does",
-        "where do",
-    ]
+    if any(phrase in message for phrase in _QUESTION_PHRASES):
+        return True
 
-    return any(
-        phrase in message
-        for phrase in question_phrases
-    )
+    if re.search(r"\bли\b", message):
+        return True
+
+    return _asks_about_dividing(message)
 
 
 def explain_integrating_factor(
     p_expression,
+    language: str | None = None,
 ) -> str:
     P = sp.sstr(
         p_expression
@@ -62,93 +123,44 @@ def explain_integrating_factor(
         integrated_p
     )
 
-    return (
-        "The integrating factor is chosen for a very specific reason.\n\n"
-        "We start with:\n\n"
-        "    y' + P(x)y = Q(x)\n\n"
-        "and multiply everything by a function mu(x):\n\n"
-        "    mu*y' + mu*P(x)*y = mu*Q(x)\n\n"
-        "We want the two terms on the left to become the derivative "
-        "of the product mu(x)*y.\n\n"
-        "By the product rule:\n\n"
-        "    d/dx(mu*y) = mu*y' + mu'*y\n\n"
-        "So we need:\n\n"
-        "    mu' = P(x)*mu\n\n"
-        "The function that has this property is:\n\n"
-        "    mu(x) = exp(integral(P(x)) dx)\n\n"
-        f"For this problem P(x) = {P}, so:\n\n"
-        f"    integral(P(x)) dx = {sp.sstr(integrated_p)}\n\n"
-        f"and therefore:\n\n"
-        f"    mu(x) = {sp.sstr(mu)}\n\n"
-        "So the integrating factor is not an arbitrary trick. "
-        "It is deliberately constructed so that the left side "
-        "turns into one product derivative."
+    return ot(
+        language,
+        "linear.concept.mu",
+        P=P,
+        integrated_p=sp.sstr(integrated_p),
+        mu=sp.sstr(mu),
     )
 
 
-def explain_product_derivative() -> str:
-    return (
-        "This comes directly from the product rule.\n\n"
-        "For two functions mu(x) and y(x):\n\n"
-        "    d/dx(mu*y) = mu*y' + mu'*y\n\n"
-        "After multiplying the linear ODE by the integrating factor, "
-        "the left side is:\n\n"
-        "    mu*y' + mu*P(x)*y\n\n"
-        "But the integrating factor was chosen so that:\n\n"
-        "    mu' = P(x)*mu\n\n"
-        "Therefore:\n\n"
-        "    mu*P(x)*y = mu'*y\n\n"
-        "and the left side becomes:\n\n"
-        "    mu*y' + mu'*y\n\n"
-        "which is exactly:\n\n"
-        "    d/dx(mu*y)\n\n"
-        "We are using the product rule backward."
-    )
+def explain_product_derivative(
+    language: str | None = None,
+) -> str:
+    return ot(language, "linear.concept.product")
 
 
-def explain_integration_constant() -> str:
-    return (
-        "We add C because we are taking an indefinite integral.\n\n"
-        "When we differentiate a constant, its derivative is zero.\n"
-        "For example:\n\n"
-        "    d/dx(x^2 + 5) = 2*x\n"
-        "    d/dx(x^2 - 8) = 2*x\n\n"
-        "So when we reverse differentiation, there are infinitely "
-        "many antiderivatives that differ only by a constant.\n\n"
-        "That is why we write:\n\n"
-        "    integral(f(x)) dx = F(x) + C\n\n"
-        "For a differential equation, C is especially important "
-        "because it represents the whole family of solutions."
-    )
+def explain_integration_constant(
+    language: str | None = None,
+) -> str:
+    return ot(language, "linear.concept.constant")
 
 
-def explain_dividing_by_integrating_factor() -> str:
-    return (
-        "At this stage we have an equation of the form:\n\n"
-        "    mu(x)*y = F(x) + C\n\n"
-        "We want y by itself, so we divide both sides by mu(x):\n\n"
-        "    y = (F(x) + C) / mu(x)\n\n"
-        "This is safe because an integrating factor has the form:\n\n"
-        "    mu(x) = exp(...)\n\n"
-        "and an exponential is always positive, so mu(x) is never zero."
-    )
+def explain_dividing_by_integrating_factor(
+    language: str | None = None,
+) -> str:
+    return ot(language, "linear.concept.divide")
 
 
-def explain_p_q_identification() -> str:
-    return (
-        "A first-order linear differential equation is written as:\n\n"
-        "    y' + P(x)y = Q(x)\n\n"
-        "P(x) is the coefficient multiplying y.\n\n"
-        "Q(x) is the expression by itself on the right-hand side.\n\n"
-        "So the goal is simply to compare the current equation "
-        "term by term with this standard form."
-    )
+def explain_p_q_identification(
+    language: str | None = None,
+) -> str:
+    return ot(language, "linear.concept.pq")
 
 
 def respond_to_linear_concept_question(
     student_message: str,
     stage: LinearODEStage,
     p_expression=None,
+    language: str | None = None,
 ) -> str | None:
     """
     Return a conceptual explanation appropriate to the current
@@ -161,68 +173,92 @@ def respond_to_linear_concept_question(
     ):
         return None
 
-    message = (
-        student_message
-        .strip()
-        .lower()
+    locale = normalize_locale(language)
+    message = _fold_message(student_message)
+
+    asks_about_integrating_factor = _mentions(
+        message,
+        (
+            "integrating factor",
+            "integration factor",
+            "why do we need mu",
+            "why do we use mu",
+            "what is mu",
+            "интегриращ",
+            "какво е mu",
+            "защо mu",
+        ),
     )
 
-    asks_about_integrating_factor = (
-        "integrating factor" in message
-        or "integration factor" in message
-        or "why do we need mu" in message
-        or "why do we use mu" in message
-        or "what is mu" in message
+    asks_about_product_derivative = _mentions(
+        message,
+        (
+            "product derivative",
+            "product rule",
+            "why does this become a derivative",
+            "why is this a derivative",
+            "why does the left side",
+            "производна на произведение",
+            "правилото за произведение",
+            "правило за произведение",
+            "защо лявата страна",
+        ),
     )
 
-    asks_about_product_derivative = (
-        "product derivative" in message
-        or "product rule" in message
-        or "why does this become a derivative" in message
-        or "why is this a derivative" in message
-        or "why does the left side" in message
+    asks_about_constant = _mentions(
+        message,
+        (
+            "why do we add c",
+            "why add c",
+            "why + c",
+            "constant c",
+            "integration constant",
+            "arbitrary constant",
+            "защо добавяме c",
+            "защо + c",
+            "константа c",
+            "произволна константа",
+        ),
     )
 
-    asks_about_constant = (
-        "why do we add c" in message
-        or "why add c" in message
-        or "why + c" in message
-        or "constant c" in message
-        or "integration constant" in message
-        or "arbitrary constant" in message
-    )
+    asks_about_dividing = _asks_about_dividing(message)
 
-    asks_about_dividing = (
-        "why divide" in message
-        or "why do we divide" in message
-        or "divide by mu" in message
-        or "divide by the integrating factor" in message
-    )
-
-    asks_about_p_q = (
-        "what is p" in message
-        or "what is q" in message
-        or "how do i find p" in message
-        or "how do i find q" in message
-        or "identify p" in message
-        or "identify q" in message
+    asks_about_p_q = _mentions(
+        message,
+        (
+            "what is p",
+            "what is q",
+            "how do i find p",
+            "how do i find q",
+            "identify p",
+            "identify q",
+            "какво е p",
+            "какво е q",
+            "как да намеря p",
+            "как да намеря q",
+            "определете p",
+            "определете q",
+        ),
     )
 
     if asks_about_dividing:
-        return explain_dividing_by_integrating_factor()
+        return explain_dividing_by_integrating_factor(
+            locale,
+        )
 
     if asks_about_product_derivative:
-        return explain_product_derivative()
+        return explain_product_derivative(locale)
 
     if asks_about_constant:
-        return explain_integration_constant()
+        return explain_integration_constant(locale)
 
     if asks_about_p_q:
-        return explain_p_q_identification()
+        return explain_p_q_identification(locale)
 
     if asks_about_integrating_factor:
         return explain_integrating_factor(
-            p_expression
+            p_expression,
+            locale,
         )
 
     #
@@ -235,36 +271,35 @@ def respond_to_linear_concept_question(
         stage
         == LinearODEStage.IDENTIFY_P_Q
     ):
-        return explain_p_q_identification()
+        return explain_p_q_identification(locale)
 
     if (
         stage
         == LinearODEStage.FIND_INTEGRATING_FACTOR
     ):
         return explain_integrating_factor(
-            p_expression
+            p_expression,
+            locale,
         )
 
     if (
         stage
         == LinearODEStage.RECOGNIZE_PRODUCT_DERIVATIVE
     ):
-        return explain_product_derivative()
+        return explain_product_derivative(locale)
 
     if (
         stage
         == LinearODEStage.INTEGRATE_BOTH_SIDES
     ):
-        return explain_integration_constant()
+        return explain_integration_constant(locale)
 
     if (
         stage
         == LinearODEStage.SOLVE_FOR_Y
     ):
-        return explain_dividing_by_integrating_factor()
+        return explain_dividing_by_integrating_factor(
+            locale,
+        )
 
-    return (
-        "This is a conceptual question about the current step. "
-        "Try asking what part of the step is unclear, and I will "
-        "explain the mathematical idea without advancing the problem."
-    )
+    return ot(locale, "linear.concept.fallback")

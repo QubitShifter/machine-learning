@@ -13,6 +13,8 @@ PARSE_TRANSFORMATIONS = standard_transformations + (
     implicit_multiplication_application,
 )
 
+from src.core.i18n.kinematics import kt
+from src.core.i18n.locale import normalize_locale
 from src.core.physics.kinematics.models import (
     KinematicsProblem,
     KinematicsStep,
@@ -63,13 +65,20 @@ def quantity_value(
     return getattr(problem.quantities, quantity)
 
 
+def _locale(problem: KinematicsProblem) -> str:
+    return normalize_locale(
+        problem.metadata.get("language")
+    )
+
+
 def evaluate_step(
     problem: KinematicsProblem,
     step: KinematicsStep,
     answer: str,
 ) -> dict:
+    locale = _locale(problem)
     if step.kind == "formula":
-        return evaluate_formula(step, answer)
+        return evaluate_formula(step, answer, locale)
 
     if step.kind == "summary":
         return evaluate_summary(problem, answer)
@@ -86,34 +95,31 @@ def evaluate_quantity(
     required_unit = step.unit or QUANTITY_UNITS.get(
         step.quantity or "",
     )
+    locale = _locale(problem)
     value, unit_text, raw = parse_quantity_answer(answer)
 
     if value is None:
         return {
             "correct": False,
             "error_type": "not_numeric",
-            "feedback": (
-                "I could not read a numeric value. "
-                "Include the number and its SI unit."
-            ),
+            "feedback": kt(locale, "feedback.not_numeric"),
         }
 
     if expected is None:
         return {
             "correct": False,
             "error_type": "invalid_expected_answer",
-            "feedback": (
-                "The tutor could not validate this step."
-            ),
+            "feedback": kt(locale, "feedback.invalid_expected"),
         }
 
     if required_unit and unit_text is None:
         return {
             "correct": False,
             "error_type": "missing_unit",
-            "feedback": (
-                "Include the SI unit for "
-                f"{_quantity_label(step.quantity)}."
+            "feedback": kt(
+                locale,
+                "feedback.missing_unit",
+                quantity=_quantity_label(step.quantity, locale),
             ),
         }
 
@@ -123,9 +129,10 @@ def evaluate_quantity(
             return {
                 "correct": False,
                 "error_type": "unknown_unit",
-                "feedback": (
-                    "I could not recognize that unit. "
-                    f"Use {required_unit}."
+                "feedback": kt(
+                    locale,
+                    "feedback.unknown_unit",
+                    unit=required_unit,
                 ),
             }
 
@@ -135,10 +142,13 @@ def evaluate_quantity(
             return {
                 "correct": False,
                 "error_type": "wrong_unit",
-                "feedback": (
-                    "The numeric value may be close, "
-                    "but the unit should represent "
-                    f"{expected_dimension}."
+                "feedback": kt(
+                    locale,
+                    "feedback.wrong_dimension",
+                    dimension=kt(
+                        locale,
+                        f"dimension.{expected_dimension}",
+                    ),
                 ),
             }
 
@@ -146,9 +156,10 @@ def evaluate_quantity(
             return {
                 "correct": False,
                 "error_type": "wrong_unit",
-                "feedback": (
-                    "Use the SI unit "
-                    f"{required_unit}."
+                "feedback": kt(
+                    locale,
+                    "feedback.wrong_unit",
+                    unit=required_unit,
                 ),
             }
 
@@ -156,25 +167,23 @@ def evaluate_quantity(
         return {
             "correct": True,
             "error_type": None,
-            "feedback": "Correct.",
+            "feedback": kt(locale, "feedback.correct"),
         }
 
     if value * expected < 0:
         return {
             "correct": False,
             "error_type": "wrong_sign",
-            "feedback": (
-                "Check the chosen positive direction "
-                "and the sign of acceleration."
-            ),
+            "feedback": kt(locale, "feedback.wrong_sign"),
         }
 
     return {
         "correct": False,
         "error_type": "wrong_value",
-        "feedback": (
-            "Check the substitution and arithmetic. "
-            f"Raw input was {raw}."
+        "feedback": kt(
+            locale,
+            "feedback.wrong_value",
+            raw=raw,
         ),
     }
 
@@ -182,7 +191,9 @@ def evaluate_quantity(
 def evaluate_formula(
     step: KinematicsStep,
     answer: str,
+    language: str | None = None,
 ) -> dict:
+    locale = normalize_locale(language)
     expected = FORMULA_CANONICAL.get(
         step.formula_id or "",
         step.expected_text or "",
@@ -194,34 +205,27 @@ def evaluate_formula(
         return {
             "correct": False,
             "error_type": "missing_equals",
-            "feedback": (
-                "Write a complete equation using =."
-            ),
+            "feedback": kt(locale, "feedback.missing_equals"),
         }
 
     if target is None:
         return {
             "correct": False,
             "error_type": "invalid_expected_answer",
-            "feedback": (
-                "The tutor could not validate this formula."
-            ),
+            "feedback": kt(locale, "feedback.invalid_expected"),
         }
 
     if _residuals_equivalent(student, target):
         return {
             "correct": True,
             "error_type": None,
-            "feedback": "Correct.",
+            "feedback": kt(locale, "feedback.correct"),
         }
 
     return {
         "correct": False,
         "error_type": "wrong_formula",
-        "feedback": (
-            "That equation does not relate the "
-            "known quantities for this step."
-        ),
+        "feedback": kt(locale, "feedback.wrong_formula"),
     }
 
 
@@ -229,6 +233,7 @@ def evaluate_summary(
     problem: KinematicsProblem,
     answer: str,
 ) -> dict:
+    locale = _locale(problem)
     found = _extract_quantities(answer)
     required = _required_summary_quantities(problem)
 
@@ -236,9 +241,7 @@ def evaluate_summary(
         return {
             "correct": False,
             "error_type": "invalid_expected_answer",
-            "feedback": (
-                "The tutor could not validate this step."
-            ),
+            "feedback": kt(locale, "feedback.invalid_expected"),
         }
 
     missing = [
@@ -251,18 +254,13 @@ def evaluate_summary(
         return {
             "correct": False,
             "error_type": "wrong_value",
-            "feedback": (
-                "State each requested result with "
-                "its SI unit."
-            ),
+            "feedback": kt(locale, "feedback.summary_wrong"),
         }
 
     return {
         "correct": True,
         "error_type": None,
-        "feedback": (
-            "Correct. Those are the final results."
-        ),
+            "feedback": kt(locale, "feedback.summary_correct"),
     }
 
 
@@ -320,14 +318,21 @@ def _values_match(value: float, expected: float) -> bool:
     )
 
 
-def _quantity_label(quantity: str | None) -> str:
-    return {
-        "v0": "initial velocity",
-        "v": "velocity",
-        "a": "acceleration",
-        "t": "time",
-        "dx": "displacement",
-    }.get(quantity or "", "this quantity")
+def _quantity_label(
+    quantity: str | None,
+    language: str | None = None,
+) -> str:
+    locale = normalize_locale(language)
+    key = {
+        "v0": "quantity.v0",
+        "v": "quantity.v",
+        "a": "quantity.a",
+        "t": "quantity.t",
+        "dx": "quantity.dx",
+    }.get(quantity or "")
+    if key:
+        return kt(locale, key)
+    return kt(locale, "quantity.v")
 
 
 def normalize_formula_text(answer: str) -> str:

@@ -59,4 +59,42 @@ assert(
   "+/- conversion must apply inside equation fragments",
 );
 
+const bulgarianIdentifyPq =
+  "След това определете P(x) и Q(x).";
+const englishIdentifyPq =
+  "Next, identify P(x) and Q(x).";
+const bulgarianCompareQ =
+  "Сравнете резултата с Q(x).";
+
+assert(
+  isMathOnlyLine(bulgarianIdentifyPq) === false,
+  "Bulgarian mixed prose with P(x) and Q(x) must not be math-only",
+);
+assert(
+  lineUsesMathOnlyRenderer(bulgarianIdentifyPq) ===
+    false,
+  "Bulgarian mixed prose must not use the math-only renderer",
+);
+assert(
+  isMathOnlyLine(englishIdentifyPq) === false,
+  "English mixed prose with P(x) and Q(x) must not be math-only",
+);
+assert(
+  isMathOnlyLine(bulgarianCompareQ) === false,
+  "Bulgarian prose containing one expression must not be math-only",
+);
+assert(
+  isMathOnlyLine("Намерете mu(x).") === false,
+  "A Cyrillic instruction around mu(x) must remain prose",
+);
+assert(
+  isMathOnlyLine("y' + P(x)y = Q(x)") === true,
+  "Standalone linear standard form must remain math-only",
+);
+assert(
+  lineUsesMathOnlyRenderer("y' + P(x)y = Q(x)") ===
+    true,
+  "Standalone linear standard form must use math-only rendering",
+);
+
 console.log("math_content_classification tests passed");

@@ -1,3 +1,4 @@
+from src.core.i18n.primary_school import pst
 from src.core.tutor_engine.contracts import (
     StudentSubmission,
     TutorResponse,
@@ -40,6 +41,14 @@ class PrimarySchoolTutorEngine:
         return self.session.problem
 
 
+    @property
+    def problem_title(self) -> str:
+        return self.problem.title
+
+    @property
+    def problem_statement(self) -> str:
+        return self.problem.problem_text
+
     def get_current_response(
         self,
     ) -> TutorResponse:
@@ -53,8 +62,9 @@ class PrimarySchoolTutorEngine:
         if step is None:
             return TutorResponse(
                 status="complete",
-                feedback=(
-                    "Excellent. You solved the problem."
+                feedback=pst(
+                    self.problem.language,
+                    "complete",
                 ),
                 current_step=(
                     self.problem.get_number_of_steps()
@@ -112,6 +122,7 @@ class PrimarySchoolTutorEngine:
             expected_answer=(
                 step.expected_answer
             ),
+            language=self.problem.language,
         )
 
         if evaluation["correct"]:
@@ -124,8 +135,9 @@ class PrimarySchoolTutorEngine:
             if self.session.is_complete():
                 return TutorResponse(
                     status="complete",
-                    feedback=(
-                        "Excellent. You solved the problem."
+                    feedback=pst(
+                        self.problem.language,
+                        "complete",
                     ),
                     current_step=(
                         self.problem
@@ -156,8 +168,9 @@ class PrimarySchoolTutorEngine:
                 feedback=(
                     evaluation["feedback"]
                 ),
-                suggestion=(
-                    "Good. Let's continue."
+                suggestion=pst(
+                    self.problem.language,
+                    "continue",
                 ),
                 current_step=(
                     next_step.step_number
@@ -232,7 +245,7 @@ class PrimarySchoolTutorEngine:
 
         hint = (
             step.hint
-            or "No additional hint is available."
+            or pst(self.problem.language, "no_hint")
         )
 
         return TutorResponse(

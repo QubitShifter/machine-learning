@@ -2,6 +2,13 @@ import sympy as sp
 
 from enum import Enum
 
+from src.core.i18n.concept import (
+    CANONICAL_NO,
+    CANONICAL_YES,
+    normalize_concept_answer,
+)
+from src.core.i18n.locale import normalize_locale
+from src.core.i18n.ode import ot
 from src.core.tutor_engine.linear_first_order_checker import (
     normalize_expression,
     parse_math,
@@ -53,7 +60,9 @@ class LinearFirstOrderVerificationEngine:
         p_expression,
         q_expression,
         solution_expression,
+        language: str | None = None,
     ):
+        self.language = normalize_locale(language)
         self.p_expression = sp.sympify(
             p_expression
         )
@@ -212,13 +221,13 @@ class LinearFirstOrderVerificationEngine:
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct. That is the derivative of "
-                "the proposed solution."
+            "feedback": ot(
+                self.language,
+                "linear.verify.diff.correct",
             ),
-            "suggestion": (
-                "Next, substitute y and y' into "
-                "y' + P(x)y."
+            "suggestion": ot(
+                self.language,
+                "linear.verify.diff.suggestion",
             ),
         }
 
@@ -279,12 +288,13 @@ class LinearFirstOrderVerificationEngine:
         return {
             "correct": True,
             "error_type": None,
-            "feedback": (
-                "Correct. You substituted the proposed "
-                "solution into the left-hand side."
+            "feedback": ot(
+                self.language,
+                "linear.verify.substitute.correct",
             ),
-            "suggestion": (
-                "Now compare the result with Q(x)."
+            "suggestion": ot(
+                self.language,
+                "linear.verify.substitute.suggestion",
             ),
         }
 
@@ -293,53 +303,54 @@ class LinearFirstOrderVerificationEngine:
         student_answer: str,
     ) -> dict:
 
-        answer = (
-            student_answer
-            .strip()
-            .lower()
+        canonical = normalize_concept_answer(
+            student_answer,
+            self.language,
         )
+        student_says_yes = canonical == CANONICAL_YES
+        student_says_no = canonical == CANONICAL_NO
 
-        normalized_answer = (
-            answer
-            .replace(",", "")
-            .replace(".", "")
-            .replace("!", "")
-            .replace("?", "")
-        )
-
-        positive_phrases = [
-            "yes",
-            "they match",
-            "match",
-            "they are equal",
-            "are equal",
-            "equal",
-            "same",
-            "correct",
-            "true",
-        ]
-
-        negative_phrases = [
-            "no",
-            "do not match",
-            "don't match",
-            "not equal",
-            "not the same",
-            "false",
-        ]
-
-        student_says_no = any(
-            phrase in normalized_answer
-            for phrase in negative_phrases
-        )
-
-        student_says_yes = (
-            not student_says_no
-            and any(
-                phrase in normalized_answer
-                for phrase in positive_phrases
+        if canonical is None:
+            answer = student_answer.strip().lower()
+            normalized_answer = (
+                answer
+                .replace(",", "")
+                .replace(".", "")
+                .replace("!", "")
+                .replace("?", "")
             )
-        )
+
+            positive_phrases = [
+                "they match",
+                "match",
+                "they are equal",
+                "are equal",
+                "equal",
+                "same",
+                "correct",
+                "true",
+            ]
+
+            negative_phrases = [
+                "do not match",
+                "don't match",
+                "not equal",
+                "not the same",
+                "false",
+            ]
+
+            student_says_no = any(
+                phrase in normalized_answer
+                for phrase in negative_phrases
+            )
+
+            student_says_yes = (
+                not student_says_no
+                and any(
+                    phrase in normalized_answer
+                    for phrase in positive_phrases
+                )
+            )
 
         expected_lhs = (
             self.get_expected_lhs()
@@ -357,9 +368,9 @@ class LinearFirstOrderVerificationEngine:
                 return {
                     "correct": True,
                     "error_type": None,
-                    "feedback": (
-                        "Verified. The proposed solution "
-                        "satisfies the original linear ODE."
+                    "feedback": ot(
+                        self.language,
+                        "linear.verify.compare.yes_correct",
                     ),
                     "suggestion": None,
                 }
@@ -367,12 +378,13 @@ class LinearFirstOrderVerificationEngine:
             return {
                 "correct": False,
                 "error_type": "comparison_error",
-                "feedback": (
-                    "The two expressions are mathematically equal."
+                "feedback": ot(
+                    self.language,
+                    "linear.verify.compare.equal_retry",
                 ),
-                "suggestion": (
-                    "Compare the simplified left-hand side "
-                    "with Q(x)."
+                "suggestion": ot(
+                    self.language,
+                    "linear.verify.compare.equal_retry_suggestion",
                 ),
             }
 
@@ -380,9 +392,9 @@ class LinearFirstOrderVerificationEngine:
             return {
                 "correct": True,
                 "error_type": None,
-                "feedback": (
-                    "Correct. The proposed solution does not "
-                    "satisfy the original ODE."
+                "feedback": ot(
+                    self.language,
+                    "linear.verify.compare.no_correct",
                 ),
                 "suggestion": None,
             }
@@ -390,10 +402,12 @@ class LinearFirstOrderVerificationEngine:
         return {
             "correct": False,
             "error_type": "comparison_error",
-            "feedback": (
-                "The two expressions do not match."
+            "feedback": ot(
+                self.language,
+                "linear.verify.compare.mismatch",
             ),
-            "suggestion": (
-                "Compare the simplified expressions again."
+            "suggestion": ot(
+                self.language,
+                "linear.verify.compare.mismatch_suggestion",
             ),
         }

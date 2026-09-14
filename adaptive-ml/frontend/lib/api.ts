@@ -54,9 +54,14 @@ export function listProblems(): Promise<ProblemSummary[]> {
 
 export function getProblem(
   problemId: string,
+  language?: "en" | "bg",
 ): Promise<ProblemDetail> {
+  const query = language
+    ? `?language=${encodeURIComponent(language)}`
+    : "";
+
   return requestJson<ProblemDetail>(
-    `/problems/${problemId}`,
+    `/problems/${problemId}${query}`,
   );
 }
 

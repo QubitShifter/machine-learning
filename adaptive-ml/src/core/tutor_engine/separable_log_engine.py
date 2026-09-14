@@ -1,5 +1,7 @@
 import sympy as sp
 
+from src.core.i18n.ode import ot
+from src.core.i18n.locale import normalize_locale
 from src.core.tutor_engine.concept_guidance.log_solve_stage_checker import (
     evaluate_absorb_constant_step,
     evaluate_apply_exp_step,
@@ -35,6 +37,13 @@ def looks_like_concept_question(
         "what does",
         "what is",
         "can you",
+        "защо",
+        "какво е",
+        "какво представлява",
+        "обясни",
+        "не разбирам",
+        "как се",
+        "как да",
     ]
 
     return (
@@ -50,8 +59,10 @@ class SeparableLogEngine:
     def __init__(
         self,
         integrated_fx,
+        language: str | None = None,
     ):
         self.integrated_fx = integrated_fx
+        self.language = normalize_locale(language)
 
     def get_step_title(
         self,
@@ -59,28 +70,28 @@ class SeparableLogEngine:
     ) -> str:
         titles = {
             LogSolveStage.APPLY_EXP:
-                "Step 3.1 — Apply exp to both sides",
+                "separable.log.title.apply_exp",
 
             LogSolveStage.CANCEL_LOG:
-                "Step 3.2 — Simplify exp(ln|y|)",
+                "separable.log.title.cancel",
 
             LogSolveStage.SPLIT_EXPONENTIAL:
-                "Step 3.3 — Split the exponential",
+                "separable.log.title.split",
 
             LogSolveStage.RENAME_EXP_CONSTANT:
-                "Step 3.4 — Rename exp(C)",
+                "separable.log.title.rename",
 
             LogSolveStage.REMOVE_ABSOLUTE_VALUE:
-                "Step 3.5 — Remove the absolute value",
+                "separable.log.title.abs",
 
             LogSolveStage.ABSORB_CONSTANT:
-                "Step 3.6 — Absorb the constants",
+                "separable.log.title.absorb",
 
             LogSolveStage.COMPLETE:
-                "Stage 3 complete",
+                "separable.log.title.complete",
         }
 
-        return titles[stage]
+        return ot(self.language, titles[stage])
 
     def get_prompt(
         self,
@@ -91,55 +102,33 @@ class SeparableLogEngine:
         )
 
         prompts = {
-            LogSolveStage.APPLY_EXP: (
-                "Starting from:\n"
-                f"    ln|y| = {fx_text} + C\n\n"
-                "Apply the inverse of ln to BOTH sides.\n"
-                "Write the complete transformed equation."
-            ),
+            LogSolveStage.APPLY_EXP:
+                "separable.log.prompt.apply_exp",
 
-            LogSolveStage.CANCEL_LOG: (
-                "Current equation:\n"
-                f"    exp(ln|y|) = exp({fx_text} + C)\n\n"
-                "Simplify the expression exp(ln|y|).\n"
-                "Write the complete equation."
-            ),
+            LogSolveStage.CANCEL_LOG:
+                "separable.log.prompt.cancel",
 
-            LogSolveStage.SPLIT_EXPONENTIAL: (
-                "Current equation:\n"
-                f"    |y| = exp({fx_text} + C)\n\n"
-                "Use:\n"
-                "    exp(a + b) = exp(a)*exp(b)\n\n"
-                "Rewrite the complete equation."
-            ),
+            LogSolveStage.SPLIT_EXPONENTIAL:
+                "separable.log.prompt.split",
 
-            LogSolveStage.RENAME_EXP_CONSTANT: (
-                "Current equation:\n"
-                f"    |y| = exp({fx_text})*exp(C)\n\n"
-                "Since exp(C) is a positive constant, "
-                "rename it as K.\n"
-                "Rewrite the equation."
-            ),
+            LogSolveStage.RENAME_EXP_CONSTANT:
+                "separable.log.prompt.rename",
 
-            LogSolveStage.REMOVE_ABSOLUTE_VALUE: (
-                "Current equation:\n"
-                f"    |y| = K*exp({fx_text})\n\n"
-                "Remove the absolute value and represent "
-                "both possible signs of y."
-            ),
+            LogSolveStage.REMOVE_ABSOLUTE_VALUE:
+                "separable.log.prompt.abs",
 
-            LogSolveStage.ABSORB_CONSTANT: (
-                "Current equation:\n"
-                f"    y = +/- K*exp({fx_text})\n\n"
-                "Combine +/- K into one new arbitrary "
-                "constant C."
-            ),
+            LogSolveStage.ABSORB_CONSTANT:
+                "separable.log.prompt.absorb",
 
             LogSolveStage.COMPLETE:
-                "The logarithmic transformation is complete.",
+                "separable.log.prompt.complete",
         }
 
-        return prompts[stage]
+        return ot(
+            self.language,
+            prompts[stage],
+            fx=fx_text,
+        )
 
     def evaluate(
         self,

@@ -2,6 +2,8 @@ from tokenize import TokenError
 
 import sympy as sp
 
+from src.core.i18n.locale import normalize_locale
+from src.core.i18n.ode import ot
 from src.core.math_input import (
     MathInputError,
     normalize_math_text,
@@ -66,8 +68,10 @@ class SeparableODETutorAdapter:
         self,
         rhs_expression,
         problem_id: str = "separable_ode_fixed_001",
+        language: str | None = None,
     ):
         self.problem_id = problem_id
+        self.language = normalize_locale(language)
         self.rhs_expression = sp.sympify(
             rhs_expression
         )
@@ -78,22 +82,27 @@ class SeparableODETutorAdapter:
 
     @property
     def problem_title(self) -> str:
-        return "Separable ODE"
+        return ot(self.language, "separable.title")
 
     @property
     def problem_statement(self) -> str:
-        return (
-            "Solve dy/dx = "
+        equation = (
+            "dy/dx = "
             f"{sp.sstr(self.rhs_expression)}"
+        )
+        return ot(
+            self.language,
+            "separable.statement",
+            equation=equation,
         )
 
     def get_current_response(self) -> TutorResponse:
         if self.solution_session.is_complete():
             return TutorResponse(
                 status="complete",
-                feedback=(
-                    "Excellent. The separable ODE has "
-                    "been solved and verified."
+                feedback=ot(
+                    self.language,
+                    "separable.complete",
                 ),
                 current_step=TOTAL_SEPARABLE_ODE_STEPS,
                 total_steps=TOTAL_SEPARABLE_ODE_STEPS,
@@ -313,8 +322,9 @@ class SeparableODETutorAdapter:
                 "correct": False,
                 "advance": False,
                 "error_type": "parse_error",
-                "feedback": (
-                    "I could not understand the mathematical input."
+                "feedback": ot(
+                    self.language,
+                    "linear.parse_error",
                 ),
                 "suggestion": str(error),
             }
@@ -481,8 +491,7 @@ class SeparableODETutorAdapter:
             status="concept",
             feedback=self._generic_concept_feedback(stage),
             suggestion=(
-                "When you're ready, continue with "
-                "the mathematical step."
+                ot(self.language, "separable.continue")
             ),
             current_step=self._current_step_number(),
             total_steps=TOTAL_SEPARABLE_ODE_STEPS,
@@ -501,24 +510,24 @@ class SeparableODETutorAdapter:
         stage: SeparableStage,
     ) -> str:
         if stage == SeparableStage.SEPARATE_VARIABLES:
-            return (
-                self.solution_session.get_prompt()
-                + "\n\nOriginal equation:\n"
-                f"    {self.problem_statement}\n\n"
-                "Write the separated coefficient form, "
-                "for example:\n"
-                "    1/y = f(x)"
+            return ot(
+                self.language,
+                "separable.stage.separate_wrap",
+                base=ot(
+                    self.language,
+                    "separable.stage.separate",
+                ),
+                equation=self.problem_statement,
             )
 
         if (
             stage
             == SeparableStage.INTEGRATE_BOTH_SIDES
         ):
-            return (
-                "From separation we have:\n"
-                f"    (1/y) dy = "
-                f"{sp.sstr(self._fx_expression())} dx\n\n"
-                "Write the result after integrating both sides."
+            return ot(
+                self.language,
+                "separable.stage.integrate",
+                fx=sp.sstr(self._fx_expression()),
             )
 
         if (
@@ -542,72 +551,54 @@ class SeparableODETutorAdapter:
         log_stage: LogSolveStage,
     ) -> str:
         if log_stage == LogSolveStage.APPLY_EXP:
-            return (
-                "Apply exp to both sides to undo ln."
-            )
+            return ot(self.language, "separable.hint.exp")
 
         if log_stage == LogSolveStage.CANCEL_LOG:
-            return (
-                "Simplify the expression exp(ln|y|) "
-                "to |y|."
-            )
+            return ot(self.language, "separable.hint.cancel")
 
         if (
             log_stage
             == LogSolveStage.SPLIT_EXPONENTIAL
         ):
-            return (
-                "Use exp(a + b) = exp(a)*exp(b) to "
-                "separate the + C in the exponent."
-            )
+            return ot(self.language, "separable.hint.split")
 
         if (
             log_stage
             == LogSolveStage.RENAME_EXP_CONSTANT
         ):
-            return (
-                "Since C is arbitrary, exp(C) is just "
-                "a positive constant. Rename it as K."
-            )
+            return ot(self.language, "separable.hint.rename")
 
         if (
             log_stage
             == LogSolveStage.REMOVE_ABSOLUTE_VALUE
         ):
-            return (
-                "If |y| equals a positive expression, "
-                "then y can have either sign. Use +/- "
-                "to represent both possibilities."
-            )
+            return ot(self.language, "separable.hint.abs")
 
         if log_stage == LogSolveStage.ABSORB_CONSTANT:
-            return (
-                "Combine +/- K into one new arbitrary "
-                "constant C."
-            )
+            return ot(self.language, "separable.hint.absorb")
 
-        return (
-            "Use exp to undo ln, then handle the "
-            "absolute value and arbitrary constant."
+        return ot(
+            self.language,
+            "separable.hint.log_default",
         )
 
     def _hint_text(self) -> str:
         stage = self.solution_session.get_stage()
 
         if stage == SeparableStage.SEPARATE_VARIABLES:
-            return (
-                "For dy/dx = f(x)*y, divide both sides "
-                "by y so the y-side becomes 1/y."
+            return ot(
+                self.language,
+                "separable.hint.separate",
             )
 
         if (
             stage
             == SeparableStage.INTEGRATE_BOTH_SIDES
         ):
-            return (
-                "The y-side integrates to ln|y|. "
-                f"The x-side integrates "
-                f"{sp.sstr(self._fx_expression())}."
+            return ot(
+                self.language,
+                "separable.hint.integrate",
+                fx=sp.sstr(self._fx_expression()),
             )
 
         if (
@@ -618,10 +609,9 @@ class SeparableODETutorAdapter:
                 self.solution_session.get_log_stage()
             )
 
-        return (
-            "Differentiate the proposed solution and compare "
-            "it with the original right-hand side after "
-            "substituting y."
+        return ot(
+            self.language,
+            "separable.hint.verify",
         )
 
     def _generic_concept_feedback(
@@ -629,27 +619,23 @@ class SeparableODETutorAdapter:
         stage: SeparableStage,
     ) -> str:
         if stage == SeparableStage.SEPARATE_VARIABLES:
-            return (
-                "A separable equation lets us move all y terms "
-                "to one side and all x terms to the other. "
-                "For dy/dx = f(x)*y, dividing by y produces "
-                "1/y on the y-side and f(x) on the x-side."
+            return ot(
+                self.language,
+                "separable.concept.separate",
             )
 
         if (
             stage
             == SeparableStage.INTEGRATE_BOTH_SIDES
         ):
-            return (
-                "After the variables are separated, we integrate "
-                "each side with respect to its own variable. "
-                "The integral of 1/y is ln|y|."
+            return ot(
+                self.language,
+                "separable.concept.integrate",
             )
 
-        return (
-            "Verification checks that the derivative of the "
-            "proposed solution matches the original right-hand "
-            "side after substituting that solution for y."
+        return ot(
+            self.language,
+            "separable.concept.verify",
         )
 
     def _comparison_metadata(
@@ -669,14 +655,26 @@ class SeparableODETutorAdapter:
 
         return {
             "kind": "expression_comparison",
-            "title": "Verification comparison",
-            "left_label": "Derivative dy/dx",
+            "title": ot(
+                self.language,
+                "separable.compare.title",
+            ),
+            "left_label": ot(
+                self.language,
+                "separable.compare.left",
+            ),
             "left": sp.sstr(
                 verification_engine.derivative_expression
             ),
-            "right_label": "Right-hand side after substitution",
+            "right_label": ot(
+                self.language,
+                "separable.compare.right",
+            ),
             "right": sp.sstr(rhs),
-            "question": "Do they match?",
+            "question": ot(
+                self.language,
+                "separable.compare.question",
+            ),
         }
 
     def _ensure_verification_engine(
@@ -689,6 +687,7 @@ class SeparableODETutorAdapter:
                     solution_expression=(
                         self._solution_expression()
                     ),
+                    language=self.language,
                 )
             )
 
@@ -786,5 +785,6 @@ class SeparableODETutorAdapter:
 
     def _log_engine(self) -> SeparableLogEngine:
         return SeparableLogEngine(
-            integrated_fx=self._integrated_fx()
+            integrated_fx=self._integrated_fx(),
+            language=self.language,
         )

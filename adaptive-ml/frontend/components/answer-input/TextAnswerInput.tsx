@@ -1,5 +1,8 @@
+"use client";
+
 import type { HTMLAttributes } from "react";
 
+import { useLanguage } from "@/components/LanguageProvider";
 import type { AnswerEditorProps } from "@/components/answer-input/types";
 
 interface TextAnswerInputProps
@@ -15,6 +18,8 @@ export function TextAnswerInput({
   onChange,
   onSubmit,
 }: TextAnswerInputProps) {
+  const { t } = useLanguage();
+
   return (
     <form
       className="answer-form"
@@ -24,7 +29,7 @@ export function TextAnswerInput({
       }}
     >
       <label htmlFor="answer">
-        Your answer
+        {t("tutor.yourAnswer")}
       </label>
       <div className="answer-row">
         <input
@@ -34,7 +39,9 @@ export function TextAnswerInput({
           onChange={(event) =>
             onChange(event.target.value)
           }
-          placeholder={`Enter a ${expectedInputType} answer`}
+          placeholder={t("tutor.placeholderAnswer", {
+            type: expectedInputType,
+          })}
           type="text"
           value={value}
         />
@@ -42,11 +49,11 @@ export function TextAnswerInput({
           disabled={disabled || !value.trim()}
           type="submit"
         >
-          Submit Answer
+          {t("tutor.submit")}
         </button>
       </div>
       <p className="input-type-note">
-        Expected input: {expectedInputType}
+        {t("tutor.expectedInput", { type: expectedInputType })}
       </p>
     </form>
   );

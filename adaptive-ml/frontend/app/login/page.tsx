@@ -2,23 +2,20 @@
 
 import Link from "next/link";
 
-import {
-  AUTH_PLACEHOLDER_MESSAGE,
-  HOME_HREF,
-} from "@/lib/learningPath";
+import { useLanguage } from "@/components/LanguageProvider";
+import { HOME_HREF } from "@/lib/learningPath";
 
 export default function LoginPage() {
+  const { t } = useLanguage();
+
   return (
     <main className="page-shell">
       <section className="login-card">
-        <p className="eyebrow">Account</p>
-        <h1>Log in to MAT-PAL</h1>
-        <p>
-          Local profiles work on this device.
-          Account login will be added later.
-        </p>
+        <p className="eyebrow">{t("login.eyebrow")}</p>
+        <h1>{t("login.title")}</h1>
+        <p>{t("login.intro")}</p>
         <p className="login-message" role="status">
-          {AUTH_PLACEHOLDER_MESSAGE}
+          {t("login.notImplemented")}
         </p>
 
         <form
@@ -26,7 +23,7 @@ export default function LoginPage() {
           onSubmit={(event) => event.preventDefault()}
         >
           <label>
-            Email
+            {t("login.email")}
             <input
               autoComplete="username"
               disabled
@@ -36,24 +33,24 @@ export default function LoginPage() {
             />
           </label>
           <label>
-            Password
+            {t("login.password")}
             <input
               autoComplete="current-password"
               disabled
               name="password"
-              placeholder="Password"
+              placeholder={t("login.password")}
               type="password"
             />
           </label>
           <button disabled type="submit">
-            Log in
+            {t("login.submit")}
           </button>
         </form>
 
         <p className="login-alt">
-          Don&apos;t have an account?{" "}
+          {t("login.noAccount")}{" "}
           <span className="login-coming-soon">
-            Sign up — coming soon
+            {t("login.signUpSoon")}
           </span>
         </p>
 
@@ -61,7 +58,7 @@ export default function LoginPage() {
           className="secondary-button login-local-link"
           href={HOME_HREF}
         >
-          Continue as Guest
+          {t("login.continueGuest")}
         </Link>
       </section>
     </main>

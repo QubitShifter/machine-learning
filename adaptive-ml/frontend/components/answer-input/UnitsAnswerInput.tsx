@@ -1,3 +1,6 @@
+"use client";
+
+import { useLanguage } from "@/components/LanguageProvider";
 import type { AnswerEditorProps } from "@/components/answer-input/types";
 
 interface UnitsParts {
@@ -39,6 +42,7 @@ export function UnitsAnswerInput({
   onChange,
   onSubmit,
 }: AnswerEditorProps) {
+  const { t } = useLanguage();
   const parts = splitUnitsAnswer(value);
   const canSubmit = Boolean(
     parts.value.trim() && parts.unit.trim(),
@@ -55,10 +59,10 @@ export function UnitsAnswerInput({
         }
       }}
     >
-      <p className="answer-label">Your answer</p>
+      <p className="answer-label">{t("tutor.yourAnswer")}</p>
       <div className="units-answer-row">
         <label>
-          Value
+          {t("tutor.value")}
           <input
             disabled={disabled}
             inputMode="decimal"
@@ -77,7 +81,7 @@ export function UnitsAnswerInput({
         </label>
 
         <label>
-          Unit
+          {t("tutor.unit")}
           <input
             disabled={disabled}
             onChange={(event) =>
@@ -98,12 +102,11 @@ export function UnitsAnswerInput({
           disabled={disabled || !canSubmit}
           type="submit"
         >
-          Submit Answer
+          {t("tutor.submit")}
         </button>
       </div>
       <p className="input-type-note">
-        Expected input: {expectedInputType}. Enter a
-        numerical value with its physical unit.
+        {t("tutor.expectedUnits", { type: expectedInputType })}
       </p>
     </form>
   );

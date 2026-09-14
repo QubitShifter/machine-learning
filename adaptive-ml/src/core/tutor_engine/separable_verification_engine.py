@@ -2,6 +2,8 @@ from enum import Enum
 
 import sympy as sp
 
+from src.core.i18n.ode import ot
+from src.core.i18n.locale import normalize_locale
 from src.core.tutor_engine.concept_guidance.separable_verification_checker import (
     evaluate_derivative_step,
     evaluate_rhs_substitution_step,
@@ -21,9 +23,11 @@ class SeparableVerificationEngine:
         self,
         rhs_expression,
         solution_expression,
+        language: str | None = None,
     ):
         self.rhs_expression = rhs_expression
         self.solution_expression = solution_expression
+        self.language = normalize_locale(language)
 
         self.stage = (
             VerificationStage.DIFFERENTIATE
@@ -40,19 +44,19 @@ class SeparableVerificationEngine:
     def get_title(self) -> str:
         titles = {
             VerificationStage.DIFFERENTIATE:
-                "Step 4.1 — Differentiate the proposed solution",
+                "separable.verify.title.diff",
 
             VerificationStage.SUBSTITUTE_RHS:
-                "Step 4.2 — Substitute y into the original ODE",
+                "separable.verify.title.substitute",
 
             VerificationStage.COMPARE:
-                "Step 4.3 — Compare both sides",
+                "separable.verify.title.compare",
 
             VerificationStage.COMPLETE:
-                "Verification complete",
+                "separable.verify.title.complete",
         }
 
-        return titles[self.stage]
+        return ot(self.language, titles[self.stage])
 
     def get_prompt(self) -> str:
         solution_text = sp.sstr(
@@ -64,33 +68,38 @@ class SeparableVerificationEngine:
         )
 
         if self.stage == VerificationStage.DIFFERENTIATE:
-            return (
-                "Your proposed solution is:\n"
-                f"    y = {solution_text}\n\n"
-                "Differentiate it with respect to x.\n"
-                "You may write:\n"
-                "    dy/dx = ..."
+            return ot(
+                self.language,
+                "separable.verify.prompt.diff",
+                solution=solution_text,
             )
 
         if self.stage == VerificationStage.SUBSTITUTE_RHS:
-            return (
-                "The original differential equation has "
-                "right-hand side:\n"
-                f"    {rhs_text}\n\n"
-                "Substitute your proposed y into this "
-                "right-hand side."
+            return ot(
+                self.language,
+                "separable.verify.prompt.substitute",
+                rhs=rhs_text,
             )
 
         if self.stage == VerificationStage.COMPARE:
-            return (
-                "Compare the two expressions:\n\n"
-                f"    dy/dx = {sp.sstr(self.derivative_expression)}\n"
-                f"    RHS   = {sp.sstr(self.rhs_expression.subs(sp.symbols('y'), self.solution_expression))}\n\n"
-                "Do they match?"
+            substituted = sp.sstr(
+                self.rhs_expression.subs(
+                    sp.symbols("y"),
+                    self.solution_expression,
+                )
+            )
+            return ot(
+                self.language,
+                "separable.verify.prompt.compare",
+                derivative=sp.sstr(
+                    self.derivative_expression
+                ),
+                rhs=substituted,
             )
 
-        return (
-            "The proposed solution has been verified."
+        return ot(
+            self.language,
+            "separable.verify.prompt.complete",
         )
 
     def evaluate(

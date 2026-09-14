@@ -5,6 +5,8 @@ from uuid import uuid4
 
 import sympy as sp
 
+from src.core.i18n.locale import normalize_locale
+from src.core.i18n.ode import ot
 from src.api.mat_pal.tutor_registry import (
     TutorRegistration,
 )
@@ -37,7 +39,7 @@ class GeneratorRegistration:
     generator_name: str
     supported_difficulties: tuple[int, ...]
     create_problem: Callable[
-        [int, int | None],
+        [int, int | None, str],
         TutorRegistration,
     ]
 
@@ -122,6 +124,7 @@ class ProblemGeneratorRegistry:
         topic: str,
         difficulty: int,
         seed: int | None = None,
+        language: str = "en",
     ) -> TutorRegistration:
         registration = self.get(
             subject=subject,
@@ -137,9 +140,11 @@ class ProblemGeneratorRegistry:
                 f"{list(registration.supported_difficulties)}"
             )
 
+        locale = normalize_locale(language)
         return registration.create_problem(
             difficulty,
             seed,
+            locale,
         )
 
 
@@ -203,7 +208,9 @@ def _generated_problem_id(
 def _create_linear_problem(
     difficulty: int,
     seed: int | None,
+    language: str = "en",
 ) -> TutorRegistration:
+    locale = normalize_locale(language)
     generated = generate_linear_first_order_question(
         difficulty=difficulty,
         rng=_rng_from_seed(seed),
@@ -229,8 +236,17 @@ def _create_linear_problem(
 
     return TutorRegistration(
         problem_id=problem_id,
-        title="Generated First-Order Linear ODE",
-        problem_statement=generated["question"],
+        language=locale,
+        title=ot(locale, "linear.title.generated"),
+        problem_statement=ot(
+            locale,
+            "linear.statement",
+            equation=(
+                "dy/dx + "
+                f"({sp.sstr(p_expression)})*y "
+                f"= {sp.sstr(q_expression)}"
+            ),
+        ),
         subject="mathematics",
         domain="ode",
         topic="first_order_linear",
@@ -242,10 +258,11 @@ def _create_linear_problem(
         metadata=metadata,
         catalog_visible=False,
         create_engine=(
-            lambda: LinearODETutorAdapter(
+            lambda language="en": LinearODETutorAdapter(
                 p_expression=p_expression,
                 q_expression=q_expression,
                 problem_id=problem_id,
+                language=language,
             )
         ),
     )
@@ -254,7 +271,9 @@ def _create_linear_problem(
 def _create_separable_problem(
     difficulty: int,
     seed: int | None,
+    language: str = "en",
 ) -> TutorRegistration:
+    locale = normalize_locale(language)
     generated = generate_separable_question(
         difficulty=difficulty,
         rng=_rng_from_seed(seed),
@@ -276,8 +295,16 @@ def _create_separable_problem(
 
     return TutorRegistration(
         problem_id=problem_id,
-        title="Generated Separable ODE",
-        problem_statement=generated["question"],
+        language=locale,
+        title=ot(locale, "separable.title.generated"),
+        problem_statement=ot(
+            locale,
+            "separable.statement",
+            equation=(
+                "dy/dx = "
+                f"{sp.sstr(rhs_expression)}"
+            ),
+        ),
         subject="mathematics",
         domain="ode",
         topic="separable_equations",
@@ -289,9 +316,10 @@ def _create_separable_problem(
         metadata=metadata,
         catalog_visible=False,
         create_engine=(
-            lambda: SeparableODETutorAdapter(
+            lambda language="en": SeparableODETutorAdapter(
                 rhs_expression=rhs_expression,
                 problem_id=problem_id,
+                language=language,
             )
         ),
     )
@@ -300,11 +328,14 @@ def _create_separable_problem(
 def _create_kinematics_problem(
     difficulty: int,
     seed: int | None,
+    language: str = "en",
 ) -> TutorRegistration:
+    locale = normalize_locale(language)
     generated = generate_kinematics_problem(
         difficulty=difficulty,
         seed=seed,
         rng=_rng_from_seed(seed),
+        language=locale,
     )
     problem_id = _generated_problem_id("kinematics")
     problem = assign_problem_id(generated, problem_id)
@@ -330,10 +361,13 @@ def _create_kinematics_problem(
         skills=("kinematics",),
         metadata=metadata,
         catalog_visible=False,
+        language=locale,
         create_engine=(
-            lambda current=problem: KinematicsTutorAdapter(
-                current
-            )
+            lambda language="en", current=problem:
+                KinematicsTutorAdapter(
+                    current,
+                    language=language,
+                )
         ),
     )
 

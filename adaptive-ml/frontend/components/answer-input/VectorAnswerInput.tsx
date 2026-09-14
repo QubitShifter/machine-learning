@@ -1,17 +1,19 @@
+"use client";
+
 import { PlaceholderAnswerInput } from "@/components/answer-input/PlaceholderAnswerInput";
+import { useLanguage } from "@/components/LanguageProvider";
 import type { AnswerEditorProps } from "@/components/answer-input/types";
 
 export function VectorAnswerInput(
   props: AnswerEditorProps,
 ) {
+  const { t } = useLanguage();
+
   return (
     <PlaceholderAnswerInput
       {...props}
-      description={
-        "A future vector editor can capture ordered entries " +
-        "and submit them through the shared answer payload."
-      }
-      title="Vector input editor coming later"
+      description={t("tutor.vectorBody")}
+      title={t("tutor.vectorTitle")}
     />
   );
 }

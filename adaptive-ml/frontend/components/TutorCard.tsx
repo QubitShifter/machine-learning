@@ -1,10 +1,20 @@
-import type { FormEvent } from "react";
-import { useState } from "react";
+"use client";
+
+import type { FormEvent, KeyboardEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AnswerInput } from "@/components/answer-input/AnswerInput";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
+import { useLanguage } from "@/components/LanguageProvider";
 import { MathContent } from "@/components/math/MathContent";
 import { ProgressBar } from "@/components/ProgressBar";
+import {
+  isAnswerEditorEnabled,
+  prepareQuestionForSubmit,
+  readQuestionFieldValue,
+  submitQuestionMode,
+  toggleQuestionMode,
+} from "@/components/questionText";
 import type { TutorSession } from "@/types/tutor";
 
 interface TutorCardProps {
@@ -55,6 +65,12 @@ function readString(
 
 function readComparisonMetadata(
   metadata: Record<string, unknown>,
+  fallbacks: {
+    title: string;
+    leftLabel: string;
+    rightLabel: string;
+    question: string;
+  },
 ): ComparisonMetadata | null {
   const comparison = metadata.comparison;
 
@@ -76,24 +92,24 @@ function readComparisonMetadata(
     title: readString(
       comparison,
       "title",
-      "Comparison",
+      fallbacks.title,
     ),
     leftLabel: readString(
       comparison,
       "left_label",
-      "Left-hand side",
+      fallbacks.leftLabel,
     ),
     left,
     rightLabel: readString(
       comparison,
       "right_label",
-      "Right-hand side",
+      fallbacks.rightLabel,
     ),
     right,
     question: readString(
       comparison,
       "question",
-      "Do they match?",
+      fallbacks.question,
     ),
   };
 }
@@ -112,11 +128,20 @@ export function TutorCard({
   onPracticeNext,
   adaptiveMessage,
 }: TutorCardProps) {
+  const { t } = useLanguage();
+  const questionInputRef =
+    useRef<HTMLInputElement | null>(null);
   const [showQuestionInput, setShowQuestionInput] =
     useState(false);
   const [question, setQuestion] = useState("");
   const comparison = readComparisonMetadata(
     session.metadata,
+    {
+      title: t("tutor.comparison"),
+      leftLabel: t("tutor.comparisonLeft"),
+      rightLabel: t("tutor.comparisonRight"),
+      question: t("tutor.comparisonQuestion"),
+    },
   );
 
   function handleQuestionSubmit(
@@ -124,20 +149,49 @@ export function TutorCard({
   ) {
     event.preventDefault();
 
-    const trimmedQuestion = question.trim();
+    const { state: nextState, submittedQuestion } =
+      submitQuestionMode({
+        questionMode: showQuestionInput,
+        questionText: question,
+      });
 
-    if (!trimmedQuestion) {
+    if (!submittedQuestion) {
       return;
     }
 
-    onSubmitQuestion(trimmedQuestion);
-    setQuestion("");
+    onSubmitQuestion(submittedQuestion);
+    setQuestion(nextState.questionText);
+    setShowQuestionInput(nextState.questionMode);
   }
+
+  function keepQuestionKeysInField(
+    event: KeyboardEvent<HTMLInputElement>,
+  ) {
+    event.stopPropagation();
+  }
+
+  useEffect(() => {
+    if (!showQuestionInput) {
+      return;
+    }
+
+    const mathFields = document.querySelectorAll(
+      "math-field",
+    );
+
+    mathFields.forEach((field) => {
+      if (field instanceof HTMLElement) {
+        field.blur();
+      }
+    });
+
+    questionInputRef.current?.focus();
+  }, [showQuestionInput]);
 
   return (
     <article className="tutor-card">
       <section className="problem-context-card">
-        <p className="eyebrow">Problem</p>
+        <p className="eyebrow">{t("tutor.problem")}</p>
         <h1>{session.problem_title}</h1>
         <MathContent text={session.problem_statement} />
       </section>
@@ -150,22 +204,22 @@ export function TutorCard({
 
       {adaptiveMessage ? (
         <section className="adaptive-message">
-          <p className="eyebrow">Adaptive recommendation</p>
+          <p className="eyebrow">{t("adaptive.eyebrow")}</p>
           <p>{adaptiveMessage}</p>
         </section>
       ) : null}
 
       {session.completed ? (
         <section className="completion-card">
-          <p className="eyebrow">Session complete</p>
-          <h1>Great work. You finished this problem.</h1>
+          <p className="eyebrow">{t("tutor.completeEyebrow")}</p>
+          <h1>{t("tutor.completeTitle")}</h1>
           <MathContent text={session.feedback} />
           <button
             disabled={loading}
             onClick={onRestart}
             type="button"
           >
-            Start Again
+            {t("tutor.startAgain")}
           </button>
           {onPracticeNext ? (
             <button
@@ -173,7 +227,7 @@ export function TutorCard({
               onClick={onPracticeNext}
               type="button"
             >
-              Practice Next
+              {t("tutor.practiceNext")}
             </button>
           ) : null}
         </section>
@@ -181,7 +235,7 @@ export function TutorCard({
         <>
           <section className="prompt-card">
             <p className="eyebrow">
-              Current step
+              {t("tutor.currentStep")}
             </p>
             <MathContent
               className="prompt-content"
@@ -221,7 +275,12 @@ export function TutorCard({
           ) : null}
 
           <AnswerInput
-            disabled={loading}
+            disabled={
+              !isAnswerEditorEnabled({
+                loading,
+                questionMode: showQuestionInput,
+              })
+            }
             expectedInputType={
               session.expected_input_type
             }
@@ -240,19 +299,22 @@ export function TutorCard({
               onClick={onRequestHint}
               type="button"
             >
-              Hint
+              {t("tutor.hint")}
             </button>
             <button
               className="secondary-button"
               disabled={loading}
               onClick={() =>
-                setShowQuestionInput(
-                  (isVisible) => !isVisible,
+                setShowQuestionInput((isVisible) =>
+                  toggleQuestionMode({
+                    questionMode: isVisible,
+                    questionText: question,
+                  }).questionMode,
                 )
               }
               type="button"
             >
-              Ask a question
+              {t("tutor.ask")}
             </button>
           </div>
 
@@ -262,29 +324,40 @@ export function TutorCard({
               onSubmit={handleQuestionSubmit}
             >
               <label htmlFor="concept-question">
-                Ask about this step
+                {t("tutor.askLabel")}
               </label>
               <div className="question-row">
                 <input
+                  autoComplete="off"
+                  autoCorrect="off"
                   disabled={loading}
                   id="concept-question"
+                  inputMode="text"
                   onChange={(event) =>
                     setQuestion(
-                      event.target.value,
+                      readQuestionFieldValue(
+                        event.target.value,
+                      ),
                     )
                   }
-                  placeholder="Ask about this step..."
+                  onKeyDown={keepQuestionKeysInField}
+                  onKeyUp={keepQuestionKeysInField}
+                  placeholder={t("tutor.askPlaceholder")}
+                  ref={questionInputRef}
+                  spellCheck={false}
                   type="text"
                   value={question}
                 />
                 <button
                   disabled={
                     loading ||
-                    question.trim().length === 0
+                    prepareQuestionForSubmit(
+                      question,
+                    ).length === 0
                   }
                   type="submit"
                 >
-                  Send Question
+                  {t("tutor.sendQuestion")}
                 </button>
               </div>
             </form>
