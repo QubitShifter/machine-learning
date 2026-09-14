@@ -35,6 +35,7 @@ def assert_fresh_progress_returns_runnable_topics():
 
     assert topics == {
         "first_order_linear",
+        "kinematics",
         "separable_equations",
         "word_problems",
     }

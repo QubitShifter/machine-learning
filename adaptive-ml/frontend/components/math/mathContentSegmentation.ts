@@ -2,6 +2,7 @@ const englishPromptWords =
   /\b(after|and|answer|as|ask|calculate|check|compare|compute|correct|differentiate|do|does|everything|find|first|for|form|from|hint|identify|inside|left|like|match|next|now|place|problem|result|right|should|side|solve|something|start|step|substitute|substitution|such|that|the|then|they|this|try|use|using|what|where|with|work|write|your)\b/i;
 
 const inlineMathPatterns: RegExp[] = [
+  /\$([^$]+)\$/g,
   /\+\/-\s*[A-Za-z]\b/g,
   /\+\/-/g,
   /y'\s*\+\s*P\(x\)y\s*=\s*Q\(x\)/g,
@@ -22,6 +23,18 @@ const inlineMathPatterns: RegExp[] = [
 export interface MathSegment {
   type: "text" | "math";
   value: string;
+}
+
+function unwrapDollarDelimiters(value: string) {
+  if (
+    value.startsWith("$") &&
+    value.endsWith("$") &&
+    value.length >= 2
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
 }
 
 function trimTrailingPunctuation(value: string) {
@@ -114,11 +127,12 @@ export function splitInlineMath(
 
     const { body, punctuation } =
       trimTrailingPunctuation(mathCore);
+    const mathBody = unwrapDollarDelimiters(body);
 
-    if (body.length > 0) {
+    if (mathBody.length > 0) {
       segments.push({
         type: "math",
-        value: body,
+        value: mathBody,
       });
     }
 

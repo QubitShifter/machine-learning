@@ -14,7 +14,12 @@ from src.core.question_generation.linear_first_order import (
 from src.core.question_generation.separable import (
     generate_separable_question,
 )
+from src.core.physics.kinematics.generator import (
+    assign_problem_id,
+    generate_kinematics_problem,
+)
 from src.core.tutor_engine.adapters import (
+    KinematicsTutorAdapter,
     LinearODETutorAdapter,
     SeparableODETutorAdapter,
 )
@@ -165,6 +170,17 @@ def build_default_problem_generator_registry() -> (
             create_problem=_create_separable_problem,
         )
     )
+    registry.register(
+        GeneratorRegistration(
+            subject="physics",
+            domain="classical_mechanics",
+            topic="kinematics",
+            topic_name="Kinematics",
+            generator_name="kinematics_1d",
+            supported_difficulties=(1, 2, 3),
+            create_problem=_create_kinematics_problem,
+        )
+    )
 
     return registry
 
@@ -276,6 +292,47 @@ def _create_separable_problem(
             lambda: SeparableODETutorAdapter(
                 rhs_expression=rhs_expression,
                 problem_id=problem_id,
+            )
+        ),
+    )
+
+
+def _create_kinematics_problem(
+    difficulty: int,
+    seed: int | None,
+) -> TutorRegistration:
+    generated = generate_kinematics_problem(
+        difficulty=difficulty,
+        seed=seed,
+        rng=_rng_from_seed(seed),
+    )
+    problem_id = _generated_problem_id("kinematics")
+    problem = assign_problem_id(generated, problem_id)
+    metadata = {
+        **problem.metadata,
+        "generated": True,
+        "difficulty": difficulty,
+        "generator_name": "kinematics_1d",
+        "seed": seed,
+    }
+
+    return TutorRegistration(
+        problem_id=problem_id,
+        title=problem.title,
+        problem_statement=problem.statement,
+        subject="physics",
+        domain="classical_mechanics",
+        topic="kinematics",
+        topic_name="Kinematics",
+        problem_type="kinematics_1d",
+        total_steps=problem.total_steps(),
+        expected_input_type=problem.steps[0].input_type,
+        skills=("kinematics",),
+        metadata=metadata,
+        catalog_visible=False,
+        create_engine=(
+            lambda current=problem: KinematicsTutorAdapter(
+                current
             )
         ),
     )

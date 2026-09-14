@@ -2,7 +2,7 @@ import {
   convertPlusMinus,
   isMathOnlyLine,
   lineUsesMathOnlyRenderer,
-} from "./mathContentClassification";
+} from "./mathContentClassification.ts";
 
 const absorbConstantInstruction =
   "Combine +/- K into one new arbitrary constant C.";

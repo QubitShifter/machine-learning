@@ -1,0 +1,13 @@
+{
+  "subject": "physics",
+  "domain": "classical_mechanics",
+  "topics": [
+    {
+      "id": "kinematics",
+      "name": "Kinematics",
+      "level": 1,
+      "description": "One-dimensional motion with constant velocity and constant acceleration.",
+      "prerequisites": []
+    }
+  ]
+}

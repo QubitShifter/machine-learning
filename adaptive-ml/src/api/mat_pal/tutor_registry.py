@@ -4,7 +4,12 @@ from typing import Protocol
 
 import sympy as sp
 
+from src.core.physics.kinematics.problems import (
+    KINEMATICS_FIXED_PROBLEM_ID,
+    load_fixed_kinematics_problem,
+)
 from src.core.tutor_engine.adapters import (
+    KinematicsTutorAdapter,
     LinearODETutorAdapter,
     SeparableODETutorAdapter,
 )
@@ -146,6 +151,9 @@ def build_default_tutor_registry() -> TutorRegistry:
     _register_separable_ode_tutors(
         registry
     )
+    _register_kinematics_tutors(
+        registry
+    )
 
     return registry
 
@@ -281,6 +289,40 @@ def _register_separable_ode_tutors(
                 )
             ),
             catalog_visible=True,
+        )
+    )
+
+
+def _register_kinematics_tutors(
+    registry: TutorRegistry,
+) -> None:
+    problem = load_fixed_kinematics_problem()
+    registry.register(
+        TutorRegistration(
+            problem_id=KINEMATICS_FIXED_PROBLEM_ID,
+            title=problem.title,
+            problem_statement=problem.statement,
+            subject="physics",
+            domain="classical_mechanics",
+            topic="kinematics",
+            topic_name="Kinematics",
+            problem_type="kinematics_1d",
+            total_steps=problem.total_steps(),
+            expected_input_type="units",
+            skills=("kinematics",),
+            language="en",
+            metadata={
+                "generated": False,
+                "description": (
+                    "One-dimensional motion with "
+                    "constant velocity and constant "
+                    "acceleration."
+                ),
+            },
+            catalog_visible=True,
+            create_engine=(
+                lambda: KinematicsTutorAdapter(problem)
+            ),
         )
     )
 

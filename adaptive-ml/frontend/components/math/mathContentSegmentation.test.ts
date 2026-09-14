@@ -2,8 +2,8 @@ import {
   convertPlusMinus,
   isMathOnlyLine,
   lineUsesMathOnlyRenderer,
-} from "./mathContentClassification";
-import { splitInlineMath } from "./mathContentSegmentation";
+} from "./mathContentClassification.ts";
+import { splitInlineMath } from "./mathContentSegmentation.ts";
 
 function assert(
   condition: boolean,
@@ -175,6 +175,51 @@ assert(
 assert(
   isMathOnlyLine("exp(x) + log(x) = sqrt(x)") === true,
   "Named-function expressions must remain math-only",
+);
+
+const kinematicsStatement =
+  "An object starts from rest and accelerates uniformly at $1\\ \\mathrm{m/s^2}$ for $2\\ \\mathrm{s}$.";
+const kinematicsSegments = splitInlineMath(
+  kinematicsStatement,
+);
+const kinematicsMath = kinematicsSegments.filter(
+  (segment) => segment.type === "math",
+);
+
+assert(
+  kinematicsMath[0]?.value === "1\\ \\mathrm{m/s^2}",
+  "Dollar-delimited kinematics quantities must become math fragments",
+);
+assert(
+  kinematicsMath[1]?.value === "2\\ \\mathrm{s}",
+  "A second dollar-delimited quantity must also become math",
+);
+assert(
+  kinematicsSegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value.includes(" uniformly at "),
+  ),
+  "Prose around dollar-delimited math must keep its spaces",
+);
+assert(
+  kinematicsSegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value === " for ",
+  ),
+  "The word for between quantities must stay prose",
+);
+assert(
+  kinematicsSegments.every(
+    (segment) => !segment.value.includes("$"),
+  ),
+  "Dollar delimiters must not remain in visible segments",
+);
+assert(
+  firstMathValue("Solve dy/dx = 2*x*y") ===
+    "dy/dx = 2*x*y",
+  "ODE statements without dollars must still segment",
 );
 
 console.log("math_content_segmentation tests passed");

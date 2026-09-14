@@ -160,6 +160,7 @@ def generate_problem(
 
 def _topics_for_domain(
     registrations: list[TutorRegistration],
+    subject: str,
     domain_id: str,
 ) -> list[CatalogTopic]:
     topic_records: dict[
@@ -168,6 +169,9 @@ def _topics_for_domain(
     ] = {}
 
     for registration in registrations:
+        if registration.subject != subject:
+            continue
+
         if registration.domain != domain_id:
             continue
 
@@ -195,7 +199,7 @@ def _topics_for_domain(
             generation_available=(
                 DEFAULT_PROBLEM_GENERATOR_REGISTRY
                 .supports(
-                    subject="mathematics",
+                    subject=subject,
                     domain=domain_id,
                     topic=topic_id,
                 )
@@ -203,7 +207,7 @@ def _topics_for_domain(
             supported_difficulties=list(
                 DEFAULT_PROBLEM_GENERATOR_REGISTRY
                 .supported_difficulties(
-                    subject="mathematics",
+                    subject=subject,
                     domain=domain_id,
                     topic=topic_id,
                 )
@@ -222,38 +226,16 @@ def get_catalog() -> CatalogResponse:
         )
     )
 
-    mathematics_domains = []
-
-    for domain_id, domain_name in MATHEMATICS_DOMAINS:
-        topics = _topics_for_domain(
-            registrations=registrations,
-            domain_id=domain_id,
-        )
-        available_problem_count = sum(
-            topic.available_problem_count
-            for topic in topics
-        )
-
-        mathematics_domains.append(
-            CatalogDomain(
-                id=domain_id,
-                name=domain_name,
-                available_problem_count=(
-                    available_problem_count
-                ),
-                topics=topics,
-            )
-        )
-
-    physics_domains = [
-        CatalogDomain(
-            id=domain_id,
-            name=domain_name,
-            available_problem_count=0,
-            topics=[],
-        )
-        for domain_id, domain_name in PHYSICS_DOMAINS
-    ]
+    mathematics_domains = _domains_for_subject(
+        registrations,
+        "mathematics",
+        MATHEMATICS_DOMAINS,
+    )
+    physics_domains = _domains_for_subject(
+        registrations,
+        "physics",
+        PHYSICS_DOMAINS,
+    )
 
     return CatalogResponse(
         subjects=[
@@ -269,8 +251,39 @@ def get_catalog() -> CatalogResponse:
             CatalogSubject(
                 id="physics",
                 name="Physics",
-                available_problem_count=0,
+                available_problem_count=sum(
+                    domain.available_problem_count
+                    for domain in physics_domains
+                ),
                 domains=physics_domains,
             ),
         ]
     )
+
+
+def _domains_for_subject(
+    registrations: list[TutorRegistration],
+    subject: str,
+    domain_pairs: list[tuple[str, str]],
+) -> list[CatalogDomain]:
+    domains = []
+
+    for domain_id, domain_name in domain_pairs:
+        topics = _topics_for_domain(
+            registrations=registrations,
+            subject=subject,
+            domain_id=domain_id,
+        )
+        domains.append(
+            CatalogDomain(
+                id=domain_id,
+                name=domain_name,
+                available_problem_count=sum(
+                    topic.available_problem_count
+                    for topic in topics
+                ),
+                topics=topics,
+            )
+        )
+
+    return domains

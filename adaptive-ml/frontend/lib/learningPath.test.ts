@@ -28,7 +28,7 @@ import {
   selectSubject,
   selectTopic,
   topicsForDomain,
-} from "./learningPath";
+} from "./learningPath.ts";
 
 function assert(
   condition: boolean,
@@ -272,7 +272,9 @@ assert(
 );
 
 const physics = catalog.subjects[1];
-const calculus = catalog.subjects[0].domains[1];
+const calculus = catalog.subjects[0].domains.find(
+  (domain) => domain.id === "calculus",
+);
 
 assert(
   isRunnableSubject(physics) === false,
@@ -289,7 +291,7 @@ assert(
 assert(
   runnableDomains(catalog.subjects[0].domains).map(
     (domain) => domain.id,
-  ).join(",") === "ode",
+  ).join(",") === "primary_school,ode",
   "Runnable domains must come from backend availability",
 );
 assert(
@@ -366,6 +368,29 @@ assert(
   cards.find((entry) => entry.key === "physics")
     ?.runnable === false,
   "Physics with zero available problems remains non-runnable",
+);
+assert(
+  isRunnableSubject({
+    id: "physics",
+    name: "Physics",
+    available_problem_count: 1,
+    domains: [],
+  }) === true,
+  "Physics with available problems is runnable",
+);
+assert(
+  landingEntries({
+    subjects: [
+      {
+        id: "physics",
+        name: "Physics",
+        available_problem_count: 1,
+        domains: [],
+      },
+    ],
+  }).find((entry) => entry.key === "physics")
+    ?.runnable === true,
+  "Landing Physics card follows catalog availability",
 );
 assert(
   cards.find((entry) => entry.key === "mathematics")

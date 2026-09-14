@@ -101,6 +101,26 @@ domains such as:
 Each topic should become catalog-visible only when backed by a real runnable
 tutor implementation.
 
+Phase 21 adds runnable 1D Kinematics
+(`physics / classical_mechanics / kinematics`)
+through the existing catalog, registry, generic session
+API, units input, MathContent rendering, adaptive
+progress, and student profiles. See
+`docs/kinematics_tutor.md`.
+
+Still deferred:
+
+- 2D motion
+- projectile motion
+- Newton's laws
+- force diagrams
+- energy
+- momentum
+- rotational mechanics
+
+Deferred to Phase 22 — Internationalization & Bulgarian
+Language Support
+
 ## Future Adapter Registration
 
 A future `PhysicsTutorAdapter` should implement the same engine protocol used by

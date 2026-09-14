@@ -50,6 +50,11 @@ TOPIC_MASTERY_KEYS = {
         "ode",
         "separable_equations",
     ): "separable_equations",
+    (
+        "physics",
+        "classical_mechanics",
+        "kinematics",
+    ): "kinematics",
 }
 
 

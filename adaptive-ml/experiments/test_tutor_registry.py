@@ -167,10 +167,14 @@ def assert_catalog_uses_visible_registrations_only():
 
     catalog_response = catalog.get_catalog()
     mathematics = catalog_response.subjects[0]
+    physics = catalog_response.subjects[1]
 
     assert mathematics.id == "mathematics"
-    assert mathematics.available_problem_count == len(
-        problems
+    assert physics.id == "physics"
+    assert (
+        mathematics.available_problem_count
+        + physics.available_problem_count
+        == len(problems)
     )
 
 

@@ -872,8 +872,10 @@ a.login-local-link {
 .units-answer-row {
   align-items: end;
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: minmax(8rem, 0.55fr) minmax(8rem, 1fr) auto;
+  gap: 0.75rem 1rem;
+  grid-template-columns: minmax(0, 6.5rem) minmax(0, 1fr) auto;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .units-answer-row label {
@@ -882,6 +884,12 @@ a.login-local-link {
   font-weight: 700;
   gap: 0.4rem;
   margin: 0;
+  min-width: 0;
+}
+
+.units-answer-row > button {
+  justify-self: end;
+  white-space: nowrap;
 }
 
 .answer-row input,
@@ -890,6 +898,12 @@ a.login-local-link {
   border-radius: 999px;
   min-height: 2.75rem;
   padding: 0.75rem 1rem;
+}
+
+.units-answer-row input {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .answer-row input:focus,
