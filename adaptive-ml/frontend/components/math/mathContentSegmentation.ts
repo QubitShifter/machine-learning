@@ -46,6 +46,16 @@ function trimTrailingPunctuation(value: string) {
   };
 }
 
+function clipCyrillicFromMath(value: string) {
+  const cyrillic = /\p{Script=Cyrillic}/u.exec(value);
+
+  if (!cyrillic || cyrillic.index === undefined) {
+    return value;
+  }
+
+  return value.slice(0, cyrillic.index);
+}
+
 function findNextMathFragment(
   text: string,
   startIndex: number,
@@ -62,7 +72,7 @@ function findNextMathFragment(
       continue;
     }
 
-    const raw = match[0];
+    const raw = clipCyrillicFromMath(match[0]);
     const value = raw.trim();
 
     if (!value || englishPromptWords.test(value)) {

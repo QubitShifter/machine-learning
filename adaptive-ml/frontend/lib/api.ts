@@ -6,6 +6,7 @@ import type {
   GenerateProblemRequest,
   ProblemDetail,
   ProblemSummary,
+  QuestionRequest,
   StartSessionRequest,
   StudentProgress,
   TutorSession,
@@ -144,6 +145,19 @@ export function submitAnswer(
 ): Promise<TutorSession> {
   return requestJson<TutorSession>(
     `/sessions/${sessionId}/answer`,
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
+  );
+}
+
+export function submitQuestion(
+  sessionId: string,
+  request: QuestionRequest,
+): Promise<TutorSession> {
+  return requestJson<TutorSession>(
+    `/sessions/${sessionId}/question`,
     {
       method: "POST",
       body: JSON.stringify(request),

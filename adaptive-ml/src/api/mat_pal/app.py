@@ -14,6 +14,7 @@ from src.api.mat_pal.schemas import (
     GenerateProblemRequest,
     ProblemDetail,
     ProblemSummary,
+    QuestionRequest,
     SessionResponse,
     StartSessionRequest,
     StudentProgressResponse,
@@ -214,6 +215,28 @@ def submit_answer(
     response = session_store.submit_answer(
         session_id=session_id,
         answer_request=request,
+    )
+
+    if response is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found.",
+        )
+
+    return response
+
+
+@app.post(
+    "/sessions/{session_id}/question",
+    response_model=SessionResponse,
+)
+def submit_question(
+    session_id: str,
+    request: QuestionRequest,
+) -> SessionResponse:
+    response = session_store.submit_question(
+        session_id=session_id,
+        question_request=request,
     )
 
     if response is None:

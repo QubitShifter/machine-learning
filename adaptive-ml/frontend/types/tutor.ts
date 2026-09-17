@@ -15,6 +15,12 @@ export type TutorStatus =
   | "hint"
   | "complete";
 
+export interface TutorSource {
+  title: string;
+  url: string;
+  domain?: string | null;
+}
+
 export interface TutorSession {
   session_id: string;
   problem_id: string;
@@ -28,6 +34,7 @@ export interface TutorSession {
   hint_available: boolean;
   expected_input_type: InputType;
   suggestion: string | null;
+  sources?: TutorSource[];
   metadata: Record<string, unknown>;
 }
 
@@ -41,6 +48,10 @@ export interface AnswerRequest {
   answer: string;
   input_type?: InputType;
   metadata?: Record<string, unknown>;
+}
+
+export interface QuestionRequest {
+  question: string;
 }
 
 export interface CatalogTopic {

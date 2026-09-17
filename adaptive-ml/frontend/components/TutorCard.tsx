@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { AnswerInput } from "@/components/answer-input/AnswerInput";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
+import type { GradedFeedback } from "@/components/feedbackPresentation";
 import { useLanguage } from "@/components/LanguageProvider";
 import { MathContent } from "@/components/math/MathContent";
 import { ProgressBar } from "@/components/ProgressBar";
@@ -22,6 +23,8 @@ interface TutorCardProps {
   currentPrompt: string;
   answer: string;
   loading: boolean;
+  questionLoading?: boolean;
+  lastGraded?: GradedFeedback | null;
   errorMessage: string | null;
   onAnswerChange: (value: string) => void;
   onSubmitAnswer: () => void;
@@ -119,6 +122,8 @@ export function TutorCard({
   currentPrompt,
   answer,
   loading,
+  questionLoading = false,
+  lastGraded = null,
   errorMessage,
   onAnswerChange,
   onSubmitAnswer,
@@ -294,6 +299,7 @@ export function TutorCard({
               className="secondary-button"
               disabled={
                 loading ||
+                questionLoading ||
                 !session.hint_available
               }
               onClick={onRequestHint}
@@ -303,7 +309,7 @@ export function TutorCard({
             </button>
             <button
               className="secondary-button"
-              disabled={loading}
+              disabled={loading || questionLoading}
               onClick={() =>
                 setShowQuestionInput((isVisible) =>
                   toggleQuestionMode({
@@ -330,7 +336,7 @@ export function TutorCard({
                 <input
                   autoComplete="off"
                   autoCorrect="off"
-                  disabled={loading}
+                  disabled={loading || questionLoading}
                   id="concept-question"
                   inputMode="text"
                   onChange={(event) =>
@@ -351,6 +357,7 @@ export function TutorCard({
                 <button
                   disabled={
                     loading ||
+                    questionLoading ||
                     prepareQuestionForSubmit(
                       question,
                     ).length === 0
@@ -368,6 +375,9 @@ export function TutorCard({
       <FeedbackPanel
         errorMessage={errorMessage}
         feedback={session.feedback}
+        lastGraded={lastGraded}
+        questionLoading={questionLoading}
+        session={session}
         status={session.status}
         suggestion={session.suggestion}
       />

@@ -96,5 +96,11 @@ assert(
     true,
   "Standalone linear standard form must use math-only rendering",
 );
+assert(
+  isMathOnlyLine(
+    "Да, това уравнение може да се реши и с разделяне на променливите, защото dy/dx + (2*x)*y = x.",
+  ) === false,
+  "Bulgarian mixed prose with an ODE must not be math-only",
+);
 
 console.log("math_content_classification tests passed");

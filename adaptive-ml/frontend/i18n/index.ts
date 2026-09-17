@@ -91,6 +91,19 @@ export function translate(
   return interpolate(text, params);
 }
 
+const GENERATED_PROBLEM_ID =
+  /^(.+)_generated_[0-9a-f]+$/i;
+
+export function catalogProblemLookupId(problemId: string): string {
+  const match = GENERATED_PROBLEM_ID.exec(problemId);
+
+  if (!match) {
+    return problemId;
+  }
+
+  return `${match[1]}_generated`;
+}
+
 export function catalogDisplayName(
   kind: "subject" | "domain" | "topic" | "problem",
   id: string,
@@ -101,14 +114,27 @@ export function catalogDisplayName(
     return fallback;
   }
 
-  const key = `catalog.${kind}.${id}`;
-  const translated = translate(locale, key);
+  const exactKey = `catalog.${kind}.${id}`;
+  const exact = translate(locale, exactKey);
 
-  if (translated === key) {
-    return fallback;
+  if (exact !== exactKey) {
+    return exact;
   }
 
-  return translated;
+  if (kind === "problem") {
+    const lookupId = catalogProblemLookupId(id);
+
+    if (lookupId !== id) {
+      const generatedKey = `catalog.${kind}.${lookupId}`;
+      const generated = translate(locale, generatedKey);
+
+      if (generated !== generatedKey) {
+        return generated;
+      }
+    }
+  }
+
+  return fallback;
 }
 
 export function masteryDisplayLabel(

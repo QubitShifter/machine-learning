@@ -89,6 +89,12 @@ class LinearODETutorAdapter:
 
     @property
     def problem_title(self) -> str:
+        if "_generated_" in self.problem_id:
+            return ot(
+                self.language,
+                "linear.title.generated",
+            )
+
         return ot(self.language, "linear.title")
 
     @property

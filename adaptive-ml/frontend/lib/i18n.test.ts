@@ -2,6 +2,7 @@ import {
   DEFAULT_LOCALE,
   LOCALE_STORAGE_KEY,
   catalogDisplayName,
+  catalogProblemLookupId,
   interpolate,
   loadLocale,
   normalizeLocale,
@@ -93,8 +94,61 @@ assert(
 );
 
 assert(
-  translate("en", "nav.learn") === "Learn",
-  "English known key must translate",
+  translate("en", "tutor.sources") === "Sources",
+  "English source heading",
+);
+assert(
+  translate("bg", "tutor.sources") === "Източници",
+  "Bulgarian source heading",
+);
+assert(
+  translate("en", "tutor.externalSources") ===
+    "Answer supported by external sources",
+  "English external-source badge",
+);
+assert(
+  translate("bg", "tutor.externalSources") ===
+    "Отговор с помощта на външни източници",
+  "Bulgarian external-source badge",
+);
+assert(
+  translate("en", "tutor.findingExplanation") ===
+    "Finding an explanation...",
+  "English question loading text",
+);
+assert(
+  translate("bg", "tutor.findingExplanation") ===
+    "Подготвям обяснение...",
+  "Bulgarian question loading text",
+);
+assert(
+  translate("en", "tutor.explanation") === "Explanation",
+  "English explanation heading",
+);
+assert(
+  translate("bg", "tutor.explanation") === "Обяснение",
+  "Bulgarian explanation heading",
+);
+assert(
+  translate("en", "tutor.lastAnswer") === "Last answer",
+  "English last-answer heading",
+);
+assert(
+  translate("bg", "tutor.lastAnswer") ===
+    "Последен отговор",
+  "Bulgarian last-answer heading",
+);
+assert(
+  translate("en", "status.concept") === "Explanation",
+  "English concept status is an explanation, not Correct",
+);
+assert(
+  translate("bg", "status.concept") === "Обяснение",
+  "Bulgarian concept status is an explanation, not Правилно",
+);
+assert(
+  translate("bg", "status.correct") === "Правилно",
+  "Bulgarian correct status remains a graded-answer label",
 );
 assert(
   translate("bg", "nav.learn") === "Учебни теми",
@@ -152,6 +206,84 @@ assert(
     "bg",
   ) === "Generated 1D kinematics",
   "Unknown catalog ids must keep the provided fallback",
+);
+
+const LINEAR_ODE_FIXED_PROBLEM_ID =
+  "linear_first_order_fixed_001";
+const LINEAR_ODE_GENERATED_PROBLEM_ID =
+  "linear_first_order_generated_a1b2c3d4e5f6";
+
+assert(
+  LINEAR_ODE_FIXED_PROBLEM_ID ===
+    "linear_first_order_fixed_001",
+  "Fixed Linear ODE catalog id must remain unchanged",
+);
+assert(
+  catalogProblemLookupId(LINEAR_ODE_FIXED_PROBLEM_ID) ===
+    LINEAR_ODE_FIXED_PROBLEM_ID,
+  "Fixed Linear ODE ids must not be rewritten for lookup",
+);
+assert(
+  catalogProblemLookupId(LINEAR_ODE_GENERATED_PROBLEM_ID) ===
+    "linear_first_order_generated",
+  "Generated Linear ODE ids must map to a stable catalog key",
+);
+assert(
+  catalogProblemLookupId(LINEAR_ODE_GENERATED_PROBLEM_ID) !==
+    LINEAR_ODE_GENERATED_PROBLEM_ID,
+  "Generated Linear ODE display lookup must not use the raw id as a label",
+);
+
+const fixedBg = catalogDisplayName(
+  "problem",
+  LINEAR_ODE_FIXED_PROBLEM_ID,
+  "First-Order Linear ODE",
+  "bg",
+);
+const generatedBg = catalogDisplayName(
+  "problem",
+  LINEAR_ODE_GENERATED_PROBLEM_ID,
+  "First-Order Linear ODE",
+  "bg",
+);
+const fixedEn = catalogDisplayName(
+  "problem",
+  LINEAR_ODE_FIXED_PROBLEM_ID,
+  "First-Order Linear ODE",
+  "en",
+);
+const generatedEn = catalogDisplayName(
+  "problem",
+  LINEAR_ODE_GENERATED_PROBLEM_ID,
+  "First-Order Linear ODE",
+  "en",
+);
+
+assert(
+  fixedBg ===
+    "Линейно диференциално уравнение от първи ред",
+  "Fixed Linear ODE must keep its Bulgarian catalog label",
+);
+assert(
+  generatedBg ===
+    "Генерирана задача — линейно ДУ от първи ред",
+  "Generated Linear ODE must use a distinct Bulgarian catalog label",
+);
+assert(
+  fixedEn === "First-order linear differential equation",
+  "Fixed Linear ODE must use its English catalog label",
+);
+assert(
+  generatedEn ===
+    "Generated problem — first-order linear ODE",
+  "Generated Linear ODE must use a distinct English catalog label",
+);
+assert(
+  !fixedBg.includes(LINEAR_ODE_FIXED_PROBLEM_ID) &&
+    !generatedBg.includes(LINEAR_ODE_GENERATED_PROBLEM_ID) &&
+    !fixedEn.includes(LINEAR_ODE_FIXED_PROBLEM_ID) &&
+    !generatedEn.includes(LINEAR_ODE_GENERATED_PROBLEM_ID),
+  "Problem labels must not expose internal catalog ids",
 );
 
 assert(

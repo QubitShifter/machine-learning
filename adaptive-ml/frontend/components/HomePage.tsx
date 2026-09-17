@@ -12,6 +12,10 @@ import { ProgressDashboard } from "@/components/ProgressDashboard";
 import { SubjectCard } from "@/components/SubjectCard";
 import { TutorCard } from "@/components/TutorCard";
 import {
+  snapshotGradedFeedback,
+  type GradedFeedback,
+} from "@/components/feedbackPresentation";
+import {
   generateProblem,
   getAdaptiveRecommendation,
   getCatalog,
@@ -21,6 +25,7 @@ import {
   requestHint,
   startSession,
   submitAnswer,
+  submitQuestion,
 } from "@/lib/api";
 import {
   HOME_HREF,
@@ -104,6 +109,10 @@ export function HomePage() {
     useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
+  const [questionLoading, setQuestionLoading] =
+    useState(false);
+  const [lastGraded, setLastGraded] =
+    useState<GradedFeedback | null>(null);
   const [errorMessage, setErrorMessage] =
     useState<string | null>(null);
   const [adaptiveMessage, setAdaptiveMessage] =
@@ -121,6 +130,7 @@ export function HomePage() {
     setAdaptiveMessage(null);
     setProgress(null);
     setErrorMessage(null);
+    setLastGraded(null);
   }, [studentId]);
 
   useEffect(() => {
@@ -134,6 +144,7 @@ export function HomePage() {
     setAnswer("");
     setAdaptiveMessage(null);
     setErrorMessage(null);
+    setLastGraded(null);
   }, [locale]);
 
   useEffect(() => {
@@ -257,6 +268,7 @@ export function HomePage() {
       (nextSession) => {
         setCurrentPrompt(nextSession.feedback);
         setAnswer("");
+        setLastGraded(null);
       },
     );
   }
@@ -275,6 +287,7 @@ export function HomePage() {
     setSelectedProblem(null);
     setSession(null);
     setAdaptiveMessage(null);
+    setLastGraded(null);
   }
 
   function handleDomainChange(value: string) {
@@ -373,6 +386,7 @@ export function HomePage() {
       setCurrentPrompt("");
       setAnswer("");
       setAdaptiveMessage(null);
+      setLastGraded(null);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
@@ -397,6 +411,12 @@ export function HomePage() {
         }),
       (nextSession) => {
         setAnswer("");
+        const graded = snapshotGradedFeedback(
+          nextSession,
+        );
+        if (graded) {
+          setLastGraded(graded);
+        }
 
         if (nextSession.completed) {
           setAdaptiveMessage(null);
@@ -417,21 +437,28 @@ export function HomePage() {
       return;
     }
 
-    void runRequest(
-      () =>
-        submitAnswer(session.session_id, {
-          answer: question,
-          input_type: "text",
-        }),
-      (nextSession) => {
-        if (
-          nextSession.status === "correct" ||
-          nextSession.status === "waiting_for_answer"
-        ) {
-          setCurrentPrompt(readNextPrompt(nextSession));
-        }
-      },
-    );
+    setQuestionLoading(true);
+    setErrorMessage(null);
+
+    void (async () => {
+      try {
+        const nextSession = await submitQuestion(
+          session.session_id,
+          {
+            question,
+          },
+        );
+        setSession(nextSession);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : t("error.generic"),
+        );
+      } finally {
+        setQuestionLoading(false);
+      }
+    })();
   }
 
   function handleRequestHint() {
@@ -439,8 +466,16 @@ export function HomePage() {
       return;
     }
 
-    void runRequest(() =>
-      requestHint(session.session_id),
+    void runRequest(
+      () => requestHint(session.session_id),
+      (nextSession) => {
+        const graded = snapshotGradedFeedback(
+          nextSession,
+        );
+        if (graded) {
+          setLastGraded(graded);
+        }
+      },
     );
   }
 
@@ -680,7 +715,9 @@ export function HomePage() {
           answer={answer}
           currentPrompt={currentPrompt}
           errorMessage={errorMessage}
+          lastGraded={lastGraded}
           loading={loading}
+          questionLoading={questionLoading}
           onAnswerChange={setAnswer}
           onPracticeNext={handlePracticeNext}
           onRequestHint={handleRequestHint}

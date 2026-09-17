@@ -14,6 +14,7 @@ from src.core.i18n.concept import (
 )
 from src.core.i18n.locale import normalize_locale
 from src.core.i18n.ode import ot
+from src.core.i18n.question import qt
 from src.core.tutor_engine.adapters.linear_ode_adapter import (
     LinearODETutorAdapter,
 )
@@ -658,6 +659,130 @@ def assert_bulgarian_linear_concept_guidance():
     assert "The integrating factor" not in payload["feedback"]
 
 
+def assert_alternative_method_strings_are_localized():
+    assert qt("bg", "question.alternative.intro").startswith(
+        "Да. Това уравнение може да се реши и чрез "
+        "разделяне на променливите."
+    )
+    assert "separation of variables" in qt(
+        "en",
+        "question.alternative.intro",
+    )
+    assert qt("bg", "question.alternative.rearrange") == (
+        "Пренареждаме уравнението:"
+    )
+    assert qt("en", "question.alternative.rearrange") == (
+        "Rearrange the equation:"
+    )
+    assert qt("bg", "question.alternative.separate") == (
+        "Разделяме променливите:"
+    )
+    assert qt("bg", "question.alternative.restriction_lead") == (
+        "При делението приемаме, че"
+    )
+    assert qt("en", "question.alternative.restriction_lead") == (
+        "When dividing we assume that"
+    )
+    assert qt("bg", "question.alternative.equilibrium_lead") == (
+        "Отделно проверяваме, че постоянната функция"
+    )
+    assert qt("en", "question.alternative.equilibrium_lead") == (
+        "Separately we check that the constant function"
+    )
+    assert qt("bg", "question.alternative.equilibrium_tail") == (
+        "също е решение на първоначалното уравнение."
+    )
+    assert "разделяне" not in qt(
+        "en",
+        "question.alternative.intro",
+    )
+    assert qt(
+        "bg",
+        "question.alternative.unverified.if_applies",
+    ) == (
+        "Методът с интегриращ фактор е приложим за това "
+        "линейно уравнение."
+    )
+    assert qt(
+        "en",
+        "question.alternative.unverified.if_applies",
+    ) == (
+        "The integrating-factor method applies to this "
+        "linear equation."
+    )
+    assert qt(
+        "bg",
+        "question.alternative.unverified.no_verified",
+    ) == (
+        "На този етап нямам проверено алтернативно "
+        "преобразуване за конкретната задача."
+    )
+    assert qt(
+        "en",
+        "question.alternative.unverified.no_verified",
+    ) == (
+        "I do not currently have a verified alternative "
+        "transformation for this particular problem."
+    )
+    assert qt(
+        "bg",
+        "question.alternative.unverified.separation",
+    ) == (
+        "Не съм установил, че разделянето на "
+        "променливите е приложимо за това уравнение."
+    )
+    assert qt(
+        "en",
+        "question.alternative.unverified.separation",
+    ) == (
+        "I have not established that separation of "
+        "variables applies to this equation."
+    )
+    assert qt(
+        "bg",
+        "question.alternative.unverified.not_impossible",
+    ) == (
+        "Това не означава, че друг метод е невъзможен."
+    )
+    assert qt(
+        "en",
+        "question.alternative.unverified.not_impossible",
+    ) == (
+        "That does not mean another method is impossible."
+    )
+    assert qt(
+        "bg",
+        "question.alternative.unverified.continue",
+    ) == (
+        "Можем да продължим с метода с интегриращ фактор "
+        "или да разгледаме допълнително приложимостта на "
+        "друг подход."
+    )
+    assert qt(
+        "en",
+        "question.alternative.unverified.continue",
+    ) == (
+        "We can continue with the integrating-factor "
+        "method or examine another approach more closely."
+    )
+    assert "Transformacao" not in qt(
+        "bg",
+        "question.alternative.unverified.no_verified",
+    )
+    assert "разделяне" not in qt(
+        "en",
+        "question.alternative.unverified.no_verified",
+    )
+    assert "единственият" not in qt(
+        "bg",
+        "question.alternative.unverified.no_verified",
+    )
+    assert "only possible" not in qt(
+        "en",
+        "question.alternative.unverified.if_applies",
+    )
+
+
 def main():
     assert_unsupported_language_falls_back_to_english()
     assert_english_session_starts_in_english()
@@ -680,6 +805,7 @@ def main():
     assert_missing_language_defaults_to_english()
     assert_bulgarian_integrating_factor_wording()
     assert_bulgarian_linear_concept_guidance()
+    assert_alternative_method_strings_are_localized()
     print("localization tests passed")
 
 

@@ -101,6 +101,10 @@ tutor state, the same safety idea used when switching profiles.
 
 A new session started after the switch uses the new locale.
 
+Ask-a-question (Phase 23) uses that same stored session language.
+The question engine does not infer output language from whether the
+learner typed English or Bulgarian.
+
 ## Catalog Localization
 
 Internal IDs stay stable:

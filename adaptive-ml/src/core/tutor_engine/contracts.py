@@ -83,6 +83,10 @@ class TutorResponse:
 
     expected_input_type: ExpectedInputType = "text"
 
+    sources: list[dict[str, Any]] = field(
+        default_factory=list
+    )
+
     metadata: dict[str, Any] = field(
         default_factory=dict
     )

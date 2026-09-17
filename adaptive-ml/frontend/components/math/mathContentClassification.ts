@@ -67,6 +67,10 @@ export function isMathOnlyLine(
     return false;
   }
 
+  if (/\p{Script=Cyrillic}/u.test(trimmed)) {
+    return false;
+  }
+
   if (/^([xyzC]|\d+(?:\s*\/\s*\d+)?)$/.test(trimmed)) {
     return true;
   }

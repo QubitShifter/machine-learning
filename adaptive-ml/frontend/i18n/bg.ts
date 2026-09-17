@@ -66,6 +66,8 @@ export const bg = {
     "Лешници в три хралупи",
   "catalog.problem.linear_first_order_fixed_001":
     "Линейно диференциално уравнение от първи ред",
+  "catalog.problem.linear_first_order_generated":
+    "Генерирана задача — линейно ДУ от първи ред",
   "catalog.problem.separable_ode_fixed_001":
     "Уравнение с разделящи се променливи",
   "catalog.problem.kinematics_fixed_001":
@@ -176,6 +178,10 @@ export const bg = {
   "tutor.askLabel": "Попитайте за тази стъпка",
   "tutor.askPlaceholder": "Попитайте за тази стъпка...",
   "tutor.sendQuestion": "Изпрати въпроса",
+  "tutor.sources": "Източници",
+  "tutor.externalSources":
+    "Отговор с помощта на външни източници",
+  "tutor.findingExplanation": "Подготвям обяснение...",
   "tutor.practiceNext": "Следваща задача",
   "tutor.startAgain": "Започни отново",
   "tutor.completeEyebrow": "Сесията е завършена",
@@ -183,6 +189,8 @@ export const bg = {
     "Отлична работа. Приключихте тази задача.",
   "tutor.currentStep": "Текуща стъпка",
   "tutor.feedback": "Обратна връзка",
+  "tutor.explanation": "Обяснение",
+  "tutor.lastAnswer": "Последен отговор",
   "tutor.suggestion": "Предложение",
   "tutor.yourAnswer": "Вашият отговор",
   "tutor.expectedInput": "Очакван вход: {type}",
@@ -219,7 +227,7 @@ export const bg = {
   "status.incorrect": "Неправилно",
   "status.hint": "Подсказка",
   "status.complete": "завършено",
-  "status.concept": "концепция",
+  "status.concept": "Обяснение",
 
   "error.catalog": "Каталогът на MAT-PAL не можа да се зареди.",
   "error.problem": "Избраната задача не можа да се зареди.",

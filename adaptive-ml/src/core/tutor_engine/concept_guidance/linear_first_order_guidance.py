@@ -156,22 +156,17 @@ def explain_p_q_identification(
     return ot(language, "linear.concept.pq")
 
 
-def respond_to_linear_concept_question(
+def explain_specific_linear_concept(
     student_message: str,
-    stage: LinearODEStage,
     p_expression=None,
     language: str | None = None,
 ) -> str | None:
     """
-    Return a conceptual explanation appropriate to the current
-    stage. Return None when the message does not appear to be
-    a concept question.
-    """
+    Return a specific known Linear ODE concept explanation.
 
-    if not looks_like_linear_concept_question(
-        student_message
-    ):
-        return None
+    Does not use stage-aware or generic fallback. Intended as
+    the Ask-a-question local fast path.
+    """
 
     locale = normalize_locale(language)
     message = _fold_message(student_message)
@@ -260,6 +255,36 @@ def respond_to_linear_concept_question(
             p_expression,
             locale,
         )
+
+    return None
+
+
+def respond_to_linear_concept_question(
+    student_message: str,
+    stage: LinearODEStage,
+    p_expression=None,
+    language: str | None = None,
+) -> str | None:
+    """
+    Return a conceptual explanation appropriate to the current
+    stage. Return None when the message does not appear to be
+    a concept question.
+    """
+
+    if not looks_like_linear_concept_question(
+        student_message
+    ):
+        return None
+
+    locale = normalize_locale(language)
+    specific = explain_specific_linear_concept(
+        student_message,
+        p_expression=p_expression,
+        language=locale,
+    )
+
+    if specific is not None:
+        return specific
 
     #
     # Stage-aware fallback.

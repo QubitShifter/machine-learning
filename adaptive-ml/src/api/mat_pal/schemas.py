@@ -31,6 +31,16 @@ class AnswerRequest(BaseModel):
     )
 
 
+class QuestionRequest(BaseModel):
+    question: str
+
+
+class TutorSourceModel(BaseModel):
+    title: str
+    url: str
+    domain: str | None = None
+
+
 class SessionResponse(BaseModel):
     session_id: str
     problem_id: str
@@ -44,6 +54,9 @@ class SessionResponse(BaseModel):
     hint_available: bool
     expected_input_type: InputType = "text"
     suggestion: str | None = None
+    sources: list[TutorSourceModel] = Field(
+        default_factory=list
+    )
     metadata: dict[str, Any] = Field(
         default_factory=dict
     )

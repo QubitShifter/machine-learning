@@ -413,4 +413,135 @@ assert(
   "Login must not pretend authentication exists",
 );
 
+const LINEAR_ODE_FIXED_PROBLEM_ID =
+  "linear_first_order_fixed_001";
+const LINEAR_ODE_GENERATED_PROBLEM_ID =
+  "linear_first_order_generated_a1b2c3d4e5f6";
+const linearOdeProblems: ProblemSummary[] = [
+  {
+    problem_id: LINEAR_ODE_FIXED_PROBLEM_ID,
+    title: "First-Order Linear ODE",
+    subject: "mathematics",
+    domain: "ode",
+    topic: "first_order_linear",
+    problem_type: "linear_first_order_ode",
+    available: true,
+    grade: null,
+    total_steps: 8,
+    expected_input_type: "text",
+    generated: false,
+    generation_available: true,
+    supported_difficulties: [1, 2, 3],
+  },
+  {
+    problem_id: LINEAR_ODE_GENERATED_PROBLEM_ID,
+    title: "Generated First-Order Linear ODE",
+    subject: "mathematics",
+    domain: "ode",
+    topic: "first_order_linear",
+    problem_type: "linear_first_order_ode",
+    available: true,
+    grade: null,
+    total_steps: 8,
+    expected_input_type: "text",
+    generated: true,
+    generation_available: true,
+    supported_difficulties: [1, 2, 3],
+  },
+];
+const linearOdePath = selectProblem(
+  selectTopic(
+    selectDomain(
+      selectSubject("mathematics"),
+      "ode",
+    ),
+    "first_order_linear",
+  ),
+  LINEAR_ODE_FIXED_PROBLEM_ID,
+);
+const linearOdeTopicProblems = problemsForTopic(
+  linearOdeProblems,
+  linearOdePath,
+);
+const generatedLinearOdePath = selectProblem(
+  linearOdePath,
+  LINEAR_ODE_GENERATED_PROBLEM_ID,
+);
+
+assert(
+  LINEAR_ODE_FIXED_PROBLEM_ID ===
+    "linear_first_order_fixed_001",
+  "Fixed Linear ODE routing id must remain unchanged",
+);
+assert(
+  LINEAR_ODE_GENERATED_PROBLEM_ID.startsWith(
+    "linear_first_order_generated_",
+  ),
+  "Generated Linear ODE routing id prefix must remain unchanged",
+);
+assert(
+  linearOdeTopicProblems.map(
+    (problem) => problem.problem_id,
+  ).join(",") ===
+    `${LINEAR_ODE_FIXED_PROBLEM_ID},${LINEAR_ODE_GENERATED_PROBLEM_ID}`,
+  "Linear ODE topic filtering must keep both catalog choices",
+);
+assert(
+  linearOdePath.problemId === LINEAR_ODE_FIXED_PROBLEM_ID,
+  "Selecting the fixed Linear ODE must keep its stable id",
+);
+assert(
+  generatedLinearOdePath.problemId ===
+    LINEAR_ODE_GENERATED_PROBLEM_ID,
+  "Selecting the generated Linear ODE must keep its generated id",
+);
+assert(
+  linearOdePath.subject === "mathematics" &&
+    linearOdePath.domain === "ode" &&
+    linearOdePath.topic === "first_order_linear" &&
+    generatedLinearOdePath.subject === "mathematics" &&
+    generatedLinearOdePath.domain === "ode" &&
+    generatedLinearOdePath.topic === "first_order_linear",
+  "Both Linear ODE choices must keep the same subject, domain, and topic routing",
+);
+assert(
+  canStartSelectedProblem(
+    linearOdePath,
+    {
+      ...linearOdeTopicProblems[0],
+      problem_text: "Solve dy/dx + (2*x)*y = x",
+      language: "en",
+      skills: [],
+      metadata: {},
+    },
+  ) === true,
+  "Starting the fixed Linear ODE must still require its own problem id",
+);
+assert(
+  canStartSelectedProblem(
+    generatedLinearOdePath,
+    {
+      ...linearOdeTopicProblems[1],
+      problem_text: "Solve dy/dx + (x)*y = 1",
+      language: "en",
+      skills: [],
+      metadata: { generated: true },
+    },
+  ) === true,
+  "Starting the generated Linear ODE must still require its own problem id",
+);
+assert(
+  canStartSelectedProblem(
+    linearOdePath,
+    {
+      ...linearOdeTopicProblems[1],
+      problem_text: "Solve dy/dx + (x)*y = 1",
+      language: "en",
+      skills: [],
+      metadata: { generated: true },
+    },
+  ) === false,
+  "Fixed and generated Linear ODE selections must not start each other",
+);
+
 console.log("learning_path tests passed");

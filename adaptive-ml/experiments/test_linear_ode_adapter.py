@@ -402,7 +402,52 @@ def assert_bulgarian_compare_keeps_lhs_rhs_and_accepts_match():
     assert "comparison" not in correct.metadata
 
 
+def assert_generated_problem_title_is_distinct():
+    x = sp.symbols("x")
+    fixed = LinearODETutorAdapter(
+        p_expression=2 * x,
+        q_expression=x,
+        problem_id="linear_first_order_fixed_001",
+        language="bg",
+    )
+    generated = LinearODETutorAdapter(
+        p_expression=2 * x,
+        q_expression=x,
+        problem_id=(
+            "linear_first_order_generated_a1b2c3d4e5f6"
+        ),
+        language="bg",
+    )
+
+    assert fixed.problem_id == (
+        "linear_first_order_fixed_001"
+    )
+    assert generated.problem_id == (
+        "linear_first_order_generated_a1b2c3d4e5f6"
+    )
+    assert fixed.problem_title == (
+        "Линейно диференциално уравнение от първи ред"
+    )
+    assert generated.problem_title == (
+        "Генерирана задача — линейно ДУ от първи ред"
+    )
+    assert fixed.problem_title != generated.problem_title
+
+    english_generated = LinearODETutorAdapter(
+        p_expression=2 * x,
+        q_expression=x,
+        problem_id=(
+            "linear_first_order_generated_a1b2c3d4e5f6"
+        ),
+        language="en",
+    )
+    assert english_generated.problem_title == (
+        "Generated problem — first-order linear ODE"
+    )
+
+
 def main():
+    assert_generated_problem_title_is_distinct()
     assert_stage_input_mapping()
     assert_initial_response_uses_shared_contract()
     assert_concept_question_does_not_advance()

@@ -60,7 +60,9 @@ export const en = {
   "catalog.problem.grade4_reverse_reasoning_001":
     "Hazelnuts in Three Hollows",
   "catalog.problem.linear_first_order_fixed_001":
-    "First-Order Linear ODE",
+    "First-order linear differential equation",
+  "catalog.problem.linear_first_order_generated":
+    "Generated problem — first-order linear ODE",
   "catalog.problem.separable_ode_fixed_001": "Separable ODE",
   "catalog.problem.kinematics_fixed_001":
     "Car accelerating from rest",
@@ -169,6 +171,10 @@ export const en = {
   "tutor.askLabel": "Ask about this step",
   "tutor.askPlaceholder": "Ask about this step...",
   "tutor.sendQuestion": "Send Question",
+  "tutor.sources": "Sources",
+  "tutor.externalSources":
+    "Answer supported by external sources",
+  "tutor.findingExplanation": "Finding an explanation...",
   "tutor.practiceNext": "Practice Next",
   "tutor.startAgain": "Start Again",
   "tutor.completeEyebrow": "Session complete",
@@ -176,6 +182,8 @@ export const en = {
     "Great work. You finished this problem.",
   "tutor.currentStep": "Current step",
   "tutor.feedback": "Feedback",
+  "tutor.explanation": "Explanation",
+  "tutor.lastAnswer": "Last answer",
   "tutor.suggestion": "Suggestion",
   "tutor.yourAnswer": "Your answer",
   "tutor.expectedInput": "Expected input: {type}",
@@ -212,7 +220,7 @@ export const en = {
   "status.incorrect": "Incorrect",
   "status.hint": "Hint",
   "status.complete": "complete",
-  "status.concept": "concept",
+  "status.concept": "Explanation",
 
   "error.catalog": "Could not load the MAT-PAL catalog.",
   "error.problem": "Could not load the selected problem.",

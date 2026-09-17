@@ -4,7 +4,9 @@ from src.core.i18n.text import tr
 ODE_TEXT = {
     "en": {
         "linear.title": "First-Order Linear ODE",
-        "linear.title.generated": "Generated First-Order Linear ODE",
+        "linear.title.generated": (
+            "Generated problem — first-order linear ODE"
+        ),
         "linear.statement": "Solve {equation}",
         "linear.complete": "Excellent. The linear ODE has been solved.",
         "linear.continue": "When you're ready, continue with the mathematical step.",
@@ -471,7 +473,7 @@ ODE_TEXT = {
             "Линейно диференциално уравнение от първи ред"
         ),
         "linear.title.generated": (
-            "Генерирано линейно ДУ от първи ред"
+            "Генерирана задача — линейно ДУ от първи ред"
         ),
         "linear.statement": "Решете {equation}",
         "linear.complete": (

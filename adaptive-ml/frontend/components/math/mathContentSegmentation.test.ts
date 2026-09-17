@@ -360,10 +360,108 @@ assert(
   isMathOnlyLine("y' + P(x)y = Q(x)") === true,
   "Standalone standard-form equation must remain math-only",
 );
+
+const bulgarianAlternative =
+  "Да, това уравнение може да се реши и с разделяне на променливите, защото dy/dx + (2*x)*y = x се записва като отделни членове.";
+const bulgarianAlternativeSegments = splitInlineMath(
+  bulgarianAlternative,
+);
+
+assert(
+  isMathOnlyLine(bulgarianAlternative) === false,
+  "A Bulgarian explanation paragraph must not render as one math expression",
+);
+assert(
+  bulgarianAlternativeSegments.some(
+    (segment) =>
+      segment.type === "text" &&
+      segment.value.includes(
+        "Да, това уравнение може да се реши",
+      ),
+  ),
+  "Cyrillic prose before the equation must stay visible text",
+);
+assert(
+  firstMathValue(bulgarianAlternative) ===
+    "dy/dx + (2*x)*y = x",
+  "Only the ODE itself should be the first math fragment",
+);
+assert(
+  textBeforeFirstMath(bulgarianAlternative).endsWith(" "),
+  "Bulgarian spacing before the equation must be preserved",
+);
+assert(
+  textAfterFirstMath(bulgarianAlternative).startsWith(
+    " се записва",
+  ),
+  "Bulgarian spacing after the equation must be preserved",
+);
 assert(
   lineUsesMathOnlyRenderer("y' + P(x)y = Q(x)") ===
     true,
   "Standalone standard-form equation must use math-only rendering",
+);
+
+const verifiedBulgarianExplanation = [
+  "Да. Това уравнение може да се реши и чрез разделяне на променливите.",
+  "",
+  "    dy/dx + (-2)*y = 2",
+  "",
+  "Пренареждаме уравнението:",
+  "",
+  "    dy/dx = 2*(y + 1)",
+  "",
+  "Разделяме променливите:",
+  "",
+  "    \\frac{dy}{y + 1} = 2\\, dx",
+  "",
+  "При делението приемаме, че",
+  "",
+  "    y + 1 \\ne 0",
+  "",
+  "Отделно проверяваме, че постоянната функция",
+  "",
+  "    y = -1",
+  "",
+  "също е решение на първоначалното уравнение.",
+  "",
+  "След това можем да интегрираме двете страни.",
+].join("\n");
+
+assert(
+  isMathOnlyLine(verifiedBulgarianExplanation.split("\n")[0]) ===
+    false,
+  "The Bulgarian intro must remain prose, not one math expression",
+);
+assert(
+  lineUsesMathOnlyRenderer("    dy/dx = 2*(y + 1)") === true,
+  "Indented verified rearrangement must render as display math",
+);
+assert(
+  lineUsesMathOnlyRenderer(
+    "    \\frac{dy}{y - 1} = 2\\, dx",
+  ) === true,
+  "Indented separated fraction must render as display math",
+);
+assert(
+  lineUsesMathOnlyRenderer("    y - 1 \\ne 0") === true,
+  "Indented division restriction must render as display math",
+);
+assert(
+  isMathOnlyLine("При делението приемаме, че") === false,
+  "Restriction lead prose must not render as math",
+);
+assert(
+  isMathOnlyLine(
+    "Отделно проверяваме, че постоянната функция",
+  ) === false,
+  "Equilibrium lead prose must not render as math",
+);
+
+const englishRestrictionLead = "When dividing we assume that";
+assert(
+  isMathOnlyLine(englishRestrictionLead) === false,
+  "English restriction lead must keep word spacing as prose",
 );
 
 console.log("math_content_segmentation tests passed");
