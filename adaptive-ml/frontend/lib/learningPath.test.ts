@@ -13,6 +13,7 @@ import {
   catalogSubjects,
   comingSoonDomains,
   createEmptyLearningPath,
+  domainContentCount,
   domainsForSubject,
   firstRunnableSubject,
   isProgressView,
@@ -27,6 +28,10 @@ import {
   selectProblem,
   selectSubject,
   selectTopic,
+  subjectContentCount,
+  topicHasStaticProblems,
+  topicIsRunnable,
+  topicSupportsGeneration,
   topicsForDomain,
 } from "./learningPath.ts";
 
@@ -542,6 +547,224 @@ assert(
     },
   ) === false,
   "Fixed and generated Linear ODE selections must not start each other",
+);
+
+const generatedPrimaryCatalog: CatalogResponse = {
+  subjects: [
+    {
+      id: "mathematics",
+      name: "Mathematics",
+      available_problem_count: 3,
+      domains: [
+        {
+          id: "primary_school",
+          name: "Primary School",
+          available_problem_count: 1,
+          topics: [
+            {
+              id: "word_problems",
+              name: "Word Problems",
+              available_problem_count: 1,
+              problem_ids: ["hazelnuts"],
+              generation_available: false,
+              supported_difficulties: [],
+            },
+            {
+              id: "arithmetic",
+              name: "Arithmetic",
+              available_problem_count: 0,
+              problem_ids: [],
+              generation_available: true,
+              supported_difficulties: [1, 2, 3],
+            },
+            {
+              id: "unknown_numbers",
+              name: "Unknown Numbers",
+              available_problem_count: 0,
+              problem_ids: [],
+              generation_available: true,
+              supported_difficulties: [1, 2, 3],
+            },
+            {
+              id: "number_patterns",
+              name: "Number Patterns",
+              available_problem_count: 0,
+              problem_ids: [],
+              generation_available: true,
+              supported_difficulties: [1, 2, 3],
+            },
+          ],
+        },
+        {
+          id: "ode",
+          name: "ODE",
+          available_problem_count: 2,
+          topics: [
+            {
+              id: "first_order_linear",
+              name: "First-Order Linear ODEs",
+              available_problem_count: 1,
+              problem_ids: ["linear_1"],
+              generation_available: true,
+              supported_difficulties: [1, 2, 3],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const primaryTopics = topicsForDomain(
+  generatedPrimaryCatalog,
+  "mathematics",
+  "primary_school",
+);
+const arithmeticTopic = primaryTopics.find(
+  (topic) => topic.id === "arithmetic",
+);
+const wordProblemsTopic = primaryTopics.find(
+  (topic) => topic.id === "word_problems",
+);
+const primaryDomain =
+  generatedPrimaryCatalog.subjects[0].domains[0];
+const arithmeticSelection = selectTopic(
+  selectDomain(
+    selectSubject("mathematics"),
+    "primary_school",
+  ),
+  "arithmetic",
+);
+const generatedArithmetic = {
+  problem_id: "grade4_arithmetic_generated_abc123def456",
+  title: "Compute the expression",
+  subject: "mathematics",
+  domain: "primary_school",
+  topic: "arithmetic",
+  problem_type: "arithmetic",
+  available: true,
+  grade: 4,
+  total_steps: 1,
+  expected_input_type: "number" as const,
+  generated: true,
+  generation_available: true,
+  supported_difficulties: [1, 2, 3],
+};
+
+assert(
+  primaryTopics.map((topic) => topic.id).join(",") ===
+    "word_problems,arithmetic,unknown_numbers,number_patterns",
+  "Primary School must list Word Problems and the three generated families",
+);
+assert(
+  topicHasStaticProblems(wordProblemsTopic) === true,
+  "Word Problems remains a static catalog topic",
+);
+assert(
+  topicHasStaticProblems(arithmeticTopic) === false,
+  "Arithmetic must not pretend to have a static problem id",
+);
+assert(
+  topicIsRunnable(arithmeticTopic) === true,
+  "Generator-only topics must still be selectable",
+);
+assert(
+  topicSupportsGeneration(arithmeticTopic) === true,
+  "Selecting Arithmetic must expose generation controls",
+);
+assert(
+  arithmeticTopic?.supported_difficulties.join(",") ===
+    "1,2,3",
+  "Generated Primary School topics must offer difficulties 1, 2, and 3",
+);
+assert(
+  topicSupportsGeneration(wordProblemsTopic) === false,
+  "Word Problems must keep the static-problem workflow",
+);
+assert(
+  domainContentCount(primaryDomain) === 4,
+  "Primary School available content includes generated families",
+);
+assert(
+  subjectContentCount(generatedPrimaryCatalog.subjects[0]) ===
+    5,
+  "Mathematics available content includes generated Primary School families",
+);
+assert(
+  problemsForTopic(problems, arithmeticSelection).length ===
+    0,
+  "A generator-only topic must not invent a predefined problem",
+);
+assert(
+  problemsForTopic(
+    [...problems, generatedArithmetic],
+    arithmeticSelection,
+  ).map((problem) => problem.problem_id).join(",") ===
+    generatedArithmetic.problem_id,
+  "Generate Again keeps the new generated problem in the topic list",
+);
+assert(
+  canStartSelectedProblem(
+    selectProblem(
+      arithmeticSelection,
+      generatedArithmetic.problem_id,
+    ),
+    {
+      ...generatedArithmetic,
+      problem_text: "Compute: 7 - 3",
+      language: "en",
+      skills: [],
+      metadata: { generated: true, difficulty: 1 },
+    },
+  ) === true,
+  "A generated Primary School problem can start a session after it exists",
+);
+
+const generatedUnknown = {
+  ...generatedArithmetic,
+  problem_id: "grade4_unknown_number_generated_aaaabbbbcccc",
+  title: "Намерете неизвестното число",
+  topic: "unknown_numbers",
+  problem_type: "unknown_number",
+};
+const unknownSelection = selectProblem(
+  selectTopic(
+    selectDomain(
+      selectSubject("mathematics"),
+      "primary_school",
+    ),
+    "unknown_numbers",
+  ),
+  generatedUnknown.problem_id,
+);
+const difficultyAfterLanguageSwitch = 2;
+assert(
+  unknownSelection.problemId === generatedUnknown.problem_id,
+  "Language switching must keep the selected generated problem id",
+);
+assert(
+  unknownSelection.topic === "unknown_numbers" &&
+    unknownSelection.domain === "primary_school",
+  "Language switching must keep the current topic selection",
+);
+assert(
+  difficultyAfterLanguageSwitch === 2,
+  "Language switching must keep the selected difficulty",
+);
+assert(
+  problemsForTopic(
+    [...problems, generatedUnknown],
+    unknownSelection,
+  ).map((problem) => problem.problem_id).join(",") ===
+    generatedUnknown.problem_id,
+  "The Problem dropdown must keep the same generated problem after a language switch",
+);
+
+assert(
+  landingEntries(generatedPrimaryCatalog).find(
+    (entry) => entry.key === "primary_school",
+  )?.description.includes("Arithmetic") === true,
+  "The Primary School card must mention generated families",
 );
 
 console.log("learning_path tests passed");

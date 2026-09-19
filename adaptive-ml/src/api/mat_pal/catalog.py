@@ -209,7 +209,25 @@ def _topics_for_domain(
             registration.problem_id
         )
 
-    return [
+    for generator in (
+        DEFAULT_PROBLEM_GENERATOR_REGISTRY
+        .list_registrations()
+    ):
+        if generator.subject != subject:
+            continue
+
+        if generator.domain != domain_id:
+            continue
+
+        topic_records.setdefault(
+            generator.topic,
+            {
+                "name": generator.topic_name,
+                "problem_ids": [],
+            },
+        )
+
+    topics = [
         CatalogTopic(
             id=topic_id,
             name=topic_record["name"],
@@ -239,6 +257,18 @@ def _topics_for_domain(
         for topic_id, topic_record
         in topic_records.items()
     ]
+    topics.sort(
+        key=lambda topic: (
+            0
+            if (
+                topic.generation_available
+                and topic.available_problem_count == 0
+            )
+            else 1,
+            topic.name,
+        )
+    )
+    return topics
 
 
 def get_catalog() -> CatalogResponse:

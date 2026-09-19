@@ -79,9 +79,12 @@ def assert_progress_api_returns_dashboard_schema():
         key[2]
         for key in keys
     } == {
+        "arithmetic",
         "first_order_linear",
         "kinematics",
+        "number_patterns",
         "separable_equations",
+        "unknown_numbers",
         "word_problems",
     }
 

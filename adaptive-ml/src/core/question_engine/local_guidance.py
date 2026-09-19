@@ -10,6 +10,9 @@ from src.core.tutor_engine.concept_guidance.linear_first_order_guidance import (
 from src.core.tutor_engine.concept_guidance.separable_guidance import (
     respond_to_stage3_concept_question,
 )
+from src.core.tutor_engine.concept_guidance.unknown_number_guidance import (
+    match_unknown_number_explanation,
+)
 
 
 def match_local_concept(
@@ -48,6 +51,12 @@ def match_local_concept(
     if topic == "separable_equations":
         return respond_to_stage3_concept_question(
             question,
+        )
+
+    if topic == "unknown_numbers":
+        return match_unknown_number_explanation(
+            question,
+            context,
         )
 
     return None

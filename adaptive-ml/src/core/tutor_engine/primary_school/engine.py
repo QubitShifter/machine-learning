@@ -49,6 +49,10 @@ class PrimarySchoolTutorEngine:
     def problem_statement(self) -> str:
         return self.problem.problem_text
 
+    @property
+    def language(self) -> str:
+        return self.problem.language
+
     def get_current_response(
         self,
     ) -> TutorResponse:
@@ -92,7 +96,7 @@ class PrimarySchoolTutorEngine:
             hint_available=(
                 step.hint is not None
             ),
-            expected_input_type="text",
+            expected_input_type=_input_type_for_step(step),
             metadata={
                 "skill_id": step.skill_id,
                 "step_type": (
@@ -123,6 +127,7 @@ class PrimarySchoolTutorEngine:
                 step.expected_answer
             ),
             language=self.problem.language,
+            answer_format=step.answer_format,
         )
 
         if evaluation["correct"]:
@@ -182,7 +187,9 @@ class PrimarySchoolTutorEngine:
                 hint_available=(
                     next_step.hint is not None
                 ),
-                expected_input_type="text",
+                expected_input_type=_input_type_for_step(
+                    next_step
+                ),
                 metadata={
                     "completed_step": (
                         completed_step_number
@@ -218,7 +225,7 @@ class PrimarySchoolTutorEngine:
             hint_available=(
                 step.hint is not None
             ),
-            expected_input_type="text",
+            expected_input_type=_input_type_for_step(step),
             metadata={
                 "error_type": (
                     evaluation["error_type"]
@@ -259,7 +266,7 @@ class PrimarySchoolTutorEngine:
             hint_available=(
                 step.hint is not None
             ),
-            expected_input_type="text",
+            expected_input_type=_input_type_for_step(step),
             metadata={
                 "hints_used_on_step": (
                     self.session
@@ -267,3 +274,10 @@ class PrimarySchoolTutorEngine:
                 ),
             },
         )
+
+
+def _input_type_for_step(step) -> str:
+    value = getattr(step, "input_type", None)
+    if value:
+        return value
+    return "text"

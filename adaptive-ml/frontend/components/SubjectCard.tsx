@@ -24,7 +24,6 @@ function cardDescription(
   if (entry.key === "primary_school") {
     const primary = findPrimarySchoolDomain(catalog);
     const names = primary?.topics
-      .slice(0, 3)
       .map((topic) =>
         catalogDisplayName(
           "topic",

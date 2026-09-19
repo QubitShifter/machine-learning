@@ -2,6 +2,7 @@ from pathlib import Path
 
 from src.api.mat_pal.problem_generation import (
     DEFAULT_PROBLEM_GENERATOR_REGISTRY,
+    GeneratorRegistration,
 )
 from src.api.mat_pal.tutor_registry import (
     DEFAULT_TUTOR_REGISTRY,
@@ -40,6 +41,21 @@ TOPIC_MASTERY_KEYS = {
         "primary_school",
         "word_problems",
     ): "grade4_reverse_reasoning",
+    (
+        "mathematics",
+        "primary_school",
+        "arithmetic",
+    ): "grade4_arithmetic",
+    (
+        "mathematics",
+        "primary_school",
+        "unknown_numbers",
+    ): "grade4_unknown_number",
+    (
+        "mathematics",
+        "primary_school",
+        "number_patterns",
+    ): "grade4_number_patterns",
     (
         "mathematics",
         "ode",
@@ -234,6 +250,34 @@ def list_topic_states(
             registration,
         )
 
+    for generator in (
+        DEFAULT_PROBLEM_GENERATOR_REGISTRY
+        .list_registrations()
+    ):
+        if (
+            subject is not None
+            and generator.subject != subject
+        ):
+            continue
+
+        if (
+            domain is not None
+            and generator.domain != domain
+        ):
+            continue
+
+        key = (
+            generator.subject,
+            generator.domain,
+            generator.topic,
+        )
+        topics.setdefault(
+            key,
+            _registration_from_generator(
+                generator
+            ),
+        )
+
     return [
         _topic_state_from_registration(
             registration,
@@ -241,6 +285,39 @@ def list_topic_states(
         )
         for registration in topics.values()
     ]
+
+
+def _registration_from_generator(
+    generator: GeneratorRegistration,
+) -> TutorRegistration:
+    return TutorRegistration(
+        problem_id=f"{generator.generator_name}_topic",
+        title=generator.topic_name,
+        problem_statement="",
+        subject=generator.subject,
+        domain=generator.domain,
+        topic=generator.topic,
+        topic_name=generator.topic_name,
+        problem_type=generator.generator_name,
+        total_steps=1,
+        expected_input_type="number",
+        create_engine=_unusable_generator_engine,
+        catalog_visible=False,
+        metadata={
+            "generated": True,
+            "generator_name": generator.generator_name,
+        },
+    )
+
+
+def _unusable_generator_engine(
+    language: str = "en",
+):
+    raise RuntimeError(
+        "Generator-only topics must be started from "
+        "a generated problem, not from the catalog "
+        "placeholder."
+    )
 
 
 def _topic_state_from_registration(

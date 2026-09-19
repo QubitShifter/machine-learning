@@ -66,16 +66,71 @@ export function findSubject(
   );
 }
 
+export function topicHasStaticProblems(
+  topic: CatalogTopic | null | undefined,
+) {
+  return (
+    (topic?.available_problem_count ?? 0) > 0 ||
+    (topic?.problem_ids.length ?? 0) > 0
+  );
+}
+
+export function topicIsRunnable(
+  topic: CatalogTopic | null | undefined,
+) {
+  return (
+    topicHasStaticProblems(topic) ||
+    Boolean(topic?.generation_available)
+  );
+}
+
 export function isRunnableSubject(
   subject: CatalogSubject | null | undefined,
 ) {
-  return (subject?.available_problem_count ?? 0) > 0;
+  if ((subject?.available_problem_count ?? 0) > 0) {
+    return true;
+  }
+
+  return (subject?.domains ?? []).some(isRunnableDomain);
 }
 
 export function isRunnableDomain(
   domain: CatalogDomain | null | undefined,
 ) {
-  return (domain?.available_problem_count ?? 0) > 0;
+  if ((domain?.available_problem_count ?? 0) > 0) {
+    return true;
+  }
+
+  return (domain?.topics ?? []).some(topicIsRunnable);
+}
+
+export function domainContentCount(
+  domain: CatalogDomain | null | undefined,
+) {
+  const runnableTopics = (domain?.topics ?? []).filter(
+    topicIsRunnable,
+  ).length;
+
+  if (runnableTopics > 0) {
+    return runnableTopics;
+  }
+
+  return domain?.available_problem_count ?? 0;
+}
+
+export function subjectContentCount(
+  subject: CatalogSubject | null | undefined,
+) {
+  const fromDomains = (subject?.domains ?? []).reduce(
+    (total, domain) => total + domainContentCount(domain),
+    0,
+  );
+
+  if (fromDomains > 0) {
+    return fromDomains;
+  }
+
+  return subject?.available_problem_count ?? 0;
 }
 
 export function firstRunnableSubject(
@@ -322,8 +377,8 @@ export function landingEntries(
 
     if (selection) {
       const topicNames = primarySchool.topics
+        .filter(topicIsRunnable)
         .map((topic) => topic.name)
-        .slice(0, 3)
         .join(" • ");
 
       entries.push({

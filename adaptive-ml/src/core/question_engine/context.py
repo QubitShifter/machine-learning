@@ -24,6 +24,10 @@ _PRIVATE_METADATA_KEYS = frozenset(
         "alternative_method_notes",
         "separable_transformation_verified",
         "also_separable",
+        "x",
+        "expected_answer",
+        "step_specs",
+        "final_answer",
     }
 )
 

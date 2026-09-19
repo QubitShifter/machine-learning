@@ -13,10 +13,23 @@ class ProblemType(Enum):
 
     REVERSE_REASONING = "reverse_reasoning"
     NUMBER_PATTERN = "number_pattern"
+    OPERATION_CHAIN = "operation_chain"
     ARITHMETIC = "arithmetic"
+    UNKNOWN_NUMBER = "unknown_number"
     FRACTION = "fraction"
     GEOMETRY = "geometry"
     WORD_PROBLEM = "word_problem"
+
+
+class AnswerFormat(Enum):
+    """
+    How a step answer is graded.
+
+    Independent of the mathematical family.
+    """
+
+    LEGACY_NUMERIC = "legacy_numeric"
+    INTEGER = "integer"
 
 
 class SolutionStepType(Enum):
@@ -49,6 +62,9 @@ class SolutionStep:
     step_type: SolutionStepType = (
         SolutionStepType.CALCULATION
     )
+
+    input_type: str | None = None
+    answer_format: str | None = None
 
     metadata: dict[str, Any] = field(
         default_factory=dict

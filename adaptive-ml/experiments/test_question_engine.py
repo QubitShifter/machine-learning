@@ -1831,6 +1831,97 @@ def assert_http_question_endpoint_uses_session_language():
         set_question_engine(previous)
 
 
+def assert_unknown_number_method_question_is_local():
+    model = FakeTutorModelProvider()
+    engine = make_engine(model)
+    context = TutorQuestionContext(
+        language="en",
+        subject="mathematics",
+        domain="primary_school",
+        topic="unknown_numbers",
+        problem_id="grade4_unknown_number_test",
+        problem_title="Find the unknown number",
+        problem_statement=(
+            "Find the integer x that makes this true: "
+            "x + 7 = 12"
+        ),
+        current_step=2,
+        total_steps=2,
+        current_prompt="What is x in x + 7 = 12?",
+        expected_input_type="number",
+        tutor_metadata={
+            "form": "x+a=b",
+            "equation": "x + 7 = 12",
+            "exercise_completed": False,
+        },
+    )
+    method = engine.answer(
+        TutorQuestionRequest(question="How do I solve this?"),
+        context,
+    )
+    assert method.answer_source == "local"
+    assert method.route == QuestionRoute.LOCAL_ONLY
+    assert "x = 12 - 7" in method.answer
+    assert "So x = 5." not in method.answer
+    assert model.calls == []
+
+    mul = TutorQuestionContext(
+        language="bg",
+        subject="mathematics",
+        domain="primary_school",
+        topic="unknown_numbers",
+        problem_id="grade4_unknown_number_test",
+        problem_title="Find the unknown number",
+        problem_statement=(
+            "Намерете цялото число x, за което е вярно: "
+            "7 × x = 35"
+        ),
+        current_step=1,
+        total_steps=2,
+        current_prompt="В 7 × x = 35 кой е известният множител?",
+        expected_input_type="number",
+        tutor_metadata={
+            "form": "a*x=b",
+            "equation": "7 × x = 35",
+            "exercise_completed": False,
+        },
+    )
+    vocab = engine.answer(
+        TutorQuestionRequest(question="Какво е множител?"),
+        mul,
+    )
+    assert vocab.answer_source == "local"
+    assert "известният множител" in vocab.answer
+    assert "Разделете" not in vocab.answer
+    assert "x = 5" not in vocab.answer
+    assert model.calls == []
+
+    general = engine.answer(
+        TutorQuestionRequest(
+            question="Where are equations used in real life?",
+        ),
+        context,
+    )
+    assert general.answer_source == "model"
+    assert len(model.calls) == 1
+    public_meta = model.calls[0]["context"]["tutor_metadata"]
+    assert "x" not in public_meta
+    assert "final_answer" not in public_meta
+
+    ode = engine.answer(
+        TutorQuestionRequest(
+            question="Може ли да се реши по друг начин?",
+        ),
+        make_context(
+            language="bg",
+            p_expression="-2",
+            q_expression="2",
+        ),
+    )
+    assert ode.answer_source == "local"
+    assert "разделяне на променливите" in ode.answer
+
+
 def main():
     assert_local_fast_path_skips_model_and_web()
     assert_unknown_question_calls_model_not_web()
@@ -1860,6 +1951,7 @@ def main():
     assert_web_search_timeout_is_unchanged()
     assert_model_provider_error_uses_localized_fallback()
     assert_failed_model_question_does_not_change_progress()
+    assert_unknown_number_method_question_is_local()
     print("question_engine tests passed")
 
 

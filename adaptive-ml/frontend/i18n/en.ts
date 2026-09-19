@@ -54,11 +54,20 @@ export const en = {
   "catalog.domain.optics": "Optics",
   "catalog.domain.modern_physics": "Modern Physics",
   "catalog.topic.word_problems": "Word Problems",
+  "catalog.topic.arithmetic": "Arithmetic",
+  "catalog.topic.unknown_numbers": "Unknown Numbers",
+  "catalog.topic.number_patterns": "Number Patterns",
   "catalog.topic.first_order_linear": "First-Order Linear ODEs",
   "catalog.topic.separable_equations": "Separable Equations",
   "catalog.topic.kinematics": "Kinematics",
   "catalog.problem.grade4_reverse_reasoning_001":
     "Hazelnuts in Three Hollows",
+  "catalog.problem.grade4_unknown_number_generated":
+    "Find the unknown number",
+  "catalog.problem.grade4_arithmetic_generated":
+    "Compute the expression",
+  "catalog.problem.grade4_number_patterns_generated":
+    "Number patterns",
   "catalog.problem.linear_first_order_fixed_001":
     "First-order linear differential equation",
   "catalog.problem.linear_first_order_generated":
@@ -84,6 +93,10 @@ export const en = {
   "path.generateHelp":
     "This topic can generate new practice problems at the selected difficulty.",
   "path.generate": "Generate Problem",
+  "path.generateAgain": "Generate Another Problem",
+  "path.generateFirst":
+    "This topic has no predefined exercise. Choose a difficulty and generate a problem to start.",
+  "path.generatedTopic": " (generated)",
   "path.start": "Start Selected Problem",
   "path.loading": "Loading...",
   "path.steps": "{count} tutor steps",
@@ -191,7 +204,10 @@ export const en = {
     "Expected input: {type}. MAT-PAL will submit the LaTeX string produced by the editor.",
   "tutor.expectedUnits":
     "Expected input: {type}. Enter a numerical value with its physical unit.",
+  "tutor.numberFieldHint":
+    "This field accepts a number. To ask what a word means, use Ask a question.",
   "tutor.placeholderAnswer": "Enter a {type} answer",
+  "tutor.placeholderNumber": "Enter a number",
   "tutor.mathAria": "Mathematical answer",
   "tutor.mathLoading": "Loading math editor...",
   "tutor.mathLoadError":

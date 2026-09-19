@@ -8,6 +8,11 @@
         "description": "Whole-number addition, subtraction, multiplication, and division."
       },
       {
+        "id": "unknown_numbers",
+        "name": "Unknown Numbers",
+        "description": "Find a unique unknown integer in a simple equation by using the inverse operation."
+      },
+      {
         "id": "fractions",
         "name": "Fractions",
         "description": "Basic fractions, parts of a whole, and reasoning with halves and other simple fractions."

@@ -23,13 +23,22 @@ def assert_registry_finds_supported_ode_generators():
         "ode",
         "separable_equations",
     )
+    arithmetic = registry.get(
+        "mathematics",
+        "primary_school",
+        "arithmetic",
+    )
 
     assert linear.generator_name == "linear_first_order"
     assert separable.generator_name == (
         "separable_equations"
     )
+    assert arithmetic.generator_name == (
+        "grade4_arithmetic"
+    )
     assert linear.supported_difficulties == (1, 2, 3)
     assert separable.supported_difficulties == (1, 2, 3)
+    assert arithmetic.supported_difficulties == (1, 2, 3)
 
 
 def assert_generated_ids_are_unique_and_seed_is_reproducible():

@@ -11,9 +11,13 @@ import type {
 } from "@/types/tutor";
 import {
   comingSoonDomains,
+  domainContentCount,
   domainsForSubject,
   problemsForTopic,
   runnableDomains,
+  subjectContentCount,
+  topicHasStaticProblems,
+  topicSupportsGeneration,
   topicsForDomain,
 } from "@/lib/learningPath";
 import type { LearningPathSelection } from "@/lib/learningPath";
@@ -70,6 +74,14 @@ export function LearningPathSelector({
     problems,
     selection,
   );
+  const canGenerate = topicSupportsGeneration(
+    selectedTopicRecord,
+  );
+  const hasStaticProblems = topicHasStaticProblems(
+    selectedTopicRecord,
+  );
+  const showProblemPicker =
+    hasStaticProblems || filteredProblems.length > 0;
   const canStart = Boolean(
     selection.problemId && selectedProblem,
   );
@@ -92,11 +104,14 @@ export function LearningPathSelector({
             <option value="">
               {t("path.chooseSubject")}
             </option>
-            {subjects.map((subject) => (
+            {subjects.map((subject) => {
+              const runnableCount = subjectContentCount(
+                subject,
+              );
+
+              return (
               <option
-                disabled={
-                  subject.available_problem_count === 0
-                }
+                disabled={runnableCount === 0}
                 key={subject.id}
                 value={subject.id}
               >
@@ -106,13 +121,14 @@ export function LearningPathSelector({
                   subject.name,
                   locale,
                 )}
-                {subject.available_problem_count === 0
+                {runnableCount === 0
                   ? t("home.comingSoonSuffix")
                   : t("home.availableCount", {
-                      count: subject.available_problem_count,
+                      count: runnableCount,
                     })}
               </option>
-            ))}
+              );
+            })}
           </select>
         </label>
 
@@ -143,7 +159,7 @@ export function LearningPathSelector({
                     locale,
                   )}
                   {t("home.availableCount", {
-                    count: domain.available_problem_count,
+                    count: domainContentCount(domain),
                   })}
                 </option>
               ))}
@@ -191,9 +207,13 @@ export function LearningPathSelector({
                       topic.name,
                       locale,
                     )}
-                    {t("home.availableCount", {
-                      count: topic.available_problem_count,
-                    })}
+                    {topicHasStaticProblems(topic)
+                      ? t("home.availableCount", {
+                          count: topic.available_problem_count,
+                        })
+                      : topic.generation_available
+                        ? t("path.generatedTopic")
+                        : t("home.comingSoonSuffix")}
                   </option>
                 ))
               ) : (
@@ -205,7 +225,7 @@ export function LearningPathSelector({
           </label>
         ) : null}
 
-        {selection.topic ? (
+        {selection.topic && showProblemPicker ? (
           <label>
             {t("path.problem")}
             <select
@@ -243,7 +263,7 @@ export function LearningPathSelector({
           </label>
         ) : null}
 
-        {selectedTopicRecord?.generation_available ? (
+        {canGenerate ? (
           <label>
             {t("path.difficulty")}
             <select
@@ -255,7 +275,10 @@ export function LearningPathSelector({
               }
               value={selectedDifficulty}
             >
-              {selectedTopicRecord.supported_difficulties.map(
+              {(
+                selectedTopicRecord?.supported_difficulties
+                ?? []
+              ).map(
                 (difficulty) => (
                   <option
                     key={difficulty}
@@ -270,15 +293,21 @@ export function LearningPathSelector({
         ) : null}
       </div>
 
-      {selectedTopicRecord?.generation_available ? (
+      {canGenerate ? (
         <div className="generation-panel">
-          <p>{t("path.generateHelp")}</p>
+          <p>
+            {showProblemPicker
+              ? t("path.generateHelp")
+              : t("path.generateFirst")}
+          </p>
           <button
             disabled={loading}
             onClick={onGenerateProblem}
             type="button"
           >
-            {t("path.generate")}
+            {selectedProblem?.generated
+              ? t("path.generateAgain")
+              : t("path.generate")}
           </button>
         </div>
       ) : null}

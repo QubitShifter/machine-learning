@@ -57,6 +57,15 @@ Package:
 Deterministic. No opaque confidence score.
 
 - Strong local concept match → `LOCAL_ONLY`
+- Supported Unknown Numbers method questions → `LOCAL_ONLY`
+  (parameterized inverse-operation explanation from verified
+  equation facts; a complete evaluation of `x` only when the
+  learner asks for the full answer or the exercise is already
+  complete). Unrelated questions stay on the model path.
+- Supported Unknown Numbers definition questions
+  (“what is a factor?”, “какво е множител?”) → `LOCAL_ONLY`
+  before method matching. Unsupported terms stay on the model
+  path.
 - Alternative-method intent on a supported first-order linear
   ODE **and** a verified transformation → `LOCAL_ONLY`
   (Case A; no model, no web)

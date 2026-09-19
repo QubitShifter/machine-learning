@@ -45,6 +45,9 @@ Progress is stored by mastery key under `skills`. Each record keeps:
 The shared API maps runnable activity to a mastery key in one place:
 
 - Primary School word problems -> `grade4_reverse_reasoning`
+- Primary School arithmetic -> `grade4_arithmetic`
+- Primary School unknown numbers -> `grade4_unknown_number`
+- Primary School number patterns -> `grade4_number_patterns`
 - First-order linear ODEs -> `linear_first_order_ode`
 - Separable ODEs -> `separable_equations`
 

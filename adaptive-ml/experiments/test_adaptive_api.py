@@ -152,11 +152,26 @@ def assert_primary_school_static_recommendation():
     write_progress(
         {
             "skills": {
+                "grade4_arithmetic": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
+                "grade4_unknown_number": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
+                "grade4_number_patterns": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
                 "grade4_reverse_reasoning": {
                     "mastery": 0.50,
                     "questions_completed": 0,
                     "first_attempt_streak": 0,
-                }
+                },
             }
         }
     )

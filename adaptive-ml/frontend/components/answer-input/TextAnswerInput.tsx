@@ -3,6 +3,10 @@
 import type { HTMLAttributes } from "react";
 
 import { useLanguage } from "@/components/LanguageProvider";
+import {
+  numericAnswerNoteKey,
+  numericAnswerPlaceholderKey,
+} from "@/components/answer-input/numberFieldCopy";
 import type { AnswerEditorProps } from "@/components/answer-input/types";
 
 interface TextAnswerInputProps
@@ -39,9 +43,15 @@ export function TextAnswerInput({
           onChange={(event) =>
             onChange(event.target.value)
           }
-          placeholder={t("tutor.placeholderAnswer", {
-            type: expectedInputType,
-          })}
+          placeholder={
+            numericAnswerPlaceholderKey(
+              expectedInputType,
+            ) === "tutor.placeholderNumber"
+              ? t("tutor.placeholderNumber")
+              : t("tutor.placeholderAnswer", {
+                  type: expectedInputType,
+                })
+          }
           type="text"
           value={value}
         />
@@ -53,7 +63,12 @@ export function TextAnswerInput({
         </button>
       </div>
       <p className="input-type-note">
-        {t("tutor.expectedInput", { type: expectedInputType })}
+        {numericAnswerNoteKey(expectedInputType) ===
+        "tutor.numberFieldHint"
+          ? t("tutor.numberFieldHint")
+          : t("tutor.expectedInput", {
+              type: expectedInputType,
+            })}
       </p>
     </form>
   );

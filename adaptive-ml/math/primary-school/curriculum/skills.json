@@ -21,10 +21,22 @@
         "description": "Multiply whole numbers accurately."
       },
       {
+        "id": "grade4_arithmetic_order",
+        "topic": "arithmetic",
+        "name": "Order of operations",
+        "description": "Evaluate expressions using multiplication before addition and parentheses first."
+      },
+      {
         "id": "grade4_arithmetic_division",
         "topic": "arithmetic",
         "name": "Division",
         "description": "Divide whole numbers accurately."
+      },
+      {
+        "id": "grade4_unknown_number",
+        "topic": "unknown_numbers",
+        "name": "Unknown numbers",
+        "description": "Find a unique integer unknown by undoing addition, subtraction, or multiplication."
       },
       {
         "id": "grade4_fraction_half",
@@ -79,6 +91,18 @@
         "topic": "word_problems",
         "name": "Reverse division",
         "description": "Undo division using multiplication."
+      },
+      {
+        "id": "grade4_number_sequence",
+        "topic": "number_patterns",
+        "name": "Arithmetic sequences",
+        "description": "Find the common difference and the next term of an arithmetic sequence."
+      },
+      {
+        "id": "grade4_operation_chain",
+        "topic": "number_patterns",
+        "name": "Operation chains",
+        "description": "Follow or reverse a short chain of addition, subtraction, and multiplication."
       },
       {
         "id": "grade4_number_pattern_recursive_digits",

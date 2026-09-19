@@ -1,0 +1,111 @@
+from src.core.i18n.locale import normalize_locale
+from src.core.i18n.primary_school import pst
+from src.core.tutor_engine.primary_school.problem_types import (
+    PrimarySchoolProblem,
+    SolutionStep,
+)
+
+
+_FAMILY_TITLE_KEYS = {
+    "arithmetic": "gen.arithmetic.title",
+    "unknown_number": "gen.unknown.title",
+    "number_patterns": "gen.patterns.title",
+}
+_FAMILY_STATEMENT_KEYS = {
+    "arithmetic": "gen.arithmetic.statement",
+    "unknown_number": "gen.unknown.statement",
+}
+
+
+def localize_generated_primary_school(
+    problem: PrimarySchoolProblem,
+    language: str | None,
+) -> PrimarySchoolProblem:
+    locale = normalize_locale(language)
+    family = (problem.metadata or {}).get("family")
+    params = _statement_params(problem)
+    title_key = _FAMILY_TITLE_KEYS.get(
+        family,
+        "gen.arithmetic.title",
+    )
+    statement_key = _statement_key(problem)
+    steps = [
+        _render_step(step, locale)
+        for step in problem.solution_steps
+    ]
+    return PrimarySchoolProblem(
+        problem_id=problem.problem_id,
+        grade=problem.grade,
+        topic=problem.topic,
+        problem_type=problem.problem_type,
+        title=pst(locale, title_key),
+        language=locale,
+        problem_text=pst(
+            locale,
+            statement_key,
+            **params,
+        ),
+        skills=list(problem.skills),
+        known=dict(problem.known),
+        unknown=dict(problem.unknown),
+        strategy=problem.strategy,
+        solution_steps=steps,
+        final_answer=problem.final_answer,
+        metadata=dict(problem.metadata or {}),
+    )
+
+
+def _statement_key(problem: PrimarySchoolProblem) -> str:
+    family = (problem.metadata or {}).get("family")
+    if family == "arithmetic":
+        return "gen.arithmetic.statement"
+    if family == "unknown_number":
+        return "gen.unknown.statement"
+    if problem.known.get("variant") == "chain":
+        if problem.known.get("direction") == "reverse":
+            return "gen.chain.statement.reverse"
+        return "gen.chain.statement.forward"
+    return "gen.sequence.statement"
+
+
+def _statement_params(problem: PrimarySchoolProblem) -> dict:
+    known = problem.known
+    if "expression" in known:
+        return {"expression": known["expression"]}
+    if "equation" in known:
+        return {"equation": known["equation"]}
+    if known.get("variant") == "chain":
+        return {"chain": known["chain_text"]}
+    return {"sequence": known.get("sequence_text", "")}
+
+
+def _render_step(
+    step: SolutionStep,
+    locale: str,
+) -> SolutionStep:
+    meta = dict(step.metadata or {})
+    params = dict(meta.get("params") or {})
+    prompt_key = meta.get("prompt_key")
+    hint_key = meta.get("hint_key")
+    prompt = (
+        pst(locale, prompt_key, **params)
+        if prompt_key
+        else step.prompt
+    )
+    hint = (
+        pst(locale, hint_key, **params)
+        if hint_key
+        else step.hint
+    )
+    return SolutionStep(
+        step_number=step.step_number,
+        skill_id=step.skill_id,
+        prompt=prompt,
+        expected_answer=step.expected_answer,
+        hint=hint,
+        operation=step.operation,
+        step_type=step.step_type,
+        input_type=step.input_type,
+        answer_format=step.answer_format,
+        metadata=meta,
+    )

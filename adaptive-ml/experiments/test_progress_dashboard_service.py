@@ -34,9 +34,12 @@ def assert_fresh_progress_returns_runnable_topics():
     }
 
     assert topics == {
+        "arithmetic",
         "first_order_linear",
         "kinematics",
+        "number_patterns",
         "separable_equations",
+        "unknown_numbers",
         "word_problems",
     }
     assert all(
@@ -123,8 +126,19 @@ def assert_static_primary_school_topic_has_problem_id():
             path=path,
         )
 
-    assert len(progress.topics) == 1
-    topic = progress.topics[0]
+    topics = {
+        topic.topic: topic
+        for topic in progress.topics
+    }
+
+    assert set(topics) == {
+        "arithmetic",
+        "number_patterns",
+        "unknown_numbers",
+        "word_problems",
+    }
+
+    topic = topics["word_problems"]
 
     assert topic.topic == "word_problems"
     assert topic.generation_available is False
@@ -134,6 +148,17 @@ def assert_static_primary_school_topic_has_problem_id():
         "grade4_reverse_reasoning_001"
     )
     assert topic.recent_trend == "insufficient_history"
+    assert topics["arithmetic"].generation_available is True
+    assert topics["arithmetic"].problem_id is None
+    assert topics["arithmetic"].mastery_key == (
+        "grade4_arithmetic"
+    )
+    assert topics["unknown_numbers"].mastery_key == (
+        "grade4_unknown_number"
+    )
+    assert topics["number_patterns"].mastery_key == (
+        "grade4_number_patterns"
+    )
 
 
 def assert_no_duplicate_topics_and_deterministic_ordering():

@@ -25,6 +25,15 @@ from src.core.tutor_engine.adapters import (
     LinearODETutorAdapter,
     SeparableODETutorAdapter,
 )
+from src.core.tutor_engine.primary_school.engine import (
+    PrimarySchoolTutorEngine,
+)
+from src.core.tutor_engine.primary_school.generation import (
+    generate_arithmetic_problem,
+    generate_sequence_or_chain_problem,
+    generate_unknown_number_problem,
+    localize_generated_primary_school,
+)
 
 
 GeneratorKey = tuple[str, str, str]
@@ -117,6 +126,11 @@ class ProblemGeneratorRegistry:
             topic,
         ).supported_difficulties
 
+    def list_registrations(
+        self,
+    ) -> list[GeneratorRegistration]:
+        return list(self._generators.values())
+
     def generate(
         self,
         subject: str,
@@ -184,6 +198,39 @@ def build_default_problem_generator_registry() -> (
             generator_name="kinematics_1d",
             supported_difficulties=(1, 2, 3),
             create_problem=_create_kinematics_problem,
+        )
+    )
+    registry.register(
+        GeneratorRegistration(
+            subject="mathematics",
+            domain="primary_school",
+            topic="arithmetic",
+            topic_name="Arithmetic",
+            generator_name="grade4_arithmetic",
+            supported_difficulties=(1, 2, 3),
+            create_problem=_create_arithmetic_problem,
+        )
+    )
+    registry.register(
+        GeneratorRegistration(
+            subject="mathematics",
+            domain="primary_school",
+            topic="unknown_numbers",
+            topic_name="Unknown Numbers",
+            generator_name="grade4_unknown_number",
+            supported_difficulties=(1, 2, 3),
+            create_problem=_create_unknown_number_problem,
+        )
+    )
+    registry.register(
+        GeneratorRegistration(
+            subject="mathematics",
+            domain="primary_school",
+            topic="number_patterns",
+            topic_name="Number Patterns",
+            generator_name="grade4_number_patterns",
+            supported_difficulties=(1, 2, 3),
+            create_problem=_create_number_patterns_problem,
         )
     )
 
@@ -369,6 +416,144 @@ def _create_kinematics_problem(
                     language=language,
                 )
         ),
+    )
+
+
+def _create_primary_school_registration(
+    problem,
+    *,
+    prefix: str,
+    topic: str,
+    topic_name: str,
+    generator_name: str,
+    difficulty: int,
+    seed: int | None,
+    language: str,
+) -> TutorRegistration:
+    locale = normalize_locale(language)
+    problem_id = _generated_problem_id(prefix)
+    problem.problem_id = problem_id
+    source_metadata = dict(problem.metadata or {})
+    known = getattr(problem, "known", None) or {}
+    public_metadata = {
+        "generated": True,
+        "difficulty": difficulty,
+        "generator_name": generator_name,
+        "seed": seed,
+        "family": source_metadata.get("family"),
+        "variant": source_metadata.get("variant"),
+        "shape": source_metadata.get("shape"),
+        "form": source_metadata.get("form"),
+        "direction": source_metadata.get("direction"),
+        "answer_format": source_metadata.get("answer_format"),
+    }
+    equation = known.get("equation")
+    if isinstance(equation, str) and equation:
+        public_metadata["equation"] = equation
+    problem.metadata = {
+        **source_metadata,
+        **public_metadata,
+    }
+    first_step = problem.solution_steps[0]
+    return TutorRegistration(
+        problem_id=problem_id,
+        title=problem.title,
+        problem_statement=problem.problem_text,
+        subject="mathematics",
+        domain="primary_school",
+        topic=topic,
+        topic_name=topic_name,
+        problem_type=problem.problem_type.value,
+        total_steps=problem.get_number_of_steps(),
+        expected_input_type=(
+            first_step.input_type or "number"
+        ),
+        skills=tuple(problem.skills),
+        metadata=public_metadata,
+        catalog_visible=False,
+        language=locale,
+        grade=problem.grade,
+        create_engine=(
+            lambda language="en", current=problem:
+                PrimarySchoolTutorEngine(
+                    problem=localize_generated_primary_school(
+                        current,
+                        language,
+                    )
+                )
+        ),
+    )
+
+
+def _create_arithmetic_problem(
+    difficulty: int,
+    seed: int | None,
+    language: str = "en",
+) -> TutorRegistration:
+    locale = normalize_locale(language)
+    problem = generate_arithmetic_problem(
+        difficulty=difficulty,
+        seed=seed,
+        rng=_rng_from_seed(seed),
+        language=locale,
+    )
+    return _create_primary_school_registration(
+        problem,
+        prefix="grade4_arithmetic",
+        topic="arithmetic",
+        topic_name="Arithmetic",
+        generator_name="grade4_arithmetic",
+        difficulty=difficulty,
+        seed=seed,
+        language=locale,
+    )
+
+
+def _create_unknown_number_problem(
+    difficulty: int,
+    seed: int | None,
+    language: str = "en",
+) -> TutorRegistration:
+    locale = normalize_locale(language)
+    problem = generate_unknown_number_problem(
+        difficulty=difficulty,
+        seed=seed,
+        rng=_rng_from_seed(seed),
+        language=locale,
+    )
+    return _create_primary_school_registration(
+        problem,
+        prefix="grade4_unknown_number",
+        topic="unknown_numbers",
+        topic_name="Unknown Numbers",
+        generator_name="grade4_unknown_number",
+        difficulty=difficulty,
+        seed=seed,
+        language=locale,
+    )
+
+
+def _create_number_patterns_problem(
+    difficulty: int,
+    seed: int | None,
+    language: str = "en",
+) -> TutorRegistration:
+    locale = normalize_locale(language)
+    problem = generate_sequence_or_chain_problem(
+        difficulty=difficulty,
+        seed=seed,
+        rng=_rng_from_seed(seed),
+        language=locale,
+    )
+    return _create_primary_school_registration(
+        problem,
+        prefix="grade4_number_patterns",
+        topic="number_patterns",
+        topic_name="Number Patterns",
+        generator_name="grade4_number_patterns",
+        difficulty=difficulty,
+        seed=seed,
+        language=locale,
     )
 
 

@@ -122,6 +122,28 @@ assert(
   "Bulgarian question loading text",
 );
 assert(
+  translate("en", "tutor.numberFieldHint").includes(
+    "Ask a question",
+  ),
+  "English number field must point questions to Ask a question",
+);
+assert(
+  translate("bg", "tutor.numberFieldHint").includes(
+    "Задай въпрос",
+  ),
+  "Bulgarian number field must point questions to Задай въпрос",
+);
+assert(
+  translate("en", "tutor.placeholderNumber") ===
+    "Enter a number",
+  "English number placeholder",
+);
+assert(
+  translate("bg", "tutor.placeholderNumber") ===
+    "Въведете число",
+  "Bulgarian number placeholder",
+);
+assert(
   translate("en", "tutor.explanation") === "Explanation",
   "English explanation heading",
 );
@@ -197,6 +219,43 @@ assert(
     "bg",
   ) === "Кинематика",
   "Catalog topic ids must map to Bulgarian display names",
+);
+assert(
+  catalogDisplayName(
+    "topic",
+    "arithmetic",
+    "Arithmetic",
+    "en",
+  ) === "Arithmetic",
+  "Arithmetic catalog topic must keep its English label",
+);
+assert(
+  catalogDisplayName(
+    "topic",
+    "unknown_numbers",
+    "Unknown Numbers",
+    "bg",
+  ) === "Неизвестни числа",
+  "Unknown-number catalog topic must have a Bulgarian label",
+);
+assert(
+  catalogDisplayName(
+    "topic",
+    "number_patterns",
+    "Number Patterns",
+    "bg",
+  ) === "Числови редици",
+  "Number-pattern catalog topic must have a Bulgarian label",
+);
+assert(
+  translate("en", "path.generateAgain") ===
+    "Generate Another Problem",
+  "Generate Again must have an English label",
+);
+assert(
+  translate("bg", "path.generatedTopic") ===
+    " (генерирана)",
+  "Generated-topic suffix must be localized",
 );
 assert(
   catalogDisplayName(
@@ -277,6 +336,174 @@ assert(
   generatedEn ===
     "Generated problem — first-order linear ODE",
   "Generated Linear ODE must use a distinct English catalog label",
+);
+
+const UNKNOWN_GENERATED_ID =
+  "grade4_unknown_number_generated_aaaabbbbcccc";
+const ARITHMETIC_GENERATED_ID =
+  "grade4_arithmetic_generated_111122223333";
+const PATTERNS_GENERATED_ID =
+  "grade4_number_patterns_generated_abcd1234ef56";
+const REVERSE_REASONING_ID =
+  "grade4_reverse_reasoning_001";
+const KINEMATICS_FIXED_ID = "kinematics_fixed_001";
+
+assert(
+  catalogProblemLookupId(UNKNOWN_GENERATED_ID) ===
+    "grade4_unknown_number_generated",
+  "Generated Unknown Numbers ids must map to a stable catalog key",
+);
+assert(
+  catalogProblemLookupId(ARITHMETIC_GENERATED_ID) ===
+    "grade4_arithmetic_generated",
+  "Generated Arithmetic ids must map to a stable catalog key",
+);
+assert(
+  catalogProblemLookupId(PATTERNS_GENERATED_ID) ===
+    "grade4_number_patterns_generated",
+  "Generated Number Patterns ids must map to a stable catalog key",
+);
+assert(
+  catalogProblemLookupId(REVERSE_REASONING_ID) ===
+    REVERSE_REASONING_ID,
+  "Static reverse-reasoning ids must not be rewritten",
+);
+
+const unknownBgStored = "Намерете неизвестното число";
+const unknownEnStored = "Find the unknown number";
+const arithmeticBgStored = "Пресметнете израза";
+const arithmeticEnStored = "Compute the expression";
+const patternsBgStored = "Числови редици";
+const patternsEnStored = "Number patterns";
+
+const unknownDropdownAfterBgToEn = catalogDisplayName(
+  "problem",
+  UNKNOWN_GENERATED_ID,
+  unknownBgStored,
+  "en",
+);
+const unknownPreviewAfterBgToEn = catalogDisplayName(
+  "problem",
+  UNKNOWN_GENERATED_ID,
+  unknownEnStored,
+  "en",
+);
+assert(
+  unknownDropdownAfterBgToEn === unknownEnStored,
+  "Unknown Numbers dropdown must switch BG stored title to English",
+);
+assert(
+  unknownPreviewAfterBgToEn === unknownEnStored,
+  "Unknown Numbers preview must show the English title",
+);
+assert(
+  unknownDropdownAfterBgToEn === unknownPreviewAfterBgToEn,
+  "Unknown Numbers dropdown and preview must share the English title",
+);
+
+const unknownDropdownAfterEnToBg = catalogDisplayName(
+  "problem",
+  UNKNOWN_GENERATED_ID,
+  unknownEnStored,
+  "bg",
+);
+const unknownPreviewAfterEnToBg = catalogDisplayName(
+  "problem",
+  UNKNOWN_GENERATED_ID,
+  unknownBgStored,
+  "bg",
+);
+assert(
+  unknownDropdownAfterEnToBg === unknownBgStored,
+  "Unknown Numbers dropdown must switch EN stored title to Bulgarian",
+);
+assert(
+  unknownPreviewAfterEnToBg === unknownBgStored,
+  "Unknown Numbers preview must show the Bulgarian title",
+);
+assert(
+  unknownDropdownAfterEnToBg === unknownPreviewAfterEnToBg,
+  "Unknown Numbers dropdown and preview must share the Bulgarian title",
+);
+
+assert(
+  catalogDisplayName(
+    "problem",
+    ARITHMETIC_GENERATED_ID,
+    arithmeticBgStored,
+    "en",
+  ) === arithmeticEnStored,
+  "Arithmetic dropdown must localize BG → EN",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    ARITHMETIC_GENERATED_ID,
+    arithmeticEnStored,
+    "bg",
+  ) === arithmeticBgStored,
+  "Arithmetic dropdown must localize EN → BG",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    PATTERNS_GENERATED_ID,
+    patternsBgStored,
+    "en",
+  ) === patternsEnStored,
+  "Number Patterns dropdown must localize BG → EN",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    PATTERNS_GENERATED_ID,
+    patternsEnStored,
+    "bg",
+  ) === patternsBgStored,
+  "Number Patterns dropdown must localize EN → BG",
+);
+
+assert(
+  catalogDisplayName(
+    "problem",
+    REVERSE_REASONING_ID,
+    "Hazelnuts in Three Hollows",
+    "bg",
+  ) === "Лешници в три хралупи",
+  "Static reverse-reasoning title must stay localized",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    REVERSE_REASONING_ID,
+    "Лешници в три хралупи",
+    "en",
+  ) === "Hazelnuts in Three Hollows",
+  "Static reverse-reasoning title must switch EN ← BG",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    KINEMATICS_FIXED_ID,
+    "Car accelerating from rest",
+    "bg",
+  ) === "Автомобил, ускоряващ от покой",
+  "Kinematics titles must keep their existing Bulgarian label",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    LINEAR_ODE_FIXED_PROBLEM_ID,
+    "First-Order Linear ODE",
+    "en",
+  ) === "First-order linear differential equation",
+  "Fixed Linear ODE English title must remain unchanged",
+);
+
+assert(
+  UNKNOWN_GENERATED_ID ===
+    "grade4_unknown_number_generated_aaaabbbbcccc",
+  "Language switching must not rewrite the generated problem id",
 );
 assert(
   !fixedBg.includes(LINEAR_ODE_FIXED_PROBLEM_ID) &&

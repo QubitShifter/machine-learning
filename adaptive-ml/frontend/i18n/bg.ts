@@ -57,6 +57,9 @@ export const bg = {
   "catalog.domain.optics": "Оптика",
   "catalog.domain.modern_physics": "Съвременна физика",
   "catalog.topic.word_problems": "Текстови задачи",
+  "catalog.topic.arithmetic": "Аритметика",
+  "catalog.topic.unknown_numbers": "Неизвестни числа",
+  "catalog.topic.number_patterns": "Числови редици",
   "catalog.topic.first_order_linear":
     "Линейни диференциални уравнения от първи ред",
   "catalog.topic.separable_equations":
@@ -64,6 +67,12 @@ export const bg = {
   "catalog.topic.kinematics": "Кинематика",
   "catalog.problem.grade4_reverse_reasoning_001":
     "Лешници в три хралупи",
+  "catalog.problem.grade4_unknown_number_generated":
+    "Намерете неизвестното число",
+  "catalog.problem.grade4_arithmetic_generated":
+    "Пресметнете израза",
+  "catalog.problem.grade4_number_patterns_generated":
+    "Числови редици",
   "catalog.problem.linear_first_order_fixed_001":
     "Линейно диференциално уравнение от първи ред",
   "catalog.problem.linear_first_order_generated":
@@ -90,6 +99,10 @@ export const bg = {
   "path.generateHelp":
     "Тази тема може да генерира нови упражнения с избраната трудност.",
   "path.generate": "Генерирай задача",
+  "path.generateAgain": "Генерирай друга задача",
+  "path.generateFirst":
+    "Тази тема няма предварително зададена задача. Изберете трудност и генерирайте упражнение, за да започнете.",
+  "path.generatedTopic": " (генерирана)",
   "path.start": "Започни избраната задача",
   "path.loading": "Зареждане...",
   "path.steps": "{count} учебни стъпки",
@@ -198,7 +211,10 @@ export const bg = {
     "Очакван вход: {type}. MAT-PAL ще изпрати LaTeX низа от редактора.",
   "tutor.expectedUnits":
     "Очакван вход: {type}. Въведете числова стойност със физическата ѝ единица.",
+  "tutor.numberFieldHint":
+    "В това поле се въвежда число. Ако искате да попитате какво означава дума, използвайте „Задай въпрос“.",
   "tutor.placeholderAnswer": "Въведете отговор от тип {type}",
+  "tutor.placeholderNumber": "Въведете число",
   "tutor.mathAria": "Математически отговор",
   "tutor.mathLoading": "Зареждане на математическия редактор...",
   "tutor.mathLoadError":

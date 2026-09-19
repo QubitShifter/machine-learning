@@ -276,8 +276,9 @@ def submit_question(
         expected_input_type=(
             live_response.expected_input_type
         ),
-        tutor_metadata=sanitize_tutor_metadata(
-            live_response.metadata,
+        tutor_metadata=_question_tutor_metadata(
+            stored_session,
+            live_response,
         ),
         recent_question_history=tuple(
             stored_session.question_history
@@ -382,6 +383,24 @@ def _update_mastery_if_completed(
         "mastery_key": summary.mastery_key,
     }
     stored_session.mastery_updated = True
+
+
+def _question_tutor_metadata(
+    stored_session: StoredSession,
+    live_response: TutorResponse,
+) -> dict:
+    metadata = dict(live_response.metadata or {})
+    metadata["exercise_completed"] = bool(
+        live_response.completed
+    )
+    problem = getattr(stored_session.engine, "problem", None)
+    known = getattr(problem, "known", None)
+    if isinstance(known, dict):
+        for key in ("form", "equation"):
+            value = known.get(key)
+            if value is not None and key not in metadata:
+                metadata[key] = value
+    return sanitize_tutor_metadata(metadata)
 
 
 def _build_performance_summary(
