@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { AnswerInput } from "@/components/answer-input/AnswerInput";
 import { FeedbackPanel } from "@/components/FeedbackPanel";
+import { GuidedQuestions } from "@/components/GuidedQuestions";
 import type { GradedFeedback } from "@/components/feedbackPresentation";
 import { useLanguage } from "@/components/LanguageProvider";
 import { MathContent } from "@/components/math/MathContent";
@@ -16,6 +17,11 @@ import {
   submitQuestionMode,
   toggleQuestionMode,
 } from "@/components/questionText";
+import {
+  feedbackPanelKey,
+  hintButtonDisabled,
+  hintButtonLabelKey,
+} from "@/components/hintControls";
 import type { TutorSession } from "@/types/tutor";
 
 interface TutorCardProps {
@@ -24,11 +30,14 @@ interface TutorCardProps {
   answer: string;
   loading: boolean;
   questionLoading?: boolean;
+  elaborationLoading?: boolean;
   lastGraded?: GradedFeedback | null;
   errorMessage: string | null;
   onAnswerChange: (value: string) => void;
   onSubmitAnswer: () => void;
   onSubmitQuestion: (question: string) => void;
+  onSubmitGuidedQuestion?: (questionId: string) => void;
+  onElaborate?: () => void;
   onRequestHint: () => void;
   onRestart: () => void;
   onPracticeNext?: () => void;
@@ -123,11 +132,14 @@ export function TutorCard({
   answer,
   loading,
   questionLoading = false,
+  elaborationLoading = false,
   lastGraded = null,
   errorMessage,
   onAnswerChange,
   onSubmitAnswer,
   onSubmitQuestion,
+  onSubmitGuidedQuestion,
+  onElaborate,
   onRequestHint,
   onRestart,
   onPracticeNext,
@@ -294,18 +306,25 @@ export function TutorCard({
             value={answer}
           />
 
+          {onSubmitGuidedQuestion ? (
+            <GuidedQuestions
+              disabled={loading || questionLoading}
+              onSelect={onSubmitGuidedQuestion}
+              questions={session.suggested_questions}
+            />
+          ) : null}
+
           <div className="action-row">
             <button
               className="secondary-button"
-              disabled={
-                loading ||
-                questionLoading ||
-                !session.hint_available
-              }
+              disabled={hintButtonDisabled(
+                session,
+                loading || questionLoading,
+              )}
               onClick={onRequestHint}
               type="button"
             >
-              {t("tutor.hint")}
+              {t(hintButtonLabelKey(session))}
             </button>
             <button
               className="secondary-button"
@@ -373,9 +392,12 @@ export function TutorCard({
       )}
 
       <FeedbackPanel
+        key={feedbackPanelKey(session)}
         errorMessage={errorMessage}
+        elaborationLoading={elaborationLoading}
         feedback={session.feedback}
         lastGraded={lastGraded}
+        onElaborate={onElaborate}
         questionLoading={questionLoading}
         session={session}
         status={session.status}

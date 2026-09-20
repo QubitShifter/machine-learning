@@ -1,4 +1,9 @@
 from src.core.i18n.primary_school import pst
+from src.core.tutor_engine.concept_guidance.story_step_guidance import (
+    build_story_guidance_context,
+    incorrect_story_nudge,
+    progressive_hint,
+)
 from src.core.tutor_engine.contracts import (
     StudentSubmission,
     TutorResponse,
@@ -93,9 +98,7 @@ class PrimarySchoolTutorEngine:
                 self.problem.get_number_of_steps()
             ),
             completed=False,
-            hint_available=(
-                step.hint is not None
-            ),
+            hint_available=self._hint_available(step),
             expected_input_type=_input_type_for_step(step),
             metadata={
                 "skill_id": step.skill_id,
@@ -184,9 +187,7 @@ class PrimarySchoolTutorEngine:
                     self.problem.get_number_of_steps()
                 ),
                 completed=False,
-                hint_available=(
-                    next_step.hint is not None
-                ),
+                hint_available=self._hint_available(next_step),
                 expected_input_type=_input_type_for_step(
                     next_step
                 ),
@@ -204,16 +205,32 @@ class PrimarySchoolTutorEngine:
             self.session
             .get_attempts_for_current_step()
         )
+        feedback = evaluation["feedback"]
+        if self.problem.topic == "story_problems":
+            live = type(
+                "Live",
+                (),
+                {"current_step": step.step_number},
+            )()
+            story = build_story_guidance_context(
+                self.problem,
+                live,
+                self.problem.language,
+            )
+            if story is not None:
+                feedback = incorrect_story_nudge(story)
 
         return TutorResponse(
             status="incorrect",
-            feedback=(
-                evaluation["feedback"]
-            ),
+            feedback=feedback,
             suggestion=(
-                step.hint
-                if attempts >= 2
-                else None
+                None
+                if self.problem.topic == "story_problems"
+                else (
+                    step.hint
+                    if attempts >= 2
+                    else None
+                )
             ),
             current_step=(
                 step.step_number
@@ -222,9 +239,7 @@ class PrimarySchoolTutorEngine:
                 self.problem.get_number_of_steps()
             ),
             completed=False,
-            hint_available=(
-                step.hint is not None
-            ),
+            hint_available=self._hint_available(step),
             expected_input_type=_input_type_for_step(step),
             metadata={
                 "error_type": (
@@ -248,11 +263,20 @@ class PrimarySchoolTutorEngine:
         if step is None:
             return self.get_current_response()
 
-        self.session.record_hint()
-
-        hint = (
-            step.hint
-            or pst(self.problem.language, "no_hint")
+        used_before = self.session.get_hints_for_current_step()
+        story_exhausted = (
+            self.problem.topic == "story_problems"
+            and used_before >= 3
+        )
+        if not story_exhausted:
+            self.session.record_hint()
+        used = self.session.get_hints_for_current_step()
+        if story_exhausted:
+            used = used_before + 1
+        hint, exhausted, level = _story_or_static_hint(
+            self.problem,
+            step,
+            used,
         )
 
         return TutorResponse(
@@ -263,17 +287,41 @@ class PrimarySchoolTutorEngine:
                 self.problem.get_number_of_steps()
             ),
             completed=False,
-            hint_available=(
-                step.hint is not None
-            ),
+            hint_available=not exhausted,
             expected_input_type=_input_type_for_step(step),
             metadata={
                 "hints_used_on_step": (
-                    self.session
-                    .get_hints_for_current_step()
+                    self.session.get_hints_for_current_step()
                 ),
+                "hint_level": level,
+                "hint_exhausted": exhausted,
+                "hint_counted": not story_exhausted,
             },
         )
+
+
+    def _hint_available(self, step) -> bool:
+        if step is None:
+            return False
+        if self.problem.topic == "story_problems":
+            return self.session.get_hints_for_current_step() < 3
+        return step.hint is not None
+
+
+def _story_or_static_hint(problem, step, used: int):
+    if problem.topic == "story_problems":
+        live = type("Live", (), {"current_step": step.step_number})()
+        story = build_story_guidance_context(
+            problem,
+            live,
+            problem.language,
+        )
+        if story is not None:
+            text, exhausted = progressive_hint(story, used)
+            level = 3 if used >= 3 else used
+            return text, exhausted, level
+    hint = step.hint or pst(problem.language, "no_hint")
+    return hint, False, 1
 
 
 def _input_type_for_step(step) -> str:

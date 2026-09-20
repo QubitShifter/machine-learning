@@ -26,6 +26,7 @@ UNTRUSTED_RETRIEVED_LABEL = (
 DEFAULT_MODEL_TIMEOUT_SECONDS = 20.0
 MIN_MODEL_TIMEOUT_SECONDS = 1.0
 MAX_MODEL_TIMEOUT_SECONDS = 600.0
+DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS = 15.0
 DEFAULT_WEB_SEARCH_TIMEOUT_SECONDS = 8.0
 
 
@@ -48,6 +49,7 @@ class NullTutorModelProvider:
         context: TutorQuestionContext,
         sources: tuple[TutorSource, ...] = (),
         prompt: str = "",
+        timeout_seconds: float | None = None,
     ) -> TutorModelAnswer:
         raise ModelProviderError(
             "No tutor model provider is configured."
@@ -68,8 +70,18 @@ class NullWebSearchProvider:
 
 
 class FakeTutorModelProvider:
-    def __init__(self, prefix: str = "MODEL"):
+    def __init__(
+        self,
+        prefix: str = "MODEL",
+        *,
+        text: str | None = None,
+        error: Exception | None = None,
+        on_call=None,
+    ):
         self.prefix = prefix
+        self.text = text
+        self.error = error
+        self.on_call = on_call
         self.calls: list[dict] = []
 
     def is_available(self) -> bool:
@@ -82,16 +94,22 @@ class FakeTutorModelProvider:
         context: TutorQuestionContext,
         sources: tuple[TutorSource, ...] = (),
         prompt: str = "",
+        timeout_seconds: float | None = None,
     ) -> TutorModelAnswer:
         locale = normalize_locale(context.language)
         self.calls.append(
             {
                 "question": question,
                 "language": locale,
+                "prompt": prompt,
+                "timeout_seconds": timeout_seconds,
+                "sources": sources,
                 "context": {
                     "subject": context.subject,
                     "domain": context.domain,
                     "topic": context.topic,
+                    "problem_id": context.problem_id,
+                    "problem_title": context.problem_title,
                     "problem_statement": (
                         context.problem_statement
                     ),
@@ -115,10 +133,17 @@ class FakeTutorModelProvider:
                     "session_id": context.session_id,
                     "student_id": context.student_id,
                 },
-                "sources": sources,
-                "prompt": prompt,
             }
         )
+        if self.on_call is not None:
+            self.on_call()
+        if self.error is not None:
+            raise self.error
+        if self.text is not None:
+            return TutorModelAnswer(
+                text=self.text,
+                language=locale,
+            )
         marker = "BG" if locale == "bg" else "EN"
         return TutorModelAnswer(
             text=f"{marker}_{self.prefix}_ANSWER: {question}",
@@ -182,6 +207,7 @@ class OpenAICompatibleTutorModelProvider:
         context: TutorQuestionContext,
         sources: tuple[TutorSource, ...] = (),
         prompt: str = "",
+        timeout_seconds: float | None = None,
     ) -> TutorModelAnswer:
         payload = json.dumps(
             {
@@ -207,11 +233,16 @@ class OpenAICompatibleTutorModelProvider:
                 "Authorization": f"Bearer {self._api_key}",
             },
         )
+        timeout = self._timeout_seconds
+        if timeout_seconds is not None:
+            timeout = coerce_model_timeout_seconds(
+                timeout_seconds,
+            )
 
         try:
             with urlopen(
                 request,
-                timeout=self._timeout_seconds,
+                timeout=timeout,
             ) as response:
                 body = json.loads(
                     response.read().decode("utf-8")
@@ -219,7 +250,7 @@ class OpenAICompatibleTutorModelProvider:
         except (HTTPError, URLError, TimeoutError, ValueError) as error:
             _log_model_request_failure(
                 error,
-                timeout_seconds=self._timeout_seconds,
+                timeout_seconds=timeout,
             )
             raise ModelProviderError(
                 "Model provider request failed."
@@ -370,6 +401,48 @@ def coerce_model_timeout_seconds(value: object) -> float:
             int(DEFAULT_MODEL_TIMEOUT_SECONDS),
         )
         return DEFAULT_MODEL_TIMEOUT_SECONDS
+
+    return timeout
+
+
+def coerce_guided_elaboration_timeout_seconds(
+    value: object,
+) -> float:
+    if value is None:
+        return DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS
+
+    if isinstance(value, bool):
+        logger.warning(
+            "Invalid MATPAL_GUIDED_ELABORATION_TIMEOUT_SECONDS; "
+            "using default %ss.",
+            int(DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS),
+        )
+        return DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS
+
+    if isinstance(value, str) and not value.strip():
+        return DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS
+
+    try:
+        timeout = float(value)
+    except (TypeError, ValueError):
+        logger.warning(
+            "Invalid MATPAL_GUIDED_ELABORATION_TIMEOUT_SECONDS; "
+            "using default %ss.",
+            int(DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS),
+        )
+        return DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS
+
+    if (
+        not math.isfinite(timeout)
+        or timeout < MIN_MODEL_TIMEOUT_SECONDS
+        or timeout > MAX_MODEL_TIMEOUT_SECONDS
+    ):
+        logger.warning(
+            "Unreasonable MATPAL_GUIDED_ELABORATION_TIMEOUT_SECONDS; "
+            "using default %ss.",
+            int(DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS),
+        )
+        return DEFAULT_GUIDED_ELABORATION_TIMEOUT_SECONDS
 
     return timeout
 

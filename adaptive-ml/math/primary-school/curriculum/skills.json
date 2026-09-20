@@ -69,6 +69,12 @@
         "description": "Work backwards from a final known quantity to an earlier unknown quantity."
       },
       {
+        "id": "grade4_word_problems",
+        "topic": "story_problems",
+        "name": "Generated story problems",
+        "description": "Solve generated Grade 4 word problems with several operations, comparisons, or reverse reasoning."
+      },
+      {
         "id": "grade4_reverse_addition",
         "topic": "word_problems",
         "name": "Reverse addition",

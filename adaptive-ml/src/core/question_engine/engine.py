@@ -19,6 +19,9 @@ from src.core.question_engine.contracts import (
     WebSearchProvider,
 )
 from src.core.question_engine.local_guidance import match_local_concept
+from src.core.tutor_engine.concept_guidance.word_problem_guidance import (
+    match_story_method_intent,
+)
 from src.core.question_engine.providers import (
     ModelProviderError,
     NullTutorModelProvider,
@@ -62,7 +65,13 @@ class GeneralTutorQuestionEngine:
     ) -> TutorQuestionResult:
         question = " ".join(request.question.split()).strip()
         context = enrich_question_context(context)
-        wants_web = wants_web_retrieval(question)
+        story_method = (
+            context.topic == "story_problems"
+            and match_story_method_intent(question)
+        )
+        wants_web = (
+            wants_web_retrieval(question) and not story_method
+        )
         local = (
             None
             if wants_web

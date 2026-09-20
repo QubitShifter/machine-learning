@@ -10,10 +10,14 @@ _FAMILY_TITLE_KEYS = {
     "arithmetic": "gen.arithmetic.title",
     "unknown_number": "gen.unknown.title",
     "number_patterns": "gen.patterns.title",
+    "several_operations": "gen.story.title",
+    "comparison": "gen.story.title",
+    "reverse": "gen.story.title",
 }
-_FAMILY_STATEMENT_KEYS = {
-    "arithmetic": "gen.arithmetic.statement",
-    "unknown_number": "gen.unknown.statement",
+_STORY_FAMILIES = {
+    "several_operations",
+    "comparison",
+    "reverse",
 }
 
 
@@ -57,6 +61,9 @@ def localize_generated_primary_school(
 
 def _statement_key(problem: PrimarySchoolProblem) -> str:
     family = (problem.metadata or {}).get("family")
+    stored = problem.known.get("statement_key")
+    if family in _STORY_FAMILIES and stored:
+        return stored
     if family == "arithmetic":
         return "gen.arithmetic.statement"
     if family == "unknown_number":
@@ -70,6 +77,8 @@ def _statement_key(problem: PrimarySchoolProblem) -> str:
 
 def _statement_params(problem: PrimarySchoolProblem) -> dict:
     known = problem.known
+    if known.get("statement_params") is not None:
+        return dict(known["statement_params"])
     if "expression" in known:
         return {"expression": known["expression"]}
     if "equation" in known:

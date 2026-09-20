@@ -84,6 +84,7 @@ def assert_progress_api_returns_dashboard_schema():
         "kinematics",
         "number_patterns",
         "separable_equations",
+        "story_problems",
         "unknown_numbers",
         "word_problems",
     }

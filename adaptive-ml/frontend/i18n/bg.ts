@@ -60,6 +60,7 @@ export const bg = {
   "catalog.topic.arithmetic": "Аритметика",
   "catalog.topic.unknown_numbers": "Неизвестни числа",
   "catalog.topic.number_patterns": "Числови редици",
+  "catalog.topic.story_problems": "Сюжетни задачи",
   "catalog.topic.first_order_linear":
     "Линейни диференциални уравнения от първи ред",
   "catalog.topic.separable_equations":
@@ -73,6 +74,8 @@ export const bg = {
     "Пресметнете израза",
   "catalog.problem.grade4_number_patterns_generated":
     "Числови редици",
+  "catalog.problem.grade4_word_problems_generated":
+    "Текстова задача за 4. клас",
   "catalog.problem.linear_first_order_fixed_001":
     "Линейно диференциално уравнение от първи ред",
   "catalog.problem.linear_first_order_generated":
@@ -186,6 +189,7 @@ export const bg = {
 
   "tutor.problem": "Задача",
   "tutor.hint": "Подсказка",
+  "tutor.moreHelp": "Още помощ",
   "tutor.submit": "Изпрати отговор",
   "tutor.ask": "Задай въпрос",
   "tutor.askLabel": "Попитайте за тази стъпка",
@@ -201,6 +205,12 @@ export const bg = {
   "tutor.completeTitle":
     "Отлична работа. Приключихте тази задача.",
   "tutor.currentStep": "Текуща стъпка",
+  "tutor.guidedHeading": "Не знаеш откъде да започнеш?",
+  "tutor.explainDifferently": "Обясни по друг начин",
+  "tutor.explainDifferentlyLoading":
+    "Търся друго обяснение...",
+  "tutor.showOriginalExplanation": "Покажи първото обяснение",
+  "tutor.elaborationFallback": "Запазих първото обяснение.",
   "tutor.feedback": "Обратна връзка",
   "tutor.explanation": "Обяснение",
   "tutor.lastAnswer": "Последен отговор",

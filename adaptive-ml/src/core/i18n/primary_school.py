@@ -1,3 +1,4 @@
+from src.core.i18n.story_problems import STORY_PROBLEM_TEXT
 from src.core.i18n.text import tr
 from src.core.tutor_engine.primary_school.problem_types import (
     PrimarySchoolProblem,
@@ -557,6 +558,9 @@ PRIMARY_SCHOOL_TEXT = {
         ),
     },
 }
+
+for _locale, _table in STORY_PROBLEM_TEXT.items():
+    PRIMARY_SCHOOL_TEXT[_locale].update(_table)
 
 PRIMARY_SCHOOL_PROBLEMS_BG = {
     "grade4_reverse_reasoning_001": {

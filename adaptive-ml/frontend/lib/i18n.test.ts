@@ -344,6 +344,8 @@ const ARITHMETIC_GENERATED_ID =
   "grade4_arithmetic_generated_111122223333";
 const PATTERNS_GENERATED_ID =
   "grade4_number_patterns_generated_abcd1234ef56";
+const STORY_GENERATED_ID =
+  "grade4_word_problems_generated_feedface0123";
 const REVERSE_REASONING_ID =
   "grade4_reverse_reasoning_001";
 const KINEMATICS_FIXED_ID = "kinematics_fixed_001";
@@ -364,6 +366,11 @@ assert(
   "Generated Number Patterns ids must map to a stable catalog key",
 );
 assert(
+  catalogProblemLookupId(STORY_GENERATED_ID) ===
+    "grade4_word_problems_generated",
+  "Generated story-problem ids must map to a stable catalog key",
+);
+assert(
   catalogProblemLookupId(REVERSE_REASONING_ID) ===
     REVERSE_REASONING_ID,
   "Static reverse-reasoning ids must not be rewritten",
@@ -375,6 +382,8 @@ const arithmeticBgStored = "Пресметнете израза";
 const arithmeticEnStored = "Compute the expression";
 const patternsBgStored = "Числови редици";
 const patternsEnStored = "Number patterns";
+const storyBgStored = "Текстова задача за 4. клас";
+const storyEnStored = "Grade 4 story problem";
 
 const unknownDropdownAfterBgToEn = catalogDisplayName(
   "problem",
@@ -461,6 +470,48 @@ assert(
     "bg",
   ) === patternsBgStored,
   "Number Patterns dropdown must localize EN → BG",
+);
+assert(
+  catalogDisplayName(
+    "topic",
+    "story_problems",
+    "Story Problems",
+    "bg",
+  ) === "Сюжетни задачи",
+  "Story Problems topic must localize EN → BG",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    STORY_GENERATED_ID,
+    storyBgStored,
+    "en",
+  ) === storyEnStored,
+  "Story problem dropdown must localize BG → EN",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    STORY_GENERATED_ID,
+    storyEnStored,
+    "bg",
+  ) === storyBgStored,
+  "Story problem dropdown must localize EN → BG",
+);
+assert(
+  catalogDisplayName(
+    "problem",
+    STORY_GENERATED_ID,
+    storyBgStored,
+    "en",
+  ) ===
+    catalogDisplayName(
+      "problem",
+      STORY_GENERATED_ID,
+      storyEnStored,
+      "en",
+    ),
+  "Story problem dropdown and preview must share the English title",
 );
 
 assert(

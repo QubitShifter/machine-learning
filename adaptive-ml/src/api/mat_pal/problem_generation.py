@@ -32,6 +32,7 @@ from src.core.tutor_engine.primary_school.generation import (
     generate_arithmetic_problem,
     generate_sequence_or_chain_problem,
     generate_unknown_number_problem,
+    generate_word_problem,
     localize_generated_primary_school,
 )
 
@@ -231,6 +232,17 @@ def build_default_problem_generator_registry() -> (
             generator_name="grade4_number_patterns",
             supported_difficulties=(1, 2, 3),
             create_problem=_create_number_patterns_problem,
+        )
+    )
+    registry.register(
+        GeneratorRegistration(
+            subject="mathematics",
+            domain="primary_school",
+            topic="story_problems",
+            topic_name="Story Problems",
+            generator_name="grade4_word_problems",
+            supported_difficulties=(1, 2, 3),
+            create_problem=_create_word_problem,
         )
     )
 
@@ -446,6 +458,8 @@ def _create_primary_school_registration(
         "form": source_metadata.get("form"),
         "direction": source_metadata.get("direction"),
         "answer_format": source_metadata.get("answer_format"),
+        "template_id": source_metadata.get("template_id"),
+        "relation_count": source_metadata.get("relation_count"),
     }
     equation = known.get("equation")
     if isinstance(equation, str) and equation:
@@ -551,6 +565,30 @@ def _create_number_patterns_problem(
         topic="number_patterns",
         topic_name="Number Patterns",
         generator_name="grade4_number_patterns",
+        difficulty=difficulty,
+        seed=seed,
+        language=locale,
+    )
+
+
+def _create_word_problem(
+    difficulty: int,
+    seed: int | None,
+    language: str = "en",
+) -> TutorRegistration:
+    locale = normalize_locale(language)
+    problem = generate_word_problem(
+        difficulty=difficulty,
+        seed=seed,
+        rng=_rng_from_seed(seed),
+        language=locale,
+    )
+    return _create_primary_school_registration(
+        problem,
+        prefix="grade4_word_problems",
+        topic="story_problems",
+        topic_name="Story Problems",
+        generator_name="grade4_word_problems",
         difficulty=difficulty,
         seed=seed,
         language=locale,

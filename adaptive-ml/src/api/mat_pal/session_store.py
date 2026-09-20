@@ -1,3 +1,4 @@
+import threading
 from collections import deque
 from dataclasses import dataclass, field
 from uuid import uuid4
@@ -28,22 +29,44 @@ from src.core.adaptive import (
 )
 from src.core.question_engine import (
     GeneralTutorQuestionEngine,
+    QuestionRoute,
     QuestionTurn,
     TutorQuestionContext,
     TutorQuestionRequest,
     build_question_engine_from_env,
 )
 from src.core.question_engine.context import sanitize_tutor_metadata
+from src.core.question_engine.guided_elaboration import (
+    STATUS_DUPLICATE,
+    STATUS_FAILED,
+    STATUS_OFF,
+    STATUS_STALE,
+    STATUS_UNAVAILABLE,
+    STATUS_UNSUPPORTED,
+    elaboration_is_available,
+    render_guided_strategy,
+    select_guided_strategy,
+)
+from src.core.question_engine.guided_questions import (
+    GuidedQuestionError,
+    list_suggested_questions,
+    resolve_guided_question,
+    suggested_as_dicts,
+)
 from src.core.question_engine.sources import public_sources
 from src.core.tutor_engine.contracts import (
     StudentSubmission,
     TutorResponse,
+)
+from src.core.tutor_engine.primary_school.generation.word_problems.templates import (
+    TEMPLATES_BY_ID,
 )
 
 
 MAX_QUESTION_HISTORY = 3
 
 _question_engine: GeneralTutorQuestionEngine | None = None
+_elaboration_guard = threading.Lock()
 
 
 def get_question_engine() -> GeneralTutorQuestionEngine:
@@ -82,6 +105,7 @@ class StoredSession:
             maxlen=MAX_QUESTION_HISTORY,
         )
     )
+    elaboration_in_flight: bool = False
 
 
 _sessions: dict[str, StoredSession] = {}
@@ -119,6 +143,9 @@ def _to_session_response(
         expected_input_type=tutor_response.expected_input_type,
         suggestion=tutor_response.suggestion,
         sources=sources,
+        suggested_questions=suggested_as_dicts(
+            _live_suggested_questions(stored_session)
+        ),
         metadata={
             **tutor_response.metadata,
             "student_id": stored_session.student_id,
@@ -286,9 +313,29 @@ def submit_question(
         session_id=stored_session.session_id,
         student_id=stored_session.student_id,
     )
+    question_id = (question_request.question_id or "").strip()
+    if question_id:
+        explanation_mode = (
+            question_request.explanation_mode or "local"
+        )
+        return _submit_guided_question(
+            stored_session,
+            question_id=question_id,
+            live_response=live_response,
+            context=context,
+            language=language,
+            explanation_mode=explanation_mode,
+        )
+    question_text = " ".join(
+        (question_request.question or "").split()
+    ).strip()
+    if not question_text:
+        raise GuidedQuestionError(
+            "Provide a question or a question_id."
+        )
     result = get_question_engine().answer(
         TutorQuestionRequest(
-            question=question_request.question,
+            question=question_text,
         ),
         context,
     )
@@ -317,9 +364,7 @@ def submit_question(
     )
     stored_session.question_history.append(
         QuestionTurn(
-            question=" ".join(
-                question_request.question.split()
-            ).strip(),
+            question=question_text,
             answer=result.answer,
             answer_source=result.answer_source,
         )
@@ -329,6 +374,357 @@ def submit_question(
     return _to_session_response(
         stored_session,
         tutor_response,
+    )
+
+
+def _submit_guided_question(
+    stored_session: StoredSession,
+    *,
+    question_id: str,
+    live_response: TutorResponse,
+    context: TutorQuestionContext,
+    language: str,
+    explanation_mode: str = "local",
+) -> SessionResponse | None:
+    items = _live_suggested_questions(stored_session)
+    allowed = {item.question_id for item in items}
+    label, answer = resolve_guided_question(
+        question_id,
+        allowed_ids=allowed,
+        topic=stored_session.registration.topic,
+        problem=getattr(stored_session.engine, "problem", None),
+        live_response=live_response,
+        context=context,
+        language=language,
+    )
+    if explanation_mode == "elaborate":
+        return _submit_guided_elaboration(
+            stored_session,
+            question_id=question_id,
+            live_response=live_response,
+            language=language,
+            local_answer=answer,
+        )
+    provider_available = (
+        get_question_engine().model_provider.is_available()
+    )
+    tutor_response = TutorResponse(
+        status="concept",
+        feedback=answer,
+        current_step=live_response.current_step,
+        total_steps=live_response.total_steps,
+        completed=live_response.completed,
+        hint_available=live_response.hint_available,
+        suggestion=question_continue_message(language),
+        expected_input_type=live_response.expected_input_type,
+        sources=[],
+        metadata={
+            **live_response.metadata,
+            "concept_question": True,
+            "answer_source": "local",
+            "used_web": False,
+            "question_route": QuestionRoute.LOCAL_ONLY.value,
+            "guided_question": True,
+            "guided_question_id": question_id,
+            "guided_local_explanation": answer,
+            "elaboration_available": elaboration_is_available(
+                question_id,
+                provider_available=provider_available,
+            ),
+            "mathematical_source": "deterministic_backend",
+            "explanation_selected_by_model": False,
+        },
+    )
+    stored_session.question_history.append(
+        QuestionTurn(
+            question=label,
+            answer=answer,
+            answer_source="local",
+        )
+    )
+    stored_session.last_response = tutor_response
+    return _to_session_response(
+        stored_session,
+        tutor_response,
+    )
+
+
+def _submit_guided_elaboration(
+    stored_session: StoredSession,
+    *,
+    question_id: str,
+    live_response: TutorResponse,
+    language: str,
+    local_answer: str,
+) -> SessionResponse | None:
+    provider = get_question_engine().model_provider
+    provider_available = provider.is_available()
+    if not elaboration_is_available(
+        question_id,
+        provider_available=provider_available,
+    ):
+        status = _elaboration_unavailable_status(
+            question_id,
+            provider_available=provider_available,
+        )
+        return _keep_guided_explanation(
+            stored_session,
+            question_id=question_id,
+            local_answer=local_answer,
+            live_response=live_response,
+            language=language,
+            status=status,
+        )
+    if not _try_begin_elaboration(stored_session):
+        return _keep_guided_explanation(
+            stored_session,
+            question_id=question_id,
+            local_answer=local_answer,
+            live_response=live_response,
+            language=language,
+            status=STATUS_DUPLICATE,
+        )
+    captured = {
+        "session_id": stored_session.session_id,
+        "problem_id": stored_session.problem_id,
+        "current_step": live_response.current_step,
+        "question_id": question_id,
+    }
+    try:
+        selection = select_guided_strategy(
+            question_id,
+            language=language,
+            model_provider=provider,
+        )
+    finally:
+        _end_elaboration(stored_session)
+
+    live_stored = _sessions.get(captured["session_id"])
+    if live_stored is None:
+        return None
+    live = live_stored.engine.get_current_response()
+    allowed = {
+        item.question_id
+        for item in _live_suggested_questions(live_stored)
+    }
+    if (
+        live_stored.problem_id != captured["problem_id"]
+        or live.current_step != captured["current_step"]
+        or captured["question_id"] not in allowed
+    ):
+        if (
+            live.current_step == captured["current_step"]
+            and live_stored.problem_id == captured["problem_id"]
+            and (live_stored.last_response.metadata or {}).get(
+                "guided_question_id"
+            )
+            == captured["question_id"]
+        ):
+            return _keep_guided_explanation(
+                live_stored,
+                question_id=question_id,
+                local_answer=local_answer,
+                live_response=live,
+                language=language,
+                status=STATUS_STALE,
+            )
+        return _to_session_response(
+            live_stored,
+            live_stored.last_response,
+        )
+    original = _guided_local_explanation(
+        live_stored,
+        question_id=question_id,
+        local_answer=local_answer,
+    )
+    if selection is None:
+        return _keep_guided_explanation(
+            live_stored,
+            question_id=question_id,
+            local_answer=original,
+            live_response=live,
+            language=language,
+            status=STATUS_FAILED,
+        )
+    rendered = render_guided_strategy(
+        question_id,
+        selection,
+        language=language,
+        problem=getattr(live_stored.engine, "problem", None),
+        live_response=live,
+    )
+    if not rendered:
+        return _keep_guided_explanation(
+            live_stored,
+            question_id=question_id,
+            local_answer=original,
+            live_response=live,
+            language=language,
+            status=STATUS_FAILED,
+        )
+    extra = {
+        "elaboration_status": "applied",
+        "elaboration_strategy": selection.strategy,
+        "explanation_selected_by_model": True,
+        "mathematical_source": "deterministic_backend",
+        "guided_local_explanation": original,
+        "guided_question_id": question_id,
+        "elaboration_available": True,
+    }
+    if selection.example_id is not None:
+        extra["elaboration_example_id"] = selection.example_id
+    return _replace_guided_explanation(
+        live_stored,
+        question_id=question_id,
+        explanation=rendered,
+        live_response=live,
+        language=language,
+        extra_metadata=extra,
+    )
+
+
+def _elaboration_unavailable_status(
+    question_id: str,
+    *,
+    provider_available: bool,
+) -> str:
+    from src.core.question_engine.guided_elaboration import (
+        ELABORATABLE_QUESTION_IDS,
+        guided_ai_mode,
+    )
+
+    if guided_ai_mode() != "optional":
+        return STATUS_OFF
+    if not provider_available:
+        return STATUS_UNAVAILABLE
+    if question_id not in ELABORATABLE_QUESTION_IDS:
+        return STATUS_UNSUPPORTED
+    return STATUS_UNAVAILABLE
+
+
+def _try_begin_elaboration(stored_session: StoredSession) -> bool:
+    with _elaboration_guard:
+        if stored_session.elaboration_in_flight:
+            return False
+        stored_session.elaboration_in_flight = True
+        return True
+
+
+def _end_elaboration(stored_session: StoredSession) -> None:
+    with _elaboration_guard:
+        stored_session.elaboration_in_flight = False
+
+
+def _guided_local_explanation(
+    stored_session: StoredSession,
+    *,
+    question_id: str,
+    local_answer: str,
+) -> str:
+    metadata = stored_session.last_response.metadata or {}
+    original = metadata.get("guided_local_explanation")
+    if (
+        isinstance(original, str)
+        and original
+        and metadata.get("guided_question_id") == question_id
+    ):
+        return original
+    if (
+        stored_session.last_response.status == "concept"
+        and metadata.get("guided_question_id") == question_id
+        and stored_session.last_response.feedback
+    ):
+        return stored_session.last_response.feedback
+    return local_answer
+
+
+def _keep_guided_explanation(
+    stored_session: StoredSession,
+    *,
+    question_id: str,
+    local_answer: str,
+    live_response: TutorResponse,
+    language: str,
+    status: str,
+) -> SessionResponse:
+    current = stored_session.last_response
+    if current.status == "concept" and current.feedback:
+        metadata = {
+            **(current.metadata or {}),
+            "elaboration_status": status,
+            "mathematical_source": "deterministic_backend",
+            "explanation_selected_by_model": False,
+        }
+        if (current.metadata or {}).get("guided_question_id") == (
+            question_id
+        ):
+            metadata["guided_local_explanation"] = (
+                _guided_local_explanation(
+                    stored_session,
+                    question_id=question_id,
+                    local_answer=local_answer,
+                )
+            )
+        current.metadata = metadata
+        stored_session.last_response = current
+    return _to_session_response(stored_session, current)
+
+
+def _replace_guided_explanation(
+    stored_session: StoredSession,
+    *,
+    question_id: str,
+    explanation: str,
+    live_response: TutorResponse,
+    language: str,
+    extra_metadata: dict,
+) -> SessionResponse:
+    current = stored_session.last_response
+    base_metadata = dict(current.metadata or {})
+    if current.status != "concept":
+        base_metadata = dict(live_response.metadata or {})
+    provider_available = (
+        get_question_engine().model_provider.is_available()
+    )
+    tutor_response = TutorResponse(
+        status="concept",
+        feedback=explanation,
+        current_step=live_response.current_step,
+        total_steps=live_response.total_steps,
+        completed=live_response.completed,
+        hint_available=live_response.hint_available,
+        suggestion=question_continue_message(language),
+        expected_input_type=live_response.expected_input_type,
+        sources=[],
+        metadata={
+            **base_metadata,
+            "concept_question": True,
+            "answer_source": "local",
+            "used_web": False,
+            "question_route": QuestionRoute.LOCAL_ONLY.value,
+            "guided_question": True,
+            "guided_question_id": question_id,
+            "elaboration_available": elaboration_is_available(
+                question_id,
+                provider_available=provider_available,
+            ),
+            **extra_metadata,
+        },
+    )
+    stored_session.last_response = tutor_response
+    return _to_session_response(stored_session, tutor_response)
+
+
+def _live_suggested_questions(
+    stored_session: StoredSession,
+):
+    live_response = stored_session.engine.get_current_response()
+    return list_suggested_questions(
+        topic=stored_session.registration.topic,
+        problem=getattr(stored_session.engine, "problem", None),
+        live_response=live_response,
+        language=stored_session.language,
+        completed=live_response.completed,
     )
 
 
@@ -345,7 +741,12 @@ def request_hint(
     tutor_response = (
         stored_session.engine.request_hint()
     )
-    stored_session.hint_requests += 1
+    metadata = tutor_response.metadata or {}
+    counted = True
+    if "hint_counted" in metadata:
+        counted = bool(metadata["hint_counted"])
+    if counted:
+        stored_session.hint_requests += 1
     stored_session.last_response = tutor_response
 
     return _to_session_response(
@@ -400,7 +801,76 @@ def _question_tutor_metadata(
             value = known.get(key)
             if value is not None and key not in metadata:
                 metadata[key] = value
-    return sanitize_tutor_metadata(metadata)
+    metadata = sanitize_tutor_metadata(metadata)
+    metadata.update(
+        _story_question_snapshot(
+            stored_session,
+            live_response,
+        )
+    )
+    return metadata
+
+
+def _story_question_snapshot(
+    stored_session: StoredSession,
+    live_response: TutorResponse,
+) -> dict:
+    problem = getattr(stored_session.engine, "problem", None)
+    if getattr(problem, "topic", "") != "story_problems":
+        return {}
+    known = getattr(problem, "known", None) or {}
+    template_id = known.get("template_id")
+    if not template_id:
+        return {}
+    template = TEMPLATES_BY_ID.get(template_id)
+    params = known.get("statement_params") or {}
+    if template is not None:
+        statement_ids = template.statement_ids
+    else:
+        statement_ids = known.get("statement_ids") or tuple(
+            params.keys()
+        )
+    visible = {
+        name: int(params[name])
+        for name in statement_ids
+        if name in params and isinstance(params[name], int)
+        and not isinstance(params[name], bool)
+        and params[name] > 0
+    }
+    disclosed = dict(visible)
+    completed_ids = []
+    current_step = live_response.current_step
+    for step in getattr(problem, "solution_steps", ()) or ():
+        if step.step_number >= current_step:
+            continue
+        key = (step.metadata or {}).get("prompt_key") or ""
+        if "." not in str(key):
+            continue
+        quantity_id = str(key).rsplit(".", 1)[-1]
+        completed_ids.append(quantity_id)
+        value = step.expected_answer
+        if (
+            quantity_id
+            and isinstance(value, int)
+            and not isinstance(value, bool)
+            and value > 0
+        ):
+            disclosed[quantity_id] = int(value)
+    prompt_key = ""
+    current = None
+    session = getattr(stored_session.engine, "session", None)
+    if session is not None:
+        current = session.get_current_step()
+    if current is not None:
+        prompt_key = (current.metadata or {}).get("prompt_key") or ""
+    return {
+        "template_id": template_id,
+        "family": known.get("family"),
+        "prompt_key": prompt_key,
+        "story_visible": visible,
+        "disclosed_values": disclosed,
+        "completed_quantity_ids": completed_ids,
+    }
 
 
 def _build_performance_summary(

@@ -5,6 +5,9 @@ from fastapi.responses import RedirectResponse
 from src.api.mat_pal import catalog
 from src.api.mat_pal import adaptive_service
 from src.api.mat_pal import session_store
+from src.core.question_engine.guided_questions import (
+    GuidedQuestionError,
+)
 from src.api.mat_pal import progress_service
 from src.api.mat_pal.schemas import (
     AdaptiveRecommendationRequest,
@@ -234,10 +237,16 @@ def submit_question(
     session_id: str,
     request: QuestionRequest,
 ) -> SessionResponse:
-    response = session_store.submit_question(
-        session_id=session_id,
-        question_request=request,
-    )
+    try:
+        response = session_store.submit_question(
+            session_id=session_id,
+            question_request=request,
+        )
+    except GuidedQuestionError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
     if response is None:
         raise HTTPException(

@@ -16,6 +16,12 @@ import {
   type GradedFeedback,
 } from "@/components/feedbackPresentation";
 import {
+  buildElaborateQuestionRequest,
+  guidedQuestionId,
+  shouldApplyElaborationResponse,
+  captureElaborationFingerprint,
+} from "@/components/guidedQuestions";
+import {
   generateProblem,
   getAdaptiveRecommendation,
   getCatalog,
@@ -111,12 +117,19 @@ export function HomePage() {
   const [loading, setLoading] = useState(false);
   const [questionLoading, setQuestionLoading] =
     useState(false);
+  const [elaborationLoading, setElaborationLoading] =
+    useState(false);
   const [lastGraded, setLastGraded] =
     useState<GradedFeedback | null>(null);
   const [errorMessage, setErrorMessage] =
     useState<string | null>(null);
   const [adaptiveMessage, setAdaptiveMessage] =
     useState<string | null>(null);
+  const sessionRef = useRef(session);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   useEffect(() => {
     if (previousStudentId.current === studentId) {
@@ -131,6 +144,7 @@ export function HomePage() {
     setProgress(null);
     setErrorMessage(null);
     setLastGraded(null);
+    setElaborationLoading(false);
   }, [studentId]);
 
   useEffect(() => {
@@ -145,6 +159,7 @@ export function HomePage() {
     setAdaptiveMessage(null);
     setErrorMessage(null);
     setLastGraded(null);
+    setElaborationLoading(false);
   }, [locale]);
 
   useEffect(() => {
@@ -269,6 +284,7 @@ export function HomePage() {
         setCurrentPrompt(nextSession.feedback);
         setAnswer("");
         setLastGraded(null);
+        setElaborationLoading(false);
       },
     );
   }
@@ -288,6 +304,7 @@ export function HomePage() {
     setSession(null);
     setAdaptiveMessage(null);
     setLastGraded(null);
+    setElaborationLoading(false);
   }
 
   function handleDomainChange(value: string) {
@@ -457,6 +474,75 @@ export function HomePage() {
         );
       } finally {
         setQuestionLoading(false);
+      }
+    })();
+  }
+
+  function handleSubmitGuidedQuestion(questionId: string) {
+    if (!session) {
+      return;
+    }
+
+    setQuestionLoading(true);
+    setErrorMessage(null);
+
+    void (async () => {
+      try {
+        const nextSession = await submitQuestion(
+          session.session_id,
+          {
+            question_id: questionId,
+          },
+        );
+        setSession(nextSession);
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : t("error.generic"),
+        );
+      } finally {
+        setQuestionLoading(false);
+      }
+    })();
+  }
+
+  function handleElaborateExplanation() {
+    if (!session || elaborationLoading) {
+      return;
+    }
+
+    const questionId = guidedQuestionId(session);
+    if (!questionId) {
+      return;
+    }
+
+    const fingerprint = captureElaborationFingerprint(
+      session,
+      questionId,
+    );
+    setElaborationLoading(true);
+
+    void (async () => {
+      try {
+        const nextSession = await submitQuestion(
+          session.session_id,
+          buildElaborateQuestionRequest(questionId),
+        );
+        if (
+          !shouldApplyElaborationResponse(
+            fingerprint,
+            sessionRef.current,
+            nextSession,
+          )
+        ) {
+          return;
+        }
+        setSession(nextSession);
+      } catch {
+        // Keep the local explanation. Do not surface provider errors.
+      } finally {
+        setElaborationLoading(false);
       }
     })();
   }
@@ -714,16 +800,19 @@ export function HomePage() {
           adaptiveMessage={adaptiveMessage}
           answer={answer}
           currentPrompt={currentPrompt}
+          elaborationLoading={elaborationLoading}
           errorMessage={errorMessage}
           lastGraded={lastGraded}
           loading={loading}
           questionLoading={questionLoading}
           onAnswerChange={setAnswer}
+          onElaborate={handleElaborateExplanation}
           onPracticeNext={handlePracticeNext}
           onRequestHint={handleRequestHint}
           onRestart={handleStart}
           onSubmitAnswer={handleSubmitAnswer}
           onSubmitQuestion={handleSubmitQuestion}
+          onSubmitGuidedQuestion={handleSubmitGuidedQuestion}
           session={session}
         />
       ) : (

@@ -167,6 +167,11 @@ def assert_primary_school_static_recommendation():
                     "questions_completed": 4,
                     "first_attempt_streak": 2,
                 },
+                "grade4_word_problems": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
                 "grade4_reverse_reasoning": {
                     "mastery": 0.50,
                     "questions_completed": 0,
@@ -194,6 +199,50 @@ def assert_primary_school_static_recommendation():
         "adjustment_reason"
     ] == "static_topic"
     assert "difficulty" not in next_step["reason"].lower()
+
+
+def assert_story_problems_can_be_recommended():
+    write_progress(
+        {
+            "skills": {
+                "grade4_arithmetic": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
+                "grade4_unknown_number": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
+                "grade4_number_patterns": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
+                "grade4_reverse_reasoning": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
+            }
+        }
+    )
+
+    next_step = recommendation(
+        domain="primary_school",
+    )
+
+    assert next_step["recommendation_available"] is True
+    assert next_step["topic"] == "story_problems"
+    assert next_step["generation_available"] is True
+    assert next_step["difficulty"] in {1, 2, 3}
+    generated = generate_from_recommendation(
+        next_step,
+        seed=3,
+    )
+    assert generated["topic"] == "story_problems"
+    assert generated["generated"] is True
 
 
 def assert_no_available_content_is_safe():
@@ -488,6 +537,7 @@ def main():
         assert_recommends_lower_mastery_ode_topic()
         assert_recommendation_changes_when_mastery_swaps()
         assert_primary_school_static_recommendation()
+        assert_story_problems_can_be_recommended()
         assert_no_available_content_is_safe()
         assert_generated_completion_updates_mastery_and_difficulty()
         assert_recommendation_metadata_for_history_profiles()

@@ -23,6 +23,11 @@
         "description": "Understand written mathematical situations, identify known and unknown quantities, choose a strategy, and solve step by step."
       },
       {
+        "id": "story_problems",
+        "name": "Story Problems",
+        "description": "Generated multi-step Grade 4 word problems with several operations, comparisons, and reverse reasoning."
+      },
+      {
         "id": "geometry",
         "name": "Geometry",
         "description": "Basic shapes, perimeter, area, angles, and spatial reasoning."

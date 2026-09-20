@@ -82,6 +82,7 @@ class TutorModelProvider(Protocol):
         context: TutorQuestionContext,
         sources: tuple[TutorSource, ...] = (),
         prompt: str = "",
+        timeout_seconds: float | None = None,
     ) -> TutorModelAnswer:
         ...
 

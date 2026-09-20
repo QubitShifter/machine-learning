@@ -58,6 +58,11 @@ TOPIC_MASTERY_KEYS = {
     ): "grade4_number_patterns",
     (
         "mathematics",
+        "primary_school",
+        "story_problems",
+    ): "grade4_word_problems",
+    (
+        "mathematics",
         "ode",
         "first_order_linear",
     ): "linear_first_order_ode",

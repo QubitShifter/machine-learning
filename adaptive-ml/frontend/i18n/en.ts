@@ -57,6 +57,7 @@ export const en = {
   "catalog.topic.arithmetic": "Arithmetic",
   "catalog.topic.unknown_numbers": "Unknown Numbers",
   "catalog.topic.number_patterns": "Number Patterns",
+  "catalog.topic.story_problems": "Story Problems",
   "catalog.topic.first_order_linear": "First-Order Linear ODEs",
   "catalog.topic.separable_equations": "Separable Equations",
   "catalog.topic.kinematics": "Kinematics",
@@ -68,6 +69,8 @@ export const en = {
     "Compute the expression",
   "catalog.problem.grade4_number_patterns_generated":
     "Number patterns",
+  "catalog.problem.grade4_word_problems_generated":
+    "Grade 4 story problem",
   "catalog.problem.linear_first_order_fixed_001":
     "First-order linear differential equation",
   "catalog.problem.linear_first_order_generated":
@@ -179,6 +182,7 @@ export const en = {
 
   "tutor.problem": "Problem",
   "tutor.hint": "Hint",
+  "tutor.moreHelp": "More help",
   "tutor.submit": "Submit Answer",
   "tutor.ask": "Ask a question",
   "tutor.askLabel": "Ask about this step",
@@ -194,6 +198,12 @@ export const en = {
   "tutor.completeTitle":
     "Great work. You finished this problem.",
   "tutor.currentStep": "Current step",
+  "tutor.guidedHeading": "Not sure where to start?",
+  "tutor.explainDifferently": "Explain differently",
+  "tutor.explainDifferentlyLoading":
+    "Looking for another explanation...",
+  "tutor.showOriginalExplanation": "Show original explanation",
+  "tutor.elaborationFallback": "Kept the original explanation.",
   "tutor.feedback": "Feedback",
   "tutor.explanation": "Explanation",
   "tutor.lastAnswer": "Last answer",

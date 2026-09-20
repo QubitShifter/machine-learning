@@ -15,11 +15,13 @@ generated-problem store, adaptive services, and EN/BG localization.
 | Arithmetic expressions | `arithmetic` | `grade4_arithmetic` | `arithmetic` |
 | Unknown-number equations | `unknown_numbers` | `grade4_unknown_number` | `unknown_number` |
 | Number sequences and operation chains | `number_patterns` | `grade4_number_patterns` | `number_pattern`, `operation_chain` |
+| Generated story problems | `story_problems` | `grade4_word_problems` | `word_problem` |
 
 The static reverse-reasoning word problem
 `grade4_reverse_reasoning_001` remains on `word_problems` with mastery
 key `grade4_reverse_reasoning`. Completing a generated family does not
-update that key.
+update that key. Generated multi-step stories are documented in
+`docs/primary_school_word_problems.md`.
 
 The mathematical family is independent of the answer format. New items
 use a single numeric field with exact integer grading. Legacy reverse
@@ -155,6 +157,7 @@ Completion uses `mastery_key_for_registration()`:
 - arithmetic completion updates `grade4_arithmetic`
 - unknown-number completion updates `grade4_unknown_number`
 - sequence or chain completion updates `grade4_number_patterns`
+- generated story completion updates `grade4_word_problems`
 
 Ask-a-question never grades or advances the exercise, so it does not
 update mastery.
@@ -197,6 +200,7 @@ routing uses the tutor registry, generator registry, and
 
 ## Deferred Exercise Families
 
-Later increments can add fractions, geometry, mixed word problems,
-division, multi-field answers, and visual models without replacing
-this engine.
+- Later increments can add fractions, geometry, mixed workbook
+  clones, general division, multi-field answers, and visual models
+  without replacing this engine. Generated story problems are in
+  Phase 25.

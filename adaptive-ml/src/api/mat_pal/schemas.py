@@ -32,7 +32,17 @@ class AnswerRequest(BaseModel):
 
 
 class QuestionRequest(BaseModel):
-    question: str
+    question: str = ""
+    question_id: str | None = None
+    explanation_mode: Literal["local", "elaborate"] | None = (
+        None
+    )
+
+
+class SuggestedQuestion(BaseModel):
+    question_id: str
+    label: str
+    category: str
 
 
 class TutorSourceModel(BaseModel):
@@ -55,6 +65,9 @@ class SessionResponse(BaseModel):
     expected_input_type: InputType = "text"
     suggestion: str | None = None
     sources: list[TutorSourceModel] = Field(
+        default_factory=list
+    )
+    suggested_questions: list[SuggestedQuestion] = Field(
         default_factory=list
     )
     metadata: dict[str, Any] = Field(

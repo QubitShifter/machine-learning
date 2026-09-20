@@ -1061,6 +1061,44 @@ a.login-local-link {
   margin-bottom: 1.25rem;
 }
 
+.guided-questions {
+  margin: 0 0 1rem;
+}
+
+.guided-questions-heading {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0 0 0.55rem;
+}
+
+.guided-question-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.guided-question-button {
+  background: #eef5ff;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: #1e3a8a;
+  font-size: 0.92rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  text-align: left;
+  width: auto;
+}
+
+.guided-question-button:hover:not(:disabled) {
+  background: #dbe8ff;
+}
+
+.guided-question-button:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 2px;
+}
+
 .secondary-button {
   background: #e0ecff;
   color: #1e3a8a;
@@ -1166,6 +1204,26 @@ a.secondary-button:hover {
 .explanation-block {
   border-left: 3px solid #1e3a8a;
   padding-left: 0.85rem;
+}
+
+.explain-differently-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.explain-differently-button,
+.show-original-button {
+  min-height: 2.75rem;
+  padding: 0.45rem 0.85rem;
+  width: auto;
+}
+
+.elaboration-note {
+  color: var(--muted);
+  font-size: 0.92rem;
+  margin: 0;
 }
 
 .graded-answer-block {
@@ -1303,7 +1361,10 @@ a.secondary-button:hover {
   .action-row button,
   .question-row button,
   .units-answer-row button,
-  .answer-row button {
+  .answer-row button,
+  .guided-question-button,
+  .explain-differently-button,
+  .show-original-button {
     width: 100%;
   }
 

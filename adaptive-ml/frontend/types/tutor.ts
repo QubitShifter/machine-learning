@@ -13,12 +13,19 @@ export type TutorStatus =
   | "correct"
   | "incorrect"
   | "hint"
-  | "complete";
+  | "complete"
+  | "concept";
 
 export interface TutorSource {
   title: string;
   url: string;
   domain?: string | null;
+}
+
+export interface SuggestedQuestion {
+  question_id: string;
+  label: string;
+  category: string;
 }
 
 export interface TutorSession {
@@ -35,6 +42,7 @@ export interface TutorSession {
   expected_input_type: InputType;
   suggestion: string | null;
   sources?: TutorSource[];
+  suggested_questions?: SuggestedQuestion[];
   metadata: Record<string, unknown>;
 }
 
@@ -51,7 +59,9 @@ export interface AnswerRequest {
 }
 
 export interface QuestionRequest {
-  question: string;
+  question?: string;
+  question_id?: string;
+  explanation_mode?: "local" | "elaborate";
 }
 
 export interface CatalogTopic {

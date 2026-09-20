@@ -31,6 +31,7 @@ from src.core.tutor_engine.primary_school.engine import (
 from src.core.tutor_engine.primary_school.generation import (
     generate_arithmetic_problem,
     generate_unknown_number_problem,
+    generate_word_problem,
 )
 
 
@@ -155,6 +156,7 @@ def assert_catalog_exposes_generated_families():
     ] == [
         "arithmetic",
         "number_patterns",
+        "story_problems",
         "unknown_numbers",
         "word_problems",
     ]
@@ -162,6 +164,7 @@ def assert_catalog_exposes_generated_families():
         "arithmetic",
         "unknown_numbers",
         "number_patterns",
+        "story_problems",
     ):
         assert topics[topic_id]["generation_available"] is True
         assert topics[topic_id]["supported_difficulties"] == [
@@ -473,6 +476,7 @@ def assert_generators_are_registered():
         ("arithmetic", "grade4_arithmetic"),
         ("unknown_numbers", "grade4_unknown_number"),
         ("number_patterns", "grade4_number_patterns"),
+        ("story_problems", "grade4_word_problems"),
     ):
         registration = registry.get(
             "mathematics",
@@ -516,6 +520,171 @@ def assert_direct_generators_match_api_seed():
     )
 
 
+HIDDEN_METADATA_KEYS = {
+    "step_specs",
+    "expected_answer",
+    "final_answer",
+    "slots",
+    "quantities",
+    "relations",
+    "ask",
+    "x",
+}
+
+
+def assert_story_problem_generation_and_mastery():
+    clear_generated_problems()
+    write_progress({"skills": {}})
+    generated = generate_problem(
+        topic="story_problems",
+        difficulty=2,
+        seed=7,
+    )
+    assert generated["generated"] is True
+    assert generated["topic"] == "story_problems"
+    assert generated["expected_input_type"] == "number"
+    assert generated["metadata"]["generator_name"] == (
+        "grade4_word_problems"
+    )
+    assert generated["metadata"]["relation_count"] == 2
+    assert generated["metadata"]["family"] in {
+        "several_operations",
+        "comparison",
+        "reverse",
+    }
+    for key in HIDDEN_METADATA_KEYS:
+        assert key not in generated
+        assert key not in generated["metadata"]
+    dumped = str(generated)
+    assert "step_specs" not in dumped
+    session = complete_generated_session(generated)
+    assert session["metadata"]["mastery_key"] == (
+        "grade4_word_problems"
+    )
+    progress = json.loads(
+        DEFAULT_PROGRESS_PATH.read_text(encoding="utf-8")
+    )
+    skills = progress["skills"]
+    assert "grade4_word_problems" in skills
+    assert "grade4_reverse_reasoning" not in skills
+
+    first = generate_problem(
+        topic="story_problems",
+        difficulty=3,
+        seed=11,
+    )
+    second = generate_problem(
+        topic="story_problems",
+        difficulty=3,
+        seed=11,
+    )
+    assert first["problem_id"] != second["problem_id"]
+    assert first["problem_text"] == second["problem_text"]
+    local = generate_word_problem(
+        difficulty=3,
+        seed=11,
+        language="en",
+    )
+    assert local.problem_text == first["problem_text"]
+
+    english = generate_problem(
+        topic="story_problems",
+        difficulty=1,
+        seed=4,
+        language="en",
+    )
+    bulgarian = generate_problem(
+        topic="story_problems",
+        difficulty=1,
+        seed=4,
+        language="bg",
+    )
+    assert english["problem_id"] != bulgarian["problem_id"]
+    assert english["problem_text"] != bulgarian["problem_text"]
+    assert english["title"] == "Grade 4 story problem"
+    assert bulgarian["title"] == "Текстова задача за 4. клас"
+    detail = client.get(
+        f"/problems/{english['problem_id']}",
+        params={"language": "bg"},
+    )
+    assert detail.status_code == 200
+    switched = detail.json()
+    assert switched["problem_id"] == english["problem_id"]
+    assert switched["title"] == bulgarian["title"]
+    assert switched["problem_text"] == bulgarian["problem_text"]
+    assert switched["language"] == "bg"
+
+
+def assert_story_problem_session_and_questions():
+    previous = get_question_engine()
+    model = FakeTutorModelProvider()
+    set_question_engine(
+        GeneralTutorQuestionEngine(
+            model_provider=model,
+            web_search_provider=FakeWebSearchProvider(),
+        )
+    )
+    try:
+        generated = generate_problem(
+            topic="story_problems",
+            difficulty=1,
+            seed=8,
+            language="en",
+        )
+        start = client.post(
+            "/sessions/start",
+            json={"problem_id": generated["problem_id"]},
+        )
+        assert start.status_code == 200
+        session = start.json()
+        session_id = session["session_id"]
+        current = session["current_step"]
+        hint = client.post(f"/sessions/{session_id}/hint")
+        assert hint.status_code == 200
+        hint_payload = hint.json()
+        assert hint_payload["status"] == "hint"
+        assert hint_payload["current_step"] == current
+        registration = get_generated_problem(
+            generated["problem_id"]
+        )
+        engine = registration.create_engine("en")
+        final = str(engine.problem.final_answer)
+        assert final not in hint_payload["feedback"]
+        bad = post_answer(session_id, "99999")
+        assert bad["status"] == "incorrect"
+        assert bad["current_step"] == current
+        assert bad["completed"] is False
+        started = store_start_session(
+            generated["problem_id"],
+            language="en",
+        )
+        before_step = started.current_step
+        vocab = submit_question(
+            started.session_id,
+            QuestionRequest(
+                question='What does "more than" mean?',
+            ),
+        )
+        assert vocab.status == "concept"
+        assert vocab.metadata["answer_source"] == "local"
+        assert vocab.current_step == before_step
+        assert started.completed is False
+        assert "add" in vocab.feedback.lower()
+        general = submit_question(
+            started.session_id,
+            QuestionRequest(
+                question="Where are story problems used in real life?",
+            ),
+        )
+        assert general.metadata["answer_source"] == "model"
+        assert general.current_step == before_step
+        live = client.get(f"/sessions/{started.session_id}")
+        assert live.json()["current_step"] == before_step
+        assert live.json()["completed"] is False
+    finally:
+        set_question_engine(previous)
+
+
 def main():
     had_progress = DEFAULT_PROGRESS_PATH.exists()
     original_progress = (
@@ -536,6 +705,8 @@ def main():
         assert_question_does_not_grade_or_advance()
         assert_reverse_reasoning_api_regression()
         assert_direct_generators_match_api_seed()
+        assert_story_problem_generation_and_mastery()
+        assert_story_problem_session_and_questions()
         print("primary_school_generated_api tests passed")
     finally:
         clear_generated_problems()

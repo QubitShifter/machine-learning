@@ -28,6 +28,16 @@ _PRIVATE_METADATA_KEYS = frozenset(
         "expected_answer",
         "step_specs",
         "final_answer",
+        "slots",
+        "quantities",
+        "relations",
+        "ask",
+        "hidden",
+        "statement_params",
+        "identify_known",
+        "disclosed_values",
+        "story_visible",
+        "completed_quantity_ids",
     }
 )
 

@@ -593,6 +593,14 @@ const generatedPrimaryCatalog: CatalogResponse = {
               generation_available: true,
               supported_difficulties: [1, 2, 3],
             },
+            {
+              id: "story_problems",
+              name: "Story Problems",
+              available_problem_count: 0,
+              problem_ids: [],
+              generation_available: true,
+              supported_difficulties: [1, 2, 3],
+            },
           ],
         },
         {
@@ -653,8 +661,8 @@ const generatedArithmetic = {
 
 assert(
   primaryTopics.map((topic) => topic.id).join(",") ===
-    "word_problems,arithmetic,unknown_numbers,number_patterns",
-  "Primary School must list Word Problems and the three generated families",
+    "word_problems,arithmetic,unknown_numbers,number_patterns,story_problems",
+  "Primary School must list Word Problems and the generated families",
 );
 assert(
   topicHasStaticProblems(wordProblemsTopic) === true,
@@ -682,12 +690,12 @@ assert(
   "Word Problems must keep the static-problem workflow",
 );
 assert(
-  domainContentCount(primaryDomain) === 4,
+  domainContentCount(primaryDomain) === 5,
   "Primary School available content includes generated families",
 );
 assert(
   subjectContentCount(generatedPrimaryCatalog.subjects[0]) ===
-    5,
+    6,
   "Mathematics available content includes generated Primary School families",
 );
 assert(
