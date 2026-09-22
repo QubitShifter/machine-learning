@@ -27,6 +27,10 @@ from src.api.mat_pal.tutor_registry import (
 from src.core.adaptive import (
     SessionPerformanceSummary,
 )
+from src.core.adaptive.features import (
+    normalize_history_difficulty,
+    normalize_history_family,
+)
 from src.core.question_engine import (
     GeneralTutorQuestionEngine,
     QuestionRoute,
@@ -64,6 +68,13 @@ from src.core.tutor_engine.primary_school.generation.word_problems.templates imp
 
 
 MAX_QUESTION_HISTORY = 3
+INVALID_INPUT_ERROR_TYPES = frozenset(
+    {
+        "not_numeric",
+        "empty_answer",
+        "not_integer",
+    }
+)
 
 _question_engine: GeneralTutorQuestionEngine | None = None
 _elaboration_guard = threading.Lock()
@@ -98,6 +109,7 @@ class StoredSession:
     language: str = "en"
     answer_submissions: int = 0
     incorrect_submissions: int = 0
+    invalid_submissions: int = 0
     hint_requests: int = 0
     mastery_updated: bool = False
     question_history: deque[QuestionTurn] = field(
@@ -251,6 +263,13 @@ def submit_answer(
 
         if tutor_response.status == "incorrect":
             stored_session.incorrect_submissions += 1
+            # invalid_submissions is a subset of
+            # incorrect_submissions. Format errors
+            # stay in the existing incorrect total.
+            if _is_invalid_input_response(
+                tutor_response
+            ):
+                stored_session.invalid_submissions += 1
 
     stored_session.last_response = tutor_response
 
@@ -930,7 +949,9 @@ def _build_performance_summary(
         subject=registration.subject,
         domain=registration.domain,
         topic=registration.topic,
-        difficulty=metadata.get("difficulty"),
+        difficulty=_history_difficulty(
+            stored_session
+        ),
         mastery_key=mastery_key,
         completed=tutor_response.completed,
         total_attempts=(
@@ -949,4 +970,76 @@ def _build_performance_summary(
             ),
             "problem_type": registration.problem_type,
         },
+        family=_history_family(stored_session),
+        invalid_attempts=(
+            stored_session.invalid_submissions
+        ),
     )
+
+
+def _is_invalid_input_response(
+    tutor_response: TutorResponse,
+) -> bool:
+    if tutor_response.status != "incorrect":
+        return False
+
+    metadata = tutor_response.metadata or {}
+    return (
+        metadata.get("error_type")
+        in INVALID_INPUT_ERROR_TYPES
+    )
+
+
+def _history_family(
+    stored_session: StoredSession,
+) -> str | None:
+    for source in _history_metadata_sources(
+        stored_session
+    ):
+        family = normalize_history_family(
+            source.get("family")
+        )
+        if family is not None:
+            return family
+
+    return None
+
+
+def _history_difficulty(
+    stored_session: StoredSession,
+) -> int | None:
+    for source in _history_metadata_sources(
+        stored_session
+    ):
+        difficulty = normalize_history_difficulty(
+            source.get("difficulty")
+        )
+        if difficulty is not None:
+            return difficulty
+
+    return None
+
+
+def _history_metadata_sources(
+    stored_session: StoredSession,
+) -> list[dict]:
+    sources = []
+    registration_metadata = (
+        stored_session.registration.metadata or {}
+    )
+    if isinstance(registration_metadata, dict):
+        sources.append(registration_metadata)
+
+    problem = getattr(
+        stored_session.engine,
+        "problem",
+        None,
+    )
+    for candidate in (
+        getattr(problem, "known", None),
+        getattr(problem, "metadata", None),
+    ):
+        if isinstance(candidate, dict):
+            sources.append(candidate)
+
+    return sources

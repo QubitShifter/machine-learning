@@ -155,19 +155,7 @@ def record_session_completion(
         else 0
     )
     recent_session = (
-        {
-            "completed": True,
-            "total_attempts": summary.total_attempts,
-            "incorrect_attempts": (
-                summary.incorrect_attempts
-            ),
-            "hints_used": summary.hints_used,
-            "first_attempt_success": (
-                summary.first_attempt_success
-            ),
-            "steps_completed": summary.steps_completed,
-            "total_steps": summary.total_steps,
-        }
+        _recent_session_record(summary)
         if summary.completed
         else None
     )
@@ -429,3 +417,27 @@ def _topic_state_from_registration(
         recent_sessions=recent_sessions,
         features=features,
     )
+
+
+def _recent_session_record(
+    summary: SessionPerformanceSummary,
+) -> dict:
+    record = {
+        "completed": True,
+        "total_attempts": summary.total_attempts,
+        "incorrect_attempts": (
+            summary.incorrect_attempts
+        ),
+        "hints_used": summary.hints_used,
+        "first_attempt_success": (
+            summary.first_attempt_success
+        ),
+        "steps_completed": summary.steps_completed,
+        "total_steps": summary.total_steps,
+        "invalid_attempts": summary.invalid_attempts,
+    }
+    if summary.family is not None:
+        record["family"] = summary.family
+    if summary.difficulty is not None:
+        record["difficulty"] = summary.difficulty
+    return record

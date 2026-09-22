@@ -473,6 +473,141 @@ def assert_legacy_recent_sessions_without_step_counts_load():
     assert features.recent_trend == TREND_STRONG
 
 
+def assert_new_history_fields_are_optional_and_unused():
+    from src.core.adaptive.features import (
+        LOGICAL_REASONING_HISTORY_FAMILIES,
+        normalize_history_difficulty,
+        normalize_history_family,
+        parse_recent_session,
+        recent_session_to_dict,
+    )
+
+    legacy = parse_recent_session(
+        {
+            "completed": True,
+            "total_attempts": 4,
+            "incorrect_attempts": 1,
+            "hints_used": 0,
+            "first_attempt_success": False,
+        }
+    )
+    assert legacy is not None
+    assert legacy.family is None
+    assert legacy.difficulty is None
+    assert legacy.invalid_attempts == 0
+    serialized = recent_session_to_dict(legacy)
+    assert "family" not in serialized
+    assert "difficulty" not in serialized
+    assert serialized["invalid_attempts"] == 0
+
+    recorded = parse_recent_session(
+        {
+            "completed": True,
+            "total_attempts": 5,
+            "incorrect_attempts": 2,
+            "hints_used": 1,
+            "first_attempt_success": False,
+            "steps_completed": 4,
+            "total_steps": 4,
+            "family": "distribution_puzzles",
+            "difficulty": 2,
+            "invalid_attempts": 1,
+        }
+    )
+    assert recorded is not None
+    assert recorded.family == "distribution_puzzles"
+    assert recorded.difficulty == 2
+    assert recorded.invalid_attempts == 1
+    assert recorded.family in (
+        LOGICAL_REASONING_HISTORY_FAMILIES
+    )
+    assert normalize_history_family(
+        "arithmetic"
+    ) is None
+    assert normalize_history_family(
+        "number_detective"
+    ) == "number_detective"
+    assert normalize_history_difficulty(
+        "3"
+    ) == 3
+    assert normalize_history_difficulty(
+        0
+    ) is None
+
+    legacy_features = build_adaptive_features(
+        mastery=0.50,
+        questions_completed=2,
+        first_attempt_streak=0,
+        recent_sessions=[
+            {
+                "completed": True,
+                "total_attempts": 4,
+                "incorrect_attempts": 1,
+                "hints_used": 1,
+                "first_attempt_success": False,
+                "steps_completed": 3,
+                "total_steps": 3,
+            },
+            {
+                "completed": True,
+                "total_attempts": 5,
+                "incorrect_attempts": 2,
+                "hints_used": 1,
+                "first_attempt_success": False,
+                "steps_completed": 3,
+                "total_steps": 3,
+            },
+        ],
+    )
+    annotated_features = build_adaptive_features(
+        mastery=0.50,
+        questions_completed=2,
+        first_attempt_streak=0,
+        recent_sessions=[
+            {
+                "completed": True,
+                "total_attempts": 4,
+                "incorrect_attempts": 1,
+                "hints_used": 1,
+                "first_attempt_success": False,
+                "steps_completed": 3,
+                "total_steps": 3,
+                "family": "number_detective",
+                "difficulty": 2,
+                "invalid_attempts": 1,
+            },
+            {
+                "completed": True,
+                "total_attempts": 5,
+                "incorrect_attempts": 2,
+                "hints_used": 1,
+                "first_attempt_success": False,
+                "steps_completed": 3,
+                "total_steps": 3,
+                "family": "logic_detective",
+                "difficulty": 1,
+                "invalid_attempts": 0,
+            },
+        ],
+    )
+    assert (
+        legacy_features.recent_trend
+        == annotated_features.recent_trend
+    )
+    assert (
+        legacy_features.recent_incorrect_rate
+        == annotated_features.recent_incorrect_rate
+    )
+    assert (
+        legacy_features.recent_hint_rate
+        == annotated_features.recent_hint_rate
+    )
+    assert (
+        legacy_features.recent_first_attempt_success_rate
+        == annotated_features.recent_first_attempt_success_rate
+    )
+
+
 def main():
     assert_empty_history()
     assert_one_recent_session()
@@ -491,6 +626,7 @@ def main():
     assert_heavily_retried_sessions_need_support()
     assert_strong_and_weak_together_are_stable()
     assert_legacy_recent_sessions_without_step_counts_load()
+    assert_new_history_fields_are_optional_and_unused()
 
     print("adaptive_features tests passed")
 

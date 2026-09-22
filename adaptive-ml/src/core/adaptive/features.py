@@ -5,6 +5,14 @@ from typing import Sequence
 RECENT_HISTORY_LIMIT = 5
 MIN_RECENT_SESSIONS_FOR_TREND = 2
 
+LOGICAL_REASONING_HISTORY_FAMILIES = frozenset(
+    {
+        "number_detective",
+        "distribution_puzzles",
+        "logic_detective",
+    }
+)
+
 STRONG_FIRST_ATTEMPT_RATE = 0.75
 STRONG_MAX_HINT_RATE = 0.25
 STRONG_MAX_INCORRECT_RATE = 0.25
@@ -28,6 +36,9 @@ class RecentSession:
     first_attempt_success: bool = False
     steps_completed: int = 0
     total_steps: int = 0
+    family: str | None = None
+    difficulty: int | None = None
+    invalid_attempts: int = 0
 
 
 @dataclass(frozen=True)
@@ -51,10 +62,40 @@ class AdaptivePerformanceFeatures:
     recent_trend: str
 
 
+def normalize_history_family(
+    value: object,
+) -> str | None:
+    if not isinstance(value, str):
+        return None
+
+    family = value.strip()
+    if family in LOGICAL_REASONING_HISTORY_FAMILIES:
+        return family
+
+    return None
+
+
+def normalize_history_difficulty(
+    value: object,
+) -> int | None:
+    if value is None or isinstance(value, bool):
+        return None
+
+    try:
+        difficulty = int(value)
+    except (TypeError, ValueError):
+        return None
+
+    if difficulty < 1:
+        return None
+
+    return difficulty
+
+
 def recent_session_to_dict(
     session: RecentSession,
 ) -> dict:
-    return {
+    payload = {
         "completed": bool(session.completed),
         "total_attempts": int(
             session.total_attempts
@@ -70,7 +111,15 @@ def recent_session_to_dict(
             session.steps_completed
         ),
         "total_steps": int(session.total_steps),
+        "invalid_attempts": int(
+            session.invalid_attempts
+        ),
     }
+    if session.family is not None:
+        payload["family"] = session.family
+    if session.difficulty is not None:
+        payload["difficulty"] = session.difficulty
+    return payload
 
 
 def parse_recent_session(
@@ -103,6 +152,15 @@ def parse_recent_session(
         ),
         total_steps=int(
             raw.get("total_steps", 0) or 0
+        ),
+        family=normalize_history_family(
+            raw.get("family")
+        ),
+        difficulty=normalize_history_difficulty(
+            raw.get("difficulty")
+        ),
+        invalid_attempts=int(
+            raw.get("invalid_attempts", 0) or 0
         ),
     )
 

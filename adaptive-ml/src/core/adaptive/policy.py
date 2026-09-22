@@ -39,6 +39,8 @@ class SessionPerformanceSummary:
     steps_completed: int
     total_steps: int
     metadata: dict = field(default_factory=dict)
+    family: str | None = None
+    invalid_attempts: int = 0
 
 
 @dataclass(frozen=True)
