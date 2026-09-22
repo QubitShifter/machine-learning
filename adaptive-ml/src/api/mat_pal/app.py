@@ -136,6 +136,7 @@ def generate_problem(
             difficulty=request.difficulty,
             seed=request.seed,
             language=request.language,
+            family=request.family,
         )
 
     except ValueError as error:

@@ -169,6 +169,16 @@ GUIDED_TEXT = {
             "change described in the story, using the "
             "inverse of that relationship."
         ),
+        "guided.logic.known": "What information is given?",
+        "guided.logic.unknown": "What do we need to find?",
+        "guided.logic.first_clue": "Which clue should I use first?",
+        "guided.logic.first_clue.distribution": (
+            "Which clue should I use first?"
+        ),
+        "guided.logic.eliminate": (
+            "How can I eliminate impossible possibilities?"
+        ),
+        "guided.logic.check": "How can I check my answer?",
     },
     "bg": {
         "guided.unknown.addend.definition": "Какво е събираемо?",
@@ -342,6 +352,16 @@ GUIDED_TEXT = {
             "Тази стъпка работи назад. Отмени последната "
             "промяна от условието с обратното действие."
         ),
+        "guided.logic.known": "Какво знаем от условието?",
+        "guided.logic.unknown": "Какво трябва да намерим?",
+        "guided.logic.first_clue": "Коя улика да използвам първо?",
+        "guided.logic.first_clue.distribution": (
+            "Кое условие да използвам първо?"
+        ),
+        "guided.logic.eliminate": (
+            "Как да изключа невъзможните варианти?"
+        ),
+        "guided.logic.check": "Как да проверя отговора си?",
     },
 }
 

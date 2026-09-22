@@ -3,6 +3,13 @@
 import { useLanguage } from "@/components/LanguageProvider";
 import { MathContent } from "@/components/math/MathContent";
 import { catalogDisplayName } from "@/i18n";
+import {
+  AUTOMATIC_FAMILY,
+  LOGICAL_REASONING_FAMILIES,
+  exerciseStatementForDisplay,
+  isLogicalReasoningTopic,
+  readGeneratedFamily,
+} from "@/lib/logicalReasoning";
 import type {
   CatalogResponse,
   CatalogTopic,
@@ -29,6 +36,7 @@ interface LearningPathSelectorProps {
   selectedProblem: ProblemDetail | null;
   selectedTopicRecord: CatalogTopic | null;
   selectedDifficulty: number;
+  selectedFamily: string;
   loading: boolean;
   errorMessage: string | null;
   onSubjectChange: (subjectId: string) => void;
@@ -36,6 +44,7 @@ interface LearningPathSelectorProps {
   onTopicChange: (topicId: string) => void;
   onProblemChange: (problemId: string) => void;
   onDifficultyChange: (difficulty: number) => void;
+  onFamilyChange: (family: string) => void;
   onGenerateProblem: () => void;
   onStart: () => void;
 }
@@ -47,6 +56,7 @@ export function LearningPathSelector({
   selectedProblem,
   selectedTopicRecord,
   selectedDifficulty,
+  selectedFamily,
   loading,
   errorMessage,
   onSubjectChange,
@@ -54,6 +64,7 @@ export function LearningPathSelector({
   onTopicChange,
   onProblemChange,
   onDifficultyChange,
+  onFamilyChange,
   onGenerateProblem,
   onStart,
 }: LearningPathSelectorProps) {
@@ -84,6 +95,9 @@ export function LearningPathSelector({
     hasStaticProblems || filteredProblems.length > 0;
   const canStart = Boolean(
     selection.problemId && selectedProblem,
+  );
+  const generatedFamily = readGeneratedFamily(
+    selectedProblem?.metadata,
   );
 
   return (
@@ -291,14 +305,40 @@ export function LearningPathSelector({
             </select>
           </label>
         ) : null}
+
+        {canGenerate &&
+        isLogicalReasoningTopic(selection.topic) ? (
+          <label>
+            {t("path.family")}
+            <select
+              aria-label={t("path.family")}
+              disabled={loading}
+              onChange={(event) =>
+                onFamilyChange(event.target.value)
+              }
+              value={selectedFamily}
+            >
+              <option value={AUTOMATIC_FAMILY}>
+                {t("path.familyAutomatic")}
+              </option>
+              {LOGICAL_REASONING_FAMILIES.map((family) => (
+                <option key={family} value={family}>
+                  {t(`path.family.${family}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </div>
 
       {canGenerate ? (
         <div className="generation-panel">
           <p>
-            {showProblemPicker
-              ? t("path.generateHelp")
-              : t("path.generateFirst")}
+            {isLogicalReasoningTopic(selection.topic)
+              ? t("catalog.topic.logical_reasoning.description")
+              : showProblemPicker
+                ? t("path.generateHelp")
+                : t("path.generateFirst")}
           </p>
           <button
             disabled={loading}
@@ -345,8 +385,19 @@ export function LearningPathSelector({
             )}
           </h3>
           <MathContent
-            text={selectedProblem.problem_text}
+            text={exerciseStatementForDisplay(
+              selectedProblem.problem_text,
+              {
+                topic: selectedProblem.topic,
+                problemId: selectedProblem.problem_id,
+              },
+            )}
           />
+          {generatedFamily ? (
+            <span>
+              {t(`path.family.${generatedFamily}`)}
+            </span>
+          ) : null}
           <span>
             {t("path.steps", {
               count: selectedProblem.total_steps,

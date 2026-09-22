@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { useStudentProfile } from "@/components/StudentProfileProvider";
@@ -48,6 +48,12 @@ import {
   selectSubject,
   selectTopic,
 } from "@/lib/learningPath";
+import {
+  AUTOMATIC_FAMILY,
+  buildGenerateProblemRequest,
+  catalogPanelState,
+  familySelectionForTopic,
+} from "@/lib/logicalReasoning";
 import {
   DEFAULT_LOCALE,
   catalogDisplayName,
@@ -105,6 +111,8 @@ export function HomePage() {
     );
   const [selectedDifficulty, setSelectedDifficulty] =
     useState(1);
+  const [selectedFamily, setSelectedFamily] =
+    useState(AUTOMATIC_FAMILY);
   const [selectedProblem, setSelectedProblem] =
     useState<ProblemDetail | null>(null);
   const [session, setSession] =
@@ -114,7 +122,7 @@ export function HomePage() {
   const [currentPrompt, setCurrentPrompt] =
     useState("");
   const [answer, setAnswer] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [questionLoading, setQuestionLoading] =
     useState(false);
   const [elaborationLoading, setElaborationLoading] =
@@ -162,33 +170,34 @@ export function HomePage() {
     setElaborationLoading(false);
   }, [locale]);
 
-  useEffect(() => {
-    async function loadCatalog() {
-      setLoading(true);
-      setErrorMessage(null);
+  const loadCatalog = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage(null);
 
-      try {
-        const [nextCatalog, nextProblems] =
-          await Promise.all([
-            getCatalog(),
-            listProblems(),
-          ]);
+    try {
+      const [nextCatalog, nextProblems] =
+        await Promise.all([
+          getCatalog(),
+          listProblems(),
+        ]);
 
-        setCatalog(nextCatalog);
-        setProblems(nextProblems);
-      } catch (error) {
-        setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : translate(DEFAULT_LOCALE, "error.catalog"),
-        );
-      } finally {
-        setLoading(false);
-      }
+      setCatalog(nextCatalog);
+      setProblems(nextProblems);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : translate(DEFAULT_LOCALE, "error.catalog"),
+      );
+    } finally {
+      setLoading(false);
     }
-
-    void loadCatalog();
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch catalog
+    void loadCatalog();
+  }, [loadCatalog]);
 
   useEffect(() => {
     if (!selection.problemId) {
@@ -300,6 +309,7 @@ export function HomePage() {
 
     setSelection(selectSubject(value));
     setSelectedDifficulty(1);
+    setSelectedFamily(AUTOMATIC_FAMILY);
     setSelectedProblem(null);
     setSession(null);
     setAdaptiveMessage(null);
@@ -312,6 +322,7 @@ export function HomePage() {
       selectDomain(current, value),
     );
     setSelectedDifficulty(1);
+    setSelectedFamily(AUTOMATIC_FAMILY);
     setSelectedProblem(null);
   }
 
@@ -329,6 +340,9 @@ export function HomePage() {
     setSelectedDifficulty(
       topic?.supported_difficulties[0] ?? 1,
     );
+    setSelectedFamily(
+      familySelectionForTopic(value, selectedFamily),
+    );
     setSelectedProblem(null);
   }
 
@@ -344,6 +358,12 @@ export function HomePage() {
   ) {
     setSelection(nextSelection);
     setSelectedDifficulty(1);
+    setSelectedFamily(
+      familySelectionForTopic(
+        nextSelection.topic,
+        AUTOMATIC_FAMILY,
+      ),
+    );
     setSelectedProblem(null);
     setSession(null);
     setAdaptiveMessage(null);
@@ -383,13 +403,16 @@ export function HomePage() {
     setErrorMessage(null);
 
     try {
-      const generated = await generateProblem({
-        subject: selection.subject,
-        domain: selection.domain,
-        topic: selection.topic,
-        difficulty: selectedDifficulty,
-        language: locale,
-      });
+      const generated = await generateProblem(
+        buildGenerateProblemRequest({
+          subject: selection.subject,
+          domain: selection.domain,
+          topic: selection.topic,
+          difficulty: selectedDifficulty,
+          language: locale,
+          family: selectedFamily,
+        }),
+      );
 
       setProblems((currentProblems) => [
         ...currentProblems,
@@ -823,7 +846,8 @@ export function HomePage() {
 
           <section className="subject-section">
             <h2>{t("home.chooseBegin")}</h2>
-            {catalog ? (
+            {catalogPanelState(catalog, loading) === "ready" &&
+            catalog ? (
               <div className="subject-grid">
                 {landingEntries(catalog).map((entry) => (
                   <SubjectCard
@@ -833,6 +857,21 @@ export function HomePage() {
                     onExplore={enterLearningPath}
                   />
                 ))}
+              </div>
+            ) : catalogPanelState(catalog, loading) ===
+              "error" ? (
+              <div className="catalog-error">
+                <p className="error-message">
+                  {errorMessage || t("error.catalog")}
+                </p>
+                <button
+                  onClick={() => {
+                    void loadCatalog();
+                  }}
+                  type="button"
+                >
+                  {t("error.retry")}
+                </button>
               </div>
             ) : (
               <p>{t("home.loadingCatalog")}</p>
@@ -845,6 +884,7 @@ export function HomePage() {
             loading={loading}
             onDifficultyChange={setSelectedDifficulty}
             onDomainChange={handleDomainChange}
+            onFamilyChange={setSelectedFamily}
             onGenerateProblem={handleGenerateProblem}
             onProblemChange={handleProblemChange}
             onStart={handleStart}
@@ -852,6 +892,7 @@ export function HomePage() {
             onTopicChange={handleTopicChange}
             problems={problems}
             selectedDifficulty={selectedDifficulty}
+            selectedFamily={selectedFamily}
             selectedProblem={visibleProblem}
             selectedTopicRecord={selectedTopicRecord}
             selection={selection}

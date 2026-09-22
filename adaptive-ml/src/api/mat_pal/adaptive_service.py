@@ -63,6 +63,11 @@ TOPIC_MASTERY_KEYS = {
     ): "grade4_word_problems",
     (
         "mathematics",
+        "primary_school",
+        "logical_reasoning",
+    ): "grade4_logical_reasoning",
+    (
+        "mathematics",
         "ode",
         "first_order_linear",
     ): "linear_first_order_ode",

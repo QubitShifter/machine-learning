@@ -19,6 +19,7 @@ class ProblemType(Enum):
     FRACTION = "fraction"
     GEOMETRY = "geometry"
     WORD_PROBLEM = "word_problem"
+    LOGICAL_REASONING = "logical_reasoning"
 
 
 class AnswerFormat(Enum):

@@ -60,6 +60,29 @@ assert(
   "The final hint disables More help",
 );
 assert(
+  hintButtonDisabled(
+    session({
+      status: "concept",
+      hint_available: false,
+      metadata: {
+        concept_question: true,
+        answer_source: "local",
+      },
+    }),
+  ),
+  "A Guided Question without hint_level must not re-enable exhausted hints",
+);
+assert(
+  hintButtonDisabled(
+    session({
+      current_step: 2,
+      hint_available: true,
+      metadata: {},
+    }),
+  ) === false,
+  "The next step makes Hint available again",
+);
+assert(
   answerPreservedAfterHint("18", "18"),
   "A typed number stays after a hint click",
 );

@@ -482,6 +482,51 @@ assert(
 );
 assert(
   catalogDisplayName(
+    "topic",
+    "logical_reasoning",
+    "Logical Reasoning",
+    "en",
+  ) === "Logical Reasoning",
+  "Logical Reasoning topic must keep its English label",
+);
+assert(
+  catalogDisplayName(
+    "topic",
+    "logical_reasoning",
+    "Logical Reasoning",
+    "bg",
+  ) === "Логическо мислене",
+  "Logical Reasoning topic must localize EN → BG",
+);
+assert(
+  translate("en", "path.familyAutomatic") === "Surprise me",
+  "Automatic family option has an English label",
+);
+assert(
+  translate("bg", "path.familyAutomatic") === "Изненадай ме",
+  "Automatic family option has a Bulgarian label",
+);
+assert(
+  translate("en", "path.family.number_detective") ===
+    "Number Detective",
+  "Number Detective family label",
+);
+assert(
+  translate("bg", "path.family.distribution_puzzles") ===
+    "Разпредели количествата",
+  "Distribution family label must localize",
+);
+assert(
+  translate("bg", "path.family.logic_detective") ===
+    "Логически детектив",
+  "Logic Detective family label must localize",
+);
+assert(
+  translate("en", "error.retry") === "Try again",
+  "Catalog retry has an English label",
+);
+assert(
+  catalogDisplayName(
     "problem",
     STORY_GENERATED_ID,
     storyBgStored,

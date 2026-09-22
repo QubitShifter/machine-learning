@@ -10,6 +10,7 @@ import type { GradedFeedback } from "@/components/feedbackPresentation";
 import { useLanguage } from "@/components/LanguageProvider";
 import { MathContent } from "@/components/math/MathContent";
 import { ProgressBar } from "@/components/ProgressBar";
+import { exerciseStatementForDisplay } from "@/lib/logicalReasoning";
 import {
   isAnswerEditorEnabled,
   prepareQuestionForSubmit,
@@ -210,7 +211,12 @@ export function TutorCard({
       <section className="problem-context-card">
         <p className="eyebrow">{t("tutor.problem")}</p>
         <h1>{session.problem_title}</h1>
-        <MathContent text={session.problem_statement} />
+        <MathContent
+          text={exerciseStatementForDisplay(
+            session.problem_statement,
+            { problemId: session.problem_id },
+          )}
+        />
       </section>
 
       <ProgressBar

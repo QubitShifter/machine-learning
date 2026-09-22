@@ -58,6 +58,9 @@ export const en = {
   "catalog.topic.unknown_numbers": "Unknown Numbers",
   "catalog.topic.number_patterns": "Number Patterns",
   "catalog.topic.story_problems": "Story Problems",
+  "catalog.topic.logical_reasoning": "Logical Reasoning",
+  "catalog.topic.logical_reasoning.description":
+    "Solve number clues, quantity relationships and logic puzzles.",
   "catalog.topic.first_order_linear": "First-Order Linear ODEs",
   "catalog.topic.separable_equations": "Separable Equations",
   "catalog.topic.kinematics": "Kinematics",
@@ -87,6 +90,11 @@ export const en = {
   "path.topic": "Topic",
   "path.problem": "Problem",
   "path.difficulty": "Difficulty",
+  "path.family": "Exercise family",
+  "path.familyAutomatic": "Surprise me",
+  "path.family.number_detective": "Number Detective",
+  "path.family.distribution_puzzles": "Distribution Puzzles",
+  "path.family.logic_detective": "Logic Detective",
   "path.chooseSubject": "Choose a subject",
   "path.chooseDomain": "Choose a domain",
   "path.chooseTopic": "Choose a topic",
@@ -249,6 +257,7 @@ export const en = {
   "status.concept": "Explanation",
 
   "error.catalog": "Could not load the MAT-PAL catalog.",
+  "error.retry": "Try again",
   "error.problem": "Could not load the selected problem.",
   "error.generate": "Could not generate a new problem.",
   "error.generic":

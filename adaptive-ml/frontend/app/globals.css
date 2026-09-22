@@ -631,6 +631,12 @@ a.login-local-link {
   text-align: left;
 }
 
+.catalog-error {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+}
+
 .generation-panel {
   align-items: center;
   background: #eef4ff;
@@ -840,6 +846,8 @@ a.login-local-link {
 .problem-context-card .math-content {
   color: var(--muted);
   line-height: 1.65;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .math-content p,

@@ -16,6 +16,9 @@ from src.core.tutor_engine.primary_school.generation.unknown_number import (
 from src.core.tutor_engine.primary_school.generation.word_problems import (
     generate_word_problem,
 )
+from src.core.tutor_engine.primary_school.generation.logical_reasoning import (
+    generate_logical_reasoning_problem,
+)
 
 __all__ = [
     "PrimarySchoolGenerationError",
@@ -23,5 +26,6 @@ __all__ = [
     "generate_sequence_or_chain_problem",
     "generate_unknown_number_problem",
     "generate_word_problem",
+    "generate_logical_reasoning_problem",
     "localize_generated_primary_school",
 ]

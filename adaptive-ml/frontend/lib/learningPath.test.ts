@@ -601,6 +601,14 @@ const generatedPrimaryCatalog: CatalogResponse = {
               generation_available: true,
               supported_difficulties: [1, 2, 3],
             },
+            {
+              id: "logical_reasoning",
+              name: "Logical Reasoning",
+              available_problem_count: 0,
+              problem_ids: [],
+              generation_available: true,
+              supported_difficulties: [1, 2, 3],
+            },
           ],
         },
         {
@@ -661,7 +669,7 @@ const generatedArithmetic = {
 
 assert(
   primaryTopics.map((topic) => topic.id).join(",") ===
-    "word_problems,arithmetic,unknown_numbers,number_patterns,story_problems",
+    "word_problems,arithmetic,unknown_numbers,number_patterns,story_problems,logical_reasoning",
   "Primary School must list Word Problems and the generated families",
 );
 assert(
@@ -686,16 +694,30 @@ assert(
   "Generated Primary School topics must offer difficulties 1, 2, and 3",
 );
 assert(
+  topicSupportsGeneration(
+    primaryTopics.find(
+      (topic) => topic.id === "logical_reasoning",
+    ),
+  ) === true,
+  "Logical Reasoning must be a generated Learning Path topic",
+);
+assert(
+  primaryTopics.find(
+    (topic) => topic.id === "logical_reasoning",
+  )?.supported_difficulties.join(",") === "1,2,3",
+  "Logical Reasoning must offer difficulties 1, 2, and 3",
+);
+assert(
   topicSupportsGeneration(wordProblemsTopic) === false,
   "Word Problems must keep the static-problem workflow",
 );
 assert(
-  domainContentCount(primaryDomain) === 5,
+  domainContentCount(primaryDomain) === 6,
   "Primary School available content includes generated families",
 );
 assert(
   subjectContentCount(generatedPrimaryCatalog.subjects[0]) ===
-    6,
+    7,
   "Mathematics available content includes generated Primary School families",
 );
 assert(

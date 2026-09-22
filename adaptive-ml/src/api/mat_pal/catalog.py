@@ -161,7 +161,15 @@ def generate_problem(
     difficulty: int,
     seed: int | None = None,
     language: str = "en",
+    family: str | None = None,
 ) -> ProblemDetail:
+    selected_family = (
+        family.strip()
+        if isinstance(family, str)
+        else family
+    )
+    if selected_family == "":
+        selected_family = None
     registration = (
         DEFAULT_PROBLEM_GENERATOR_REGISTRY
         .generate(
@@ -171,6 +179,7 @@ def generate_problem(
             difficulty=difficulty,
             seed=seed,
             language=language,
+            family=selected_family,
         )
     )
     add_generated_problem(registration)

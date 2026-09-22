@@ -82,6 +82,7 @@ def assert_progress_api_returns_dashboard_schema():
         "arithmetic",
         "first_order_linear",
         "kinematics",
+        "logical_reasoning",
         "number_patterns",
         "separable_equations",
         "story_problems",

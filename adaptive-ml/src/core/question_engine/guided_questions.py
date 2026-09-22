@@ -2,6 +2,14 @@ from dataclasses import dataclass
 
 from src.core.i18n.guided_questions import gst
 from src.core.i18n.locale import normalize_locale
+from src.core.tutor_engine.concept_guidance.logical_reasoning_guidance import (
+    build_logical_guidance_context,
+    explain_logical_check,
+    explain_logical_eliminate,
+    explain_logical_first_clue,
+    explain_logical_known,
+    explain_logical_unknown,
+)
 from src.core.tutor_engine.concept_guidance.unknown_number_guidance import (
     build_unknown_number_explanation,
     build_vocabulary_explanation,
@@ -92,7 +100,7 @@ def list_suggested_questions(
         items.append(
             SuggestedQuestion(
                 question_id=question_id,
-                label=gst(locale, _label_key(question_id)),
+                label=gst(locale, _label_key(question_id, problem)),
                 category=_category(question_id),
             )
         )
@@ -120,7 +128,7 @@ def resolve_guided_question(
             "suggested questions."
         )
     locale = normalize_locale(language)
-    label = gst(locale, _label_key(question_id))
+    label = gst(locale, _label_key(question_id, problem))
     answer = _explain(
         question_id,
         topic=topic,
@@ -159,6 +167,8 @@ def _select_ids(topic: str, problem, live_response) -> list[str]:
         return _arithmetic_ids(problem)
     if topic == "number_patterns":
         return _pattern_ids(problem)
+    if topic == "logical_reasoning":
+        return _logical_ids(problem)
     return []
 
 
@@ -278,6 +288,23 @@ def _pattern_ids(problem) -> list[str]:
     return []
 
 
+def _logical_ids(problem) -> list[str]:
+    known = getattr(problem, "known", None) or {}
+    family = known.get("family")
+    ids = ["logic.known", "logic.unknown"]
+    if family == "distribution_puzzles":
+        ids.extend(["logic.first_clue", "logic.check"])
+        return ids
+    if family == "number_detective":
+        ids.extend(["logic.first_clue", "logic.eliminate"])
+        return ids
+    if family == "logic_detective":
+        ids.extend(["logic.eliminate", "logic.check"])
+        return ids
+    ids.append("logic.check")
+    return ids
+
+
 def _explain(
     question_id: str,
     *,
@@ -301,6 +328,13 @@ def _explain(
         return _explain_arithmetic(question_id, problem, language)
     if question_id.startswith("pattern."):
         return gst(language, _explain_key(question_id))
+    if question_id.startswith("logic."):
+        return _explain_logical(
+            question_id,
+            problem,
+            live_response,
+            language,
+        )
     return None
 
 
@@ -382,6 +416,34 @@ def _explain_story(
     return None
 
 
+def _explain_logical(
+    question_id: str,
+    problem,
+    live_response,
+    language: str,
+) -> str | None:
+    ctx = build_logical_guidance_context(
+        problem,
+        live_response,
+        language,
+    )
+    if ctx is None:
+        return None
+    if question_id == "logic.known":
+        return explain_logical_known(ctx)
+    if question_id == "logic.unknown":
+        return explain_logical_unknown(ctx)
+    if question_id == "logic.first_clue":
+        return explain_logical_first_clue(ctx)
+    if question_id == "logic.eliminate":
+        if ctx.family == "distribution_puzzles":
+            return None
+        return explain_logical_eliminate(ctx)
+    if question_id == "logic.check":
+        return explain_logical_check(ctx)
+    return None
+
+
 def _current_step(problem, live_response):
     if problem is None:
         return None
@@ -401,8 +463,8 @@ def _current_quantity(problem, live_response) -> str:
     return str(key).rsplit(".", 1)[-1]
 
 
-def _label_key(question_id: str) -> str:
-    return {
+def _label_key(question_id: str, problem=None) -> str:
+    base = {
         "unknown.addend.definition": (
             "guided.unknown.addend.definition"
         ),
@@ -463,7 +525,18 @@ def _label_key(question_id: str) -> str:
         "story.phrase.doubled": "guided.story.phrase.doubled",
         "story.phrase.remaining": "guided.story.phrase.remaining",
         "story.phrase.in_all": "guided.story.phrase.in_all",
+        "logic.known": "guided.logic.known",
+        "logic.unknown": "guided.logic.unknown",
+        "logic.first_clue": "guided.logic.first_clue",
+        "logic.eliminate": "guided.logic.eliminate",
+        "logic.check": "guided.logic.check",
     }.get(question_id, question_id)
+    if question_id != "logic.first_clue":
+        return base
+    known = getattr(problem, "known", None) or {}
+    if known.get("family") == "distribution_puzzles":
+        return "guided.logic.first_clue.distribution"
+    return base
 
 
 def _explain_key(question_id: str) -> str:
@@ -505,6 +578,11 @@ def _category(question_id: str) -> str:
         "arith.parentheses.why",
         "pattern.sequence.what",
         "pattern.chain.what",
+        "logic.known",
+        "logic.unknown",
+        "logic.first_clue",
+        "logic.eliminate",
+        "logic.check",
     }:
         return CATEGORY_UNDERSTAND
     return CATEGORY_DEFINITION

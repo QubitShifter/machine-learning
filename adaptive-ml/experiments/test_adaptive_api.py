@@ -172,6 +172,11 @@ def assert_primary_school_static_recommendation():
                     "questions_completed": 4,
                     "first_attempt_streak": 2,
                 },
+                "grade4_logical_reasoning": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
                 "grade4_reverse_reasoning": {
                     "mastery": 0.50,
                     "questions_completed": 0,
@@ -221,6 +226,11 @@ def assert_story_problems_can_be_recommended():
                     "first_attempt_streak": 2,
                 },
                 "grade4_reverse_reasoning": {
+                    "mastery": 0.95,
+                    "questions_completed": 4,
+                    "first_attempt_streak": 2,
+                },
+                "grade4_logical_reasoning": {
                     "mastery": 0.95,
                     "questions_completed": 4,
                     "first_attempt_streak": 2,

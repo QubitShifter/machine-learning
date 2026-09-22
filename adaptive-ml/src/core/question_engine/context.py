@@ -38,6 +38,23 @@ _PRIVATE_METADATA_KEYS = frozenset(
         "disclosed_values",
         "story_visible",
         "completed_quantity_ids",
+        "intended",
+        "blueprint",
+        "elimination",
+        "assignment",
+        "target_position",
+        "candidates",
+        "satisfying",
+        "reconstructed",
+        "hidden_steps",
+        "future_steps",
+        "solution",
+        "expected_answers",
+        "step_answers",
+        "compiled_steps",
+        "step_plan",
+        "protected_by_step",
+        "private_clues",
     }
 )
 

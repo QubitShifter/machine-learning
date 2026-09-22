@@ -121,6 +121,12 @@
         "topic": "number_patterns",
         "name": "Digit constraints",
         "description": "Use digit limits and logical constraints to find valid numbers."
+      },
+      {
+        "id": "grade4_logical_reasoning",
+        "topic": "logical_reasoning",
+        "name": "Logical reasoning",
+        "description": "Solve Grade 4 number clues, quantity relationships, and deduction puzzles."
       }
     ]
   }

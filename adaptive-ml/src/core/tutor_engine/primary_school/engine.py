@@ -1,4 +1,10 @@
 from src.core.i18n.primary_school import pst
+from src.core.tutor_engine.concept_guidance.logical_reasoning_guidance import (
+    build_logical_guidance_context,
+    correct_logical_nudge,
+    incorrect_logical_nudge,
+    progressive_logical_hint,
+)
 from src.core.tutor_engine.concept_guidance.story_step_guidance import (
     build_story_guidance_context,
     incorrect_story_nudge,
@@ -170,12 +176,24 @@ class PrimarySchoolTutorEngine:
             next_step = (
                 self.session.get_current_step()
             )
+            feedback = evaluation["feedback"]
+            if self.problem.topic == "logical_reasoning":
+                live = type(
+                    "Live",
+                    (),
+                    {"current_step": completed_step_number},
+                )()
+                logic = build_logical_guidance_context(
+                    self.problem,
+                    live,
+                    self.problem.language,
+                )
+                if logic is not None:
+                    feedback = correct_logical_nudge(logic)
 
             return TutorResponse(
                 status="correct",
-                feedback=(
-                    evaluation["feedback"]
-                ),
+                feedback=feedback,
                 suggestion=pst(
                     self.problem.language,
                     "continue",
@@ -219,13 +237,29 @@ class PrimarySchoolTutorEngine:
             )
             if story is not None:
                 feedback = incorrect_story_nudge(story)
+        elif self.problem.topic == "logical_reasoning":
+            live = type(
+                "Live",
+                (),
+                {"current_step": step.step_number},
+            )()
+            logic = build_logical_guidance_context(
+                self.problem,
+                live,
+                self.problem.language,
+            )
+            if logic is not None:
+                feedback = incorrect_logical_nudge(logic)
 
         return TutorResponse(
             status="incorrect",
             feedback=feedback,
             suggestion=(
                 None
-                if self.problem.topic == "story_problems"
+                if self.problem.topic in {
+                    "story_problems",
+                    "logical_reasoning",
+                }
                 else (
                     step.hint
                     if attempts >= 2
@@ -264,14 +298,14 @@ class PrimarySchoolTutorEngine:
             return self.get_current_response()
 
         used_before = self.session.get_hints_for_current_step()
-        story_exhausted = (
-            self.problem.topic == "story_problems"
+        progressive_exhausted = (
+            _uses_progressive_hints(self.problem)
             and used_before >= 3
         )
-        if not story_exhausted:
+        if not progressive_exhausted:
             self.session.record_hint()
         used = self.session.get_hints_for_current_step()
-        if story_exhausted:
+        if progressive_exhausted:
             used = used_before + 1
         hint, exhausted, level = _story_or_static_hint(
             self.problem,
@@ -295,7 +329,7 @@ class PrimarySchoolTutorEngine:
                 ),
                 "hint_level": level,
                 "hint_exhausted": exhausted,
-                "hint_counted": not story_exhausted,
+                "hint_counted": not progressive_exhausted,
             },
         )
 
@@ -303,9 +337,13 @@ class PrimarySchoolTutorEngine:
     def _hint_available(self, step) -> bool:
         if step is None:
             return False
-        if self.problem.topic == "story_problems":
+        if _uses_progressive_hints(self.problem):
             return self.session.get_hints_for_current_step() < 3
         return step.hint is not None
+
+
+def _uses_progressive_hints(problem) -> bool:
+    return problem.topic in {"story_problems", "logical_reasoning"}
 
 
 def _story_or_static_hint(problem, step, used: int):
@@ -318,6 +356,17 @@ def _story_or_static_hint(problem, step, used: int):
         )
         if story is not None:
             text, exhausted = progressive_hint(story, used)
+            level = 3 if used >= 3 else used
+            return text, exhausted, level
+    if problem.topic == "logical_reasoning":
+        live = type("Live", (), {"current_step": step.step_number})()
+        logic = build_logical_guidance_context(
+            problem,
+            live,
+            problem.language,
+        )
+        if logic is not None:
+            text, exhausted = progressive_logical_hint(logic, used)
             level = 3 if used >= 3 else used
             return text, exhausted, level
     hint = step.hint or pst(problem.language, "no_hint")

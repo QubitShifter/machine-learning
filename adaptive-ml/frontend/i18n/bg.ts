@@ -61,6 +61,9 @@ export const bg = {
   "catalog.topic.unknown_numbers": "Неизвестни числа",
   "catalog.topic.number_patterns": "Числови редици",
   "catalog.topic.story_problems": "Сюжетни задачи",
+  "catalog.topic.logical_reasoning": "Логическо мислене",
+  "catalog.topic.logical_reasoning.description":
+    "Решавай задачи с числови улики, зависимости между количества и логически загадки.",
   "catalog.topic.first_order_linear":
     "Линейни диференциални уравнения от първи ред",
   "catalog.topic.separable_equations":
@@ -93,6 +96,11 @@ export const bg = {
   "path.topic": "Тема",
   "path.problem": "Задача",
   "path.difficulty": "Трудност",
+  "path.family": "Вид упражнение",
+  "path.familyAutomatic": "Изненадай ме",
+  "path.family.number_detective": "Открий числото",
+  "path.family.distribution_puzzles": "Разпредели количествата",
+  "path.family.logic_detective": "Логически детектив",
   "path.chooseSubject": "Изберете предмет",
   "path.chooseDomain": "Изберете област",
   "path.chooseTopic": "Изберете тема",
@@ -256,6 +264,7 @@ export const bg = {
   "status.concept": "Обяснение",
 
   "error.catalog": "Каталогът на MAT-PAL не можа да се зареди.",
+  "error.retry": "Опитай отново",
   "error.problem": "Избраната задача не можа да се зареди.",
   "error.generate": "Новата задача не можа да се генерира.",
   "error.generic":

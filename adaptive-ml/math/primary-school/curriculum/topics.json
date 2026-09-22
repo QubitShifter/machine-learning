@@ -36,6 +36,11 @@
         "id": "number_patterns",
         "name": "Number Patterns",
         "description": "Recognize and continue numerical patterns and solve digit-based logic problems."
+      },
+      {
+        "id": "logical_reasoning",
+        "name": "Logical Reasoning",
+        "description": "Solve number clues, quantity relationships and deduction puzzles."
       }
     ]
   }

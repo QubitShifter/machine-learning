@@ -808,6 +808,12 @@ def _question_tutor_metadata(
             live_response,
         )
     )
+    metadata.update(
+        _logical_question_snapshot(
+            stored_session,
+            live_response,
+        )
+    )
     return metadata
 
 
@@ -870,6 +876,35 @@ def _story_question_snapshot(
         "story_visible": visible,
         "disclosed_values": disclosed,
         "completed_quantity_ids": completed_ids,
+    }
+
+
+def _logical_question_snapshot(
+    stored_session: StoredSession,
+    live_response: TutorResponse,
+) -> dict:
+    problem = getattr(stored_session.engine, "problem", None)
+    if getattr(problem, "topic", "") != "logical_reasoning":
+        return {}
+    known = getattr(problem, "known", None) or {}
+    current = None
+    session = getattr(stored_session.engine, "session", None)
+    if session is not None:
+        current = session.get_current_step()
+    meta = dict((current.metadata or {}) if current is not None else {})
+    params = dict(meta.get("params") or {})
+    return {
+        "family": known.get("family"),
+        "difficulty": known.get("difficulty"),
+        "public_clues": list(known.get("public_clues") or ()),
+        "clue_kinds": list(known.get("clue_kinds") or ()),
+        "visible_numbers": list(known.get("visible_numbers") or ()),
+        "target_object": known.get("target_object"),
+        "milestone": meta.get("milestone"),
+        "purpose": meta.get("purpose"),
+        "prompt_key": meta.get("prompt_key") or "",
+        "params": params,
+        "logic_params": params,
     }
 
 

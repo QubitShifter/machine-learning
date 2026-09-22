@@ -19,6 +19,11 @@ from src.core.question_engine.contracts import (
     WebSearchProvider,
 )
 from src.core.question_engine.local_guidance import match_local_concept
+from src.core.tutor_engine.concept_guidance.logical_reasoning_guidance import (
+    match_logical_answer_format_intent,
+    match_logical_method_intent,
+    match_logical_terminology_intent,
+)
 from src.core.tutor_engine.concept_guidance.word_problem_guidance import (
     match_story_method_intent,
 )
@@ -69,8 +74,18 @@ class GeneralTutorQuestionEngine:
             context.topic == "story_problems"
             and match_story_method_intent(question)
         )
+        logical_local = (
+            context.topic == "logical_reasoning"
+            and (
+                match_logical_method_intent(question)
+                or match_logical_answer_format_intent(question)
+                or match_logical_terminology_intent(question)
+            )
+        )
         wants_web = (
-            wants_web_retrieval(question) and not story_method
+            wants_web_retrieval(question)
+            and not story_method
+            and not logical_local
         )
         local = (
             None

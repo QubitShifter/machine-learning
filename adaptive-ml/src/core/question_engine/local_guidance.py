@@ -13,6 +13,9 @@ from src.core.tutor_engine.concept_guidance.separable_guidance import (
 from src.core.tutor_engine.concept_guidance.unknown_number_guidance import (
     match_unknown_number_explanation,
 )
+from src.core.tutor_engine.concept_guidance.logical_reasoning_guidance import (
+    match_logical_reasoning_explanation,
+)
 from src.core.tutor_engine.concept_guidance.word_problem_guidance import (
     match_word_problem_explanation,
 )
@@ -64,6 +67,12 @@ def match_local_concept(
 
     if topic == "story_problems":
         return match_word_problem_explanation(
+            question,
+            context,
+        )
+
+    if topic == "logical_reasoning":
+        return match_logical_reasoning_explanation(
             question,
             context,
         )

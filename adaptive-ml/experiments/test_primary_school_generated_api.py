@@ -155,6 +155,7 @@ def assert_catalog_exposes_generated_families():
         for topic in primary["topics"]
     ] == [
         "arithmetic",
+        "logical_reasoning",
         "number_patterns",
         "story_problems",
         "unknown_numbers",
@@ -165,6 +166,7 @@ def assert_catalog_exposes_generated_families():
         "unknown_numbers",
         "number_patterns",
         "story_problems",
+        "logical_reasoning",
     ):
         assert topics[topic_id]["generation_available"] is True
         assert topics[topic_id]["supported_difficulties"] == [
@@ -477,6 +479,7 @@ def assert_generators_are_registered():
         ("unknown_numbers", "grade4_unknown_number"),
         ("number_patterns", "grade4_number_patterns"),
         ("story_problems", "grade4_word_problems"),
+        ("logical_reasoning", "grade4_logical_reasoning"),
     ):
         registration = registry.get(
             "mathematics",

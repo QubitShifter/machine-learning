@@ -144,6 +144,7 @@ class GenerateProblemRequest(BaseModel):
     difficulty: int = 1
     seed: int | None = None
     language: str = "en"
+    family: str | None = None
 
 
 class AdaptiveRecommendationRequest(BaseModel):

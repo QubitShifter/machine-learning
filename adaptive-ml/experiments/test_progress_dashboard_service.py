@@ -37,6 +37,7 @@ def assert_fresh_progress_returns_runnable_topics():
         "arithmetic",
         "first_order_linear",
         "kinematics",
+        "logical_reasoning",
         "number_patterns",
         "separable_equations",
         "story_problems",
@@ -134,6 +135,7 @@ def assert_static_primary_school_topic_has_problem_id():
 
     assert set(topics) == {
         "arithmetic",
+        "logical_reasoning",
         "number_patterns",
         "story_problems",
         "unknown_numbers",
@@ -164,6 +166,10 @@ def assert_static_primary_school_topic_has_problem_id():
     assert topics["story_problems"].generation_available is True
     assert topics["story_problems"].mastery_key == (
         "grade4_word_problems"
+    )
+    assert topics["logical_reasoning"].generation_available is True
+    assert topics["logical_reasoning"].mastery_key == (
+        "grade4_logical_reasoning"
     )
 
 

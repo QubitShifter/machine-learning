@@ -33,6 +33,7 @@ from src.core.tutor_engine.primary_school.generation import (
     generate_sequence_or_chain_problem,
     generate_unknown_number_problem,
     generate_word_problem,
+    generate_logical_reasoning_problem,
     localize_generated_primary_school,
 )
 
@@ -48,10 +49,7 @@ class GeneratorRegistration:
     topic_name: str
     generator_name: str
     supported_difficulties: tuple[int, ...]
-    create_problem: Callable[
-        [int, int | None, str],
-        TutorRegistration,
-    ]
+    create_problem: Callable[..., TutorRegistration]
 
 
 class ProblemGeneratorRegistry:
@@ -140,6 +138,7 @@ class ProblemGeneratorRegistry:
         difficulty: int,
         seed: int | None = None,
         language: str = "en",
+        family: str | None = None,
     ) -> TutorRegistration:
         registration = self.get(
             subject=subject,
@@ -160,6 +159,7 @@ class ProblemGeneratorRegistry:
             difficulty,
             seed,
             locale,
+            family=family,
         )
 
 
@@ -245,6 +245,17 @@ def build_default_problem_generator_registry() -> (
             create_problem=_create_word_problem,
         )
     )
+    registry.register(
+        GeneratorRegistration(
+            subject="mathematics",
+            domain="primary_school",
+            topic="logical_reasoning",
+            topic_name="Logical Reasoning",
+            generator_name="grade4_logical_reasoning",
+            supported_difficulties=(1, 2, 3),
+            create_problem=_create_logical_reasoning_problem,
+        )
+    )
 
     return registry
 
@@ -268,6 +279,7 @@ def _create_linear_problem(
     difficulty: int,
     seed: int | None,
     language: str = "en",
+    family: str | None = None,
 ) -> TutorRegistration:
     locale = normalize_locale(language)
     generated = generate_linear_first_order_question(
@@ -331,6 +343,7 @@ def _create_separable_problem(
     difficulty: int,
     seed: int | None,
     language: str = "en",
+    family: str | None = None,
 ) -> TutorRegistration:
     locale = normalize_locale(language)
     generated = generate_separable_question(
@@ -388,6 +401,7 @@ def _create_kinematics_problem(
     difficulty: int,
     seed: int | None,
     language: str = "en",
+    family: str | None = None,
 ) -> TutorRegistration:
     locale = normalize_locale(language)
     generated = generate_kinematics_problem(
@@ -464,10 +478,26 @@ def _create_primary_school_registration(
     equation = known.get("equation")
     if isinstance(equation, str) and equation:
         public_metadata["equation"] = equation
-    problem.metadata = {
-        **source_metadata,
-        **public_metadata,
-    }
+    if topic == "logical_reasoning":
+        public_metadata = {
+            "generated": True,
+            "difficulty": difficulty,
+            "generator_name": generator_name,
+            "seed": seed,
+            "family": source_metadata.get("family"),
+        }
+        template_id = source_metadata.get("template_id")
+        if template_id:
+            public_metadata["template_id"] = template_id
+        answer_format = source_metadata.get("answer_format")
+        if answer_format:
+            public_metadata["answer_format"] = answer_format
+        problem.metadata = dict(public_metadata)
+    else:
+        problem.metadata = {
+            **source_metadata,
+            **public_metadata,
+        }
     first_step = problem.solution_steps[0]
     return TutorRegistration(
         problem_id=problem_id,
@@ -503,6 +533,7 @@ def _create_arithmetic_problem(
     difficulty: int,
     seed: int | None,
     language: str = "en",
+    family: str | None = None,
 ) -> TutorRegistration:
     locale = normalize_locale(language)
     problem = generate_arithmetic_problem(
@@ -527,6 +558,7 @@ def _create_unknown_number_problem(
     difficulty: int,
     seed: int | None,
     language: str = "en",
+    family: str | None = None,
 ) -> TutorRegistration:
     locale = normalize_locale(language)
     problem = generate_unknown_number_problem(
@@ -551,6 +583,7 @@ def _create_number_patterns_problem(
     difficulty: int,
     seed: int | None,
     language: str = "en",
+    family: str | None = None,
 ) -> TutorRegistration:
     locale = normalize_locale(language)
     problem = generate_sequence_or_chain_problem(
@@ -575,6 +608,7 @@ def _create_word_problem(
     difficulty: int,
     seed: int | None,
     language: str = "en",
+    family: str | None = None,
 ) -> TutorRegistration:
     locale = normalize_locale(language)
     problem = generate_word_problem(
@@ -589,6 +623,32 @@ def _create_word_problem(
         topic="story_problems",
         topic_name="Story Problems",
         generator_name="grade4_word_problems",
+        difficulty=difficulty,
+        seed=seed,
+        language=locale,
+    )
+
+
+def _create_logical_reasoning_problem(
+    difficulty: int,
+    seed: int | None,
+    language: str = "en",
+    family: str | None = None,
+) -> TutorRegistration:
+    locale = normalize_locale(language)
+    problem = generate_logical_reasoning_problem(
+        difficulty=difficulty,
+        seed=seed,
+        rng=_rng_from_seed(seed),
+        language=locale,
+        family=family,
+    )
+    return _create_primary_school_registration(
+        problem,
+        prefix="grade4_logical_reasoning",
+        topic="logical_reasoning",
+        topic_name="Logical Reasoning",
+        generator_name="grade4_logical_reasoning",
         difficulty=difficulty,
         seed=seed,
         language=locale,

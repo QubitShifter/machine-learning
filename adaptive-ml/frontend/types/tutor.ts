@@ -121,6 +121,7 @@ export interface GenerateProblemRequest {
   difficulty: number;
   seed?: number;
   language?: "en" | "bg";
+  family?: string;
 }
 
 export interface AdaptiveRecommendationRequest {
