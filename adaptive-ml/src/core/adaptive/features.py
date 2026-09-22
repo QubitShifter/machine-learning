@@ -52,6 +52,8 @@ class AdaptivePerformanceFeatures:
     recent_hint_rate: float
     recent_incorrect_rate: float
     recent_average_attempts_per_step: float
+    recent_mathematical_incorrect_rate: float
+    recent_average_mathematical_attempts_per_step: float
     last_total_attempts: int
     last_incorrect_attempts: int
     last_hints_used: int
@@ -239,6 +241,56 @@ def attempts_per_completed_step(
     )
 
 
+def bounded_invalid_attempts(
+    session: RecentSession,
+) -> int:
+    incorrect = max(0, int(session.incorrect_attempts))
+    invalid = max(0, int(session.invalid_attempts))
+    return min(invalid, incorrect)
+
+
+def mathematical_incorrect_attempts(
+    session: RecentSession,
+) -> int:
+    return max(
+        0,
+        int(session.incorrect_attempts)
+        - bounded_invalid_attempts(session),
+    )
+
+
+def mathematical_answer_attempts(
+    session: RecentSession,
+) -> int:
+    """
+    Valid answer submissions remaining after
+    removing known invalid-format attempts.
+
+    Assumes each invalid-format submission is
+    also counted in total_attempts and in
+    incorrect_attempts. Missing invalid_attempts
+    defaults to 0, so legacy sessions keep their
+    original attempt totals.
+    """
+
+    total = max(0, int(session.total_attempts))
+    return max(
+        0,
+        total - bounded_invalid_attempts(session),
+    )
+
+
+def mathematical_attempts_per_completed_step(
+    session: RecentSession,
+) -> float | None:
+    if session.steps_completed <= 0:
+        return None
+
+    return mathematical_answer_attempts(
+        session
+    ) / max(session.steps_completed, 1)
+
+
 def _resolve_recent_sessions(
     recent_sessions: Sequence[
         RecentSession | dict
@@ -304,9 +356,9 @@ def is_weak_recent_trend(
 ) -> bool:
     return features.has_enough_recent_history and (
         features.recent_hint_rate >= WEAK_HINT_RATE
-        or features.recent_incorrect_rate
+        or features.recent_mathematical_incorrect_rate
         >= WEAK_INCORRECT_RATE
-        or features.recent_average_attempts_per_step
+        or features.recent_average_mathematical_attempts_per_step
         >= WEAK_AVERAGE_ATTEMPTS_PER_STEP
     )
 
@@ -373,10 +425,25 @@ def build_adaptive_features(
         for session in sessions
         if session.incorrect_attempts > 0
     )
+    mathematical_incorrect_count = sum(
+        1
+        for session in sessions
+        if mathematical_incorrect_attempts(session) > 0
+    )
     per_step_values = [
         value
         for value in (
             attempts_per_completed_step(session)
+            for session in sessions
+        )
+        if value is not None
+    ]
+    mathematical_per_step_values = [
+        value
+        for value in (
+            mathematical_attempts_per_completed_step(
+                session
+            )
             for session in sessions
         )
         if value is not None
@@ -407,6 +474,14 @@ def build_adaptive_features(
         recent_average_attempts_per_step=_safe_rate(
             sum(per_step_values),
             len(per_step_values),
+        ),
+        recent_mathematical_incorrect_rate=_safe_rate(
+            mathematical_incorrect_count,
+            count,
+        ),
+        recent_average_mathematical_attempts_per_step=_safe_rate(
+            sum(mathematical_per_step_values),
+            len(mathematical_per_step_values),
         ),
         last_total_attempts=int(last_total_attempts),
         last_incorrect_attempts=int(
@@ -460,6 +535,12 @@ def features_as_metadata(
         ),
         "recent_average_attempts_per_step": (
             features.recent_average_attempts_per_step
+        ),
+        "recent_mathematical_incorrect_rate": (
+            features.recent_mathematical_incorrect_rate
+        ),
+        "recent_average_mathematical_attempts_per_step": (
+            features.recent_average_mathematical_attempts_per_step
         ),
         "has_recent_history": (
             features.has_recent_history

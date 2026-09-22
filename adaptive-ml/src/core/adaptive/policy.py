@@ -7,6 +7,7 @@ from src.core.adaptive.features import (
     features_as_metadata,
     is_strong_recent_trend,
     is_weak_recent_trend,
+    mathematical_incorrect_attempts,
 )
 
 
@@ -315,8 +316,24 @@ class RuleBasedAdaptivePolicy:
         topic_state: AdaptiveTopicState,
     ) -> bool:
         return (
-            topic_state.last_incorrect_attempts >= 2
+            self._last_mathematical_incorrect_attempts(
+                topic_state
+            ) >= 2
             or topic_state.last_hints_used >= 2
+        )
+
+    def _last_mathematical_incorrect_attempts(
+        self,
+        topic_state: AdaptiveTopicState,
+    ) -> int:
+        if topic_state.recent_sessions:
+            return mathematical_incorrect_attempts(
+                topic_state.recent_sessions[-1]
+            )
+
+        return max(
+            0,
+            int(topic_state.last_incorrect_attempts),
         )
 
     def _snap_to_supported(

@@ -13,6 +13,7 @@ def make_session(
     first_attempt_success: bool = True,
     steps_completed: int = 1,
     total_steps: int = 1,
+    invalid_attempts: int = 0,
 ) -> RecentSession:
     return RecentSession(
         completed=completed,
@@ -22,6 +23,7 @@ def make_session(
         first_attempt_success=first_attempt_success,
         steps_completed=steps_completed,
         total_steps=total_steps,
+        invalid_attempts=invalid_attempts,
     )
 
 
@@ -516,6 +518,323 @@ def assert_recommendation_reason_and_metadata():
     )
 
 
+def format_only_session(
+    *,
+    invalid_attempts: int = 2,
+    steps_completed: int = 1,
+    extra_valid_attempts: int = 1,
+    hints_used: int = 0,
+) -> RecentSession:
+    return make_session(
+        total_attempts=(
+            extra_valid_attempts + invalid_attempts
+        ),
+        incorrect_attempts=invalid_attempts,
+        invalid_attempts=invalid_attempts,
+        hints_used=hints_used,
+        first_attempt_success=False,
+        steps_completed=steps_completed,
+        total_steps=steps_completed,
+    )
+
+
+def assert_format_only_last_session_does_not_decrease():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        last_incorrect_attempts=2,
+        last_hints_used=0,
+        last_first_attempt_success=False,
+        last_completed=True,
+        last_total_attempts=3,
+        recent_sessions=(format_only_session(),),
+    )
+
+    assert policy.choose_difficulty(topic) == 2
+    decision = policy._difficulty_decision(topic)
+    assert decision["adjustment"] == 0
+    assert decision["adjustment_reason"] == (
+        "insufficient_history"
+    )
+
+
+def assert_mathematical_last_session_still_decreases():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        last_incorrect_attempts=2,
+        last_hints_used=0,
+        last_first_attempt_success=False,
+        last_completed=True,
+        recent_sessions=(
+            make_session(
+                total_attempts=3,
+                incorrect_attempts=2,
+                invalid_attempts=0,
+                first_attempt_success=False,
+            ),
+        ),
+    )
+
+    assert policy.choose_difficulty(topic) == 1
+    decision = policy._difficulty_decision(topic)
+    assert decision["adjustment"] == -1
+    assert decision["adjustment_reason"] == (
+        "last_session_weak"
+    )
+
+
+def assert_mixed_errors_last_session_still_decreases():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        last_incorrect_attempts=4,
+        last_hints_used=0,
+        last_first_attempt_success=False,
+        recent_sessions=(
+            make_session(
+                total_attempts=5,
+                incorrect_attempts=4,
+                invalid_attempts=2,
+                first_attempt_success=False,
+            ),
+        ),
+    )
+
+    assert policy.choose_difficulty(topic) == 1
+
+
+def assert_format_only_trend_does_not_decrease():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=(
+            format_only_session(),
+            format_only_session(),
+        ),
+    )
+
+    assert policy.choose_difficulty(topic) == 2
+    decision = policy._difficulty_decision(topic)
+    assert decision["adjustment"] == 0
+    assert decision["adjustment_reason"] == (
+        "recent_mixed"
+    )
+
+
+def assert_format_only_high_attempts_per_step_do_not_decrease():
+    policy = RuleBasedAdaptivePolicy()
+    heavy_format = format_only_session(
+        invalid_attempts=4,
+        steps_completed=2,
+        extra_valid_attempts=2,
+    )
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=(heavy_format, heavy_format),
+    )
+    features = policy.features_for(topic)
+
+    assert features.recent_average_attempts_per_step >= 2.0
+    assert (
+        features.recent_average_mathematical_attempts_per_step
+        < 2.0
+    )
+    assert features.recent_incorrect_rate == 1.0
+    assert features.recent_mathematical_incorrect_rate == 0.0
+    assert policy.choose_difficulty(topic) == 2
+
+
+def assert_hints_with_format_errors_still_decrease():
+    policy = RuleBasedAdaptivePolicy()
+    last_session = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        last_hints_used=2,
+        last_incorrect_attempts=2,
+        last_first_attempt_success=False,
+        recent_sessions=(
+            format_only_session(hints_used=2),
+        ),
+    )
+    trend = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=(
+            format_only_session(hints_used=2),
+            format_only_session(hints_used=2),
+        ),
+    )
+
+    assert policy.choose_difficulty(last_session) == 1
+    assert policy._difficulty_decision(last_session)[
+        "adjustment_reason"
+    ] == "last_session_weak"
+    assert policy.choose_difficulty(trend) == 1
+    assert policy._difficulty_decision(trend)[
+        "adjustment_reason"
+    ] == "recent_weak"
+
+
+def assert_two_clean_sessions_still_increase():
+    policy = RuleBasedAdaptivePolicy()
+    topic = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=(
+            make_session(invalid_attempts=0),
+            make_session(invalid_attempts=0),
+        ),
+    )
+
+    assert policy.choose_difficulty(topic) == 3
+    assert policy._difficulty_decision(topic)[
+        "adjustment_reason"
+    ] == "recent_strong"
+
+
+def assert_legacy_history_keeps_previous_difficulty():
+    policy = RuleBasedAdaptivePolicy()
+    no_history = make_topic(
+        "separable_equations",
+        mastery=0.45,
+    )
+    one_legacy = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        last_incorrect_attempts=2,
+        last_completed=True,
+        last_total_attempts=3,
+    )
+    five_legacy = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=tuple(
+            make_session(
+                total_attempts=4,
+                incorrect_attempts=2,
+                first_attempt_success=False,
+            )
+            for _ in range(5)
+        ),
+    )
+    mixed = make_topic(
+        "first_order_linear",
+        mastery=0.50,
+        recent_sessions=(
+            make_session(
+                total_attempts=4,
+                incorrect_attempts=2,
+                first_attempt_success=False,
+            ),
+            format_only_session(),
+        ),
+    )
+
+    assert policy.choose_difficulty(no_history) == 2
+    assert policy.choose_difficulty(one_legacy) == 1
+    assert policy.choose_difficulty(five_legacy) == 1
+    assert policy.choose_difficulty(mixed) == 1
+
+
+def assert_invalid_annotations_do_not_change_topic_rank():
+    policy = RuleBasedAdaptivePolicy()
+    unmarked = [
+        make_topic(
+            "separable_equations",
+            mastery=0.50,
+            recent_sessions=(
+                make_session(),
+                make_session(),
+            ),
+        ),
+        make_topic(
+            "first_order_linear",
+            mastery=0.50,
+            recent_sessions=(
+                make_session(
+                    first_attempt_success=False,
+                    incorrect_attempts=2,
+                    total_attempts=3,
+                ),
+                make_session(
+                    first_attempt_success=False,
+                    incorrect_attempts=2,
+                    total_attempts=3,
+                ),
+            ),
+        ),
+    ]
+    annotated = [
+        make_topic(
+            "separable_equations",
+            mastery=0.50,
+            recent_sessions=(
+                make_session(invalid_attempts=0),
+                make_session(invalid_attempts=0),
+            ),
+        ),
+        make_topic(
+            "first_order_linear",
+            mastery=0.50,
+            recent_sessions=(
+                make_session(
+                    first_attempt_success=False,
+                    incorrect_attempts=2,
+                    invalid_attempts=2,
+                    total_attempts=3,
+                ),
+                make_session(
+                    first_attempt_success=False,
+                    incorrect_attempts=2,
+                    invalid_attempts=2,
+                    total_attempts=3,
+                ),
+            ),
+        ),
+    ]
+
+    assert policy.recommend_next(unmarked).topic == (
+        policy.recommend_next(annotated).topic
+    )
+    assert policy.recommend_next(unmarked).topic == (
+        "first_order_linear"
+    )
+    assert policy.recommend_next(annotated).difficulty == 2
+    assert policy.recommend_next(unmarked).difficulty == 1
+
+
+def assert_difficulty_stays_within_supported_levels():
+    policy = RuleBasedAdaptivePolicy()
+    for mastery in (0.20, 0.50, 0.90):
+        for sessions in (
+            (format_only_session(),),
+            (format_only_session(), format_only_session()),
+            (
+                make_session(
+                    incorrect_attempts=2,
+                    first_attempt_success=False,
+                ),
+                make_session(
+                    incorrect_attempts=2,
+                    first_attempt_success=False,
+                ),
+            ),
+        ):
+            topic = make_topic(
+                "first_order_linear",
+                mastery=mastery,
+                recent_sessions=sessions,
+            )
+            difficulty = policy.choose_difficulty(topic)
+            assert difficulty in (1, 2, 3)
+
+
 def main():
     assert_mastery_thresholds()
     assert_recent_performance_adjustments()
@@ -532,6 +851,16 @@ def main():
     assert_topic_ranking_uses_weaker_recent_performance()
     assert_static_topic_has_null_difficulty()
     assert_recommendation_reason_and_metadata()
+    assert_format_only_last_session_does_not_decrease()
+    assert_mathematical_last_session_still_decreases()
+    assert_mixed_errors_last_session_still_decreases()
+    assert_format_only_trend_does_not_decrease()
+    assert_format_only_high_attempts_per_step_do_not_decrease()
+    assert_hints_with_format_errors_still_decrease()
+    assert_two_clean_sessions_still_increase()
+    assert_legacy_history_keeps_previous_difficulty()
+    assert_invalid_annotations_do_not_change_topic_rank()
+    assert_difficulty_stays_within_supported_levels()
 
     print("adaptive_policy tests passed")
 

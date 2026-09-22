@@ -606,6 +606,149 @@ def assert_new_history_fields_are_optional_and_unused():
         legacy_features.recent_first_attempt_success_rate
         == annotated_features.recent_first_attempt_success_rate
     )
+    assert (
+        legacy_features.recent_incorrect_rate
+        == annotated_features.recent_incorrect_rate
+    )
+
+
+def assert_format_only_sessions_use_mathematical_rates():
+    from src.core.adaptive.features import (
+        TREND_STABLE,
+        mathematical_incorrect_attempts,
+        parse_recent_session,
+    )
+
+    format_only = {
+        "completed": True,
+        "total_attempts": 6,
+        "incorrect_attempts": 4,
+        "invalid_attempts": 4,
+        "hints_used": 0,
+        "first_attempt_success": False,
+        "steps_completed": 2,
+        "total_steps": 2,
+    }
+    features = build_adaptive_features(
+        mastery=0.50,
+        questions_completed=2,
+        first_attempt_streak=0,
+        recent_sessions=[format_only, format_only],
+    )
+    parsed = parse_recent_session(format_only)
+    assert parsed is not None
+    assert mathematical_incorrect_attempts(parsed) == 0
+    assert features.recent_incorrect_rate == 1.0
+    assert features.recent_mathematical_incorrect_rate == 0.0
+    assert features.recent_average_attempts_per_step == 3.0
+    assert (
+        features.recent_average_mathematical_attempts_per_step
+        == 1.0
+    )
+    assert features.recent_trend == TREND_STABLE
+
+    legacy = build_adaptive_features(
+        mastery=0.50,
+        questions_completed=2,
+        first_attempt_streak=0,
+        recent_sessions=[
+            {
+                "completed": True,
+                "total_attempts": 4,
+                "incorrect_attempts": 2,
+                "hints_used": 0,
+                "first_attempt_success": False,
+                "steps_completed": 2,
+                "total_steps": 2,
+            },
+            {
+                "completed": True,
+                "total_attempts": 4,
+                "incorrect_attempts": 2,
+                "hints_used": 0,
+                "first_attempt_success": False,
+                "steps_completed": 2,
+                "total_steps": 2,
+            },
+        ],
+    )
+    zero_invalid = build_adaptive_features(
+        mastery=0.50,
+        questions_completed=2,
+        first_attempt_streak=0,
+        recent_sessions=[
+            {
+                "completed": True,
+                "total_attempts": 4,
+                "incorrect_attempts": 2,
+                "invalid_attempts": 0,
+                "hints_used": 0,
+                "first_attempt_success": False,
+                "steps_completed": 2,
+                "total_steps": 2,
+            },
+            {
+                "completed": True,
+                "total_attempts": 4,
+                "incorrect_attempts": 2,
+                "invalid_attempts": 0,
+                "hints_used": 0,
+                "first_attempt_success": False,
+                "steps_completed": 2,
+                "total_steps": 2,
+            },
+        ],
+    )
+    assert (
+        legacy.recent_mathematical_incorrect_rate
+        == zero_invalid.recent_mathematical_incorrect_rate
+    )
+    assert (
+        legacy.recent_average_mathematical_attempts_per_step
+        == zero_invalid.recent_average_mathematical_attempts_per_step
+    )
+    assert legacy.recent_trend == zero_invalid.recent_trend
+    assert legacy.recent_trend == TREND_NEEDS_SUPPORT
+
+
+def assert_mastery_ignores_invalid_attempt_annotation():
+    with TemporaryDirectory() as directory:
+        path = Path(directory) / "progress.json"
+        unmarked = record_session_completion(
+            summary(
+                completed=True,
+                total_attempts=3,
+                incorrect_attempts=2,
+                first_attempt_success=False,
+            ),
+            path=path,
+            student_id="phase27_c2_mastery_a",
+        )
+        annotated = SessionPerformanceSummary(
+            problem_id="generated_test",
+            subject="mathematics",
+            domain="ode",
+            topic="first_order_linear",
+            difficulty=1,
+            mastery_key="linear_first_order_ode",
+            completed=True,
+            total_attempts=3,
+            incorrect_attempts=2,
+            hints_used=0,
+            first_attempt_success=False,
+            steps_completed=1,
+            total_steps=1,
+            invalid_attempts=2,
+        )
+        marked = record_session_completion(
+            annotated,
+            path=path,
+            student_id="phase27_c2_mastery_b",
+        )
+        assert unmarked["mastery"] == marked["mastery"]
+        assert unmarked["questions_completed"] == 1
+        assert marked["questions_completed"] == 1
+        assert unmarked["mastery"] == 0.53
 
 
 def main():
@@ -627,6 +770,8 @@ def main():
     assert_strong_and_weak_together_are_stable()
     assert_legacy_recent_sessions_without_step_counts_load()
     assert_new_history_fields_are_optional_and_unused()
+    assert_format_only_sessions_use_mathematical_rates()
+    assert_mastery_ignores_invalid_attempt_annotation()
 
     print("adaptive_features tests passed")
 

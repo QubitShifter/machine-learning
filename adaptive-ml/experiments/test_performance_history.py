@@ -15,8 +15,13 @@ from src.api.mat_pal import adaptive_service
 from src.api.mat_pal import progress_service
 from src.api.mat_pal.app import app
 from src.api.mat_pal.adaptive_service import (
+    list_topic_states,
     recommend_next,
     record_session_completion,
+)
+from src.core.adaptive import (
+    RuleBasedAdaptivePolicy,
+    SessionPerformanceSummary,
 )
 from src.api.mat_pal.generated_problem_store import (
     get_generated_problem,
@@ -24,9 +29,6 @@ from src.api.mat_pal.generated_problem_store import (
 from src.api.mat_pal.session_store import (
     get_question_engine,
     set_question_engine,
-)
-from src.core.adaptive import (
-    SessionPerformanceSummary,
 )
 from src.core.question_engine import (
     GeneralTutorQuestionEngine,
@@ -979,6 +981,91 @@ def assert_answer_metadata_cannot_override_family():
         assert record["invalid_attempts"] == 0
 
 
+def assert_student_difficulty_is_isolated():
+    with isolated_progress() as path:
+        write_progress(
+            path,
+            {
+                "students": {
+                    STUDENT_A: {
+                        "skills": {
+                            LOGIC_KEY: {
+                                "mastery": 0.50,
+                                "questions_completed": 1,
+                                "first_attempt_streak": 0,
+                                "last_incorrect_attempts": 2,
+                                "last_hints_used": 0,
+                                "last_first_attempt_success": False,
+                                "last_completed": True,
+                                "recent_sessions": [
+                                    {
+                                        "completed": True,
+                                        "total_attempts": 3,
+                                        "incorrect_attempts": 2,
+                                        "invalid_attempts": 2,
+                                        "hints_used": 0,
+                                        "first_attempt_success": False,
+                                        "steps_completed": 1,
+                                        "total_steps": 1,
+                                    }
+                                ],
+                            }
+                        }
+                    },
+                    STUDENT_B: {
+                        "skills": {
+                            LOGIC_KEY: {
+                                "mastery": 0.50,
+                                "questions_completed": 1,
+                                "first_attempt_streak": 0,
+                                "last_incorrect_attempts": 2,
+                                "last_hints_used": 0,
+                                "last_first_attempt_success": False,
+                                "last_completed": True,
+                                "recent_sessions": [
+                                    {
+                                        "completed": True,
+                                        "total_attempts": 3,
+                                        "incorrect_attempts": 2,
+                                        "invalid_attempts": 0,
+                                        "hints_used": 0,
+                                        "first_attempt_success": False,
+                                        "steps_completed": 1,
+                                        "total_steps": 1,
+                                    }
+                                ],
+                            }
+                        }
+                    },
+                }
+            },
+        )
+        policy = RuleBasedAdaptivePolicy()
+        topic_a = next(
+            topic
+            for topic in list_topic_states(
+                "mathematics",
+                "primary_school",
+                path,
+                STUDENT_A,
+            )
+            if topic.topic == "logical_reasoning"
+        )
+        topic_b = next(
+            topic
+            for topic in list_topic_states(
+                "mathematics",
+                "primary_school",
+                path,
+                STUDENT_B,
+            )
+            if topic.topic == "logical_reasoning"
+        )
+        assert policy.choose_difficulty(topic_a) == 2
+        assert policy.choose_difficulty(topic_b) == 1
+        assert topic_a.mastery == topic_b.mastery
+
+
 def main():
     assert_omitted_path_keeps_production_default()
     assert_explicit_path_uses_temporary_file()
@@ -994,6 +1081,7 @@ def main():
     assert_student_history_is_isolated()
     assert_recommendation_parity_with_stage_a_rules()
     assert_answer_metadata_cannot_override_family()
+    assert_student_difficulty_is_isolated()
     print("performance_history tests passed")
 
 
