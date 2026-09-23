@@ -4,13 +4,15 @@ from typing import Sequence
 
 RECENT_HISTORY_LIMIT = 5
 MIN_RECENT_SESSIONS_FOR_TREND = 2
+FAMILY_MATH_ERROR_SESSION_THRESHOLD = 2
 
+LOGICAL_REASONING_FAMILY_ORDER = (
+    "number_detective",
+    "distribution_puzzles",
+    "logic_detective",
+)
 LOGICAL_REASONING_HISTORY_FAMILIES = frozenset(
-    {
-        "number_detective",
-        "distribution_puzzles",
-        "logic_detective",
-    }
+    LOGICAL_REASONING_FAMILY_ORDER
 )
 
 STRONG_FIRST_ATTEMPT_RATE = 0.75
@@ -257,6 +259,76 @@ def mathematical_incorrect_attempts(
         int(session.incorrect_attempts)
         - bounded_invalid_attempts(session),
     )
+
+
+def session_has_mathematical_error(
+    session: RecentSession,
+) -> bool:
+    return mathematical_incorrect_attempts(session) > 0
+
+
+@dataclass(frozen=True)
+class FamilyWindowStats:
+    family: str
+    completed: int
+    mathematical_error_sessions: int
+
+
+def annotated_logical_reasoning_sessions(
+    sessions: Sequence[RecentSession],
+) -> tuple[RecentSession, ...]:
+    annotated: list[RecentSession] = []
+    for session in sessions:
+        if not session.completed:
+            continue
+        if normalize_history_family(session.family) is None:
+            continue
+        annotated.append(session)
+    return tuple(annotated)
+
+
+def last_completed_known_family(
+    sessions: Sequence[RecentSession],
+) -> str | None:
+    annotated = annotated_logical_reasoning_sessions(
+        sessions
+    )
+    if not annotated:
+        return None
+    return annotated[-1].family
+
+
+def family_window_stats(
+    sessions: Sequence[RecentSession],
+) -> dict[str, FamilyWindowStats]:
+    stats = {
+        family: FamilyWindowStats(
+            family=family,
+            completed=0,
+            mathematical_error_sessions=0,
+        )
+        for family in LOGICAL_REASONING_FAMILY_ORDER
+    }
+    for session in annotated_logical_reasoning_sessions(
+        sessions
+    ):
+        family = session.family
+        if family is None:
+            continue
+        current = stats[family]
+        stats[family] = FamilyWindowStats(
+            family=family,
+            completed=current.completed + 1,
+            mathematical_error_sessions=(
+                current.mathematical_error_sessions
+                + int(
+                    session_has_mathematical_error(
+                        session
+                    )
+                )
+            ),
+        )
+    return stats
 
 
 def mathematical_answer_attempts(

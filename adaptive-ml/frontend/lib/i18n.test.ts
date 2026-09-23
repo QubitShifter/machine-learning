@@ -5,6 +5,9 @@ import {
   catalogProblemLookupId,
   interpolate,
   loadLocale,
+  localizeFamilyReason,
+  localizeRecommendationReason,
+  localizedFamilyName,
   normalizeLocale,
   persistLocale,
   translate,
@@ -661,6 +664,92 @@ assert(
 assert(
   loadLocale(sharedStore) === "bg",
   "Language must remain independent of student profile state",
+);
+
+assert(
+  localizedFamilyName("en", "distribution_puzzles") ===
+    "Distribution Puzzles",
+  "English family explanations use the display name",
+);
+assert(
+  localizedFamilyName("bg", "distribution_puzzles") ===
+    "Разпредели количествата",
+  "Bulgarian family explanations use the display name",
+);
+assert(
+  localizedFamilyName("en", "number_detective") ===
+    "Number Detective",
+  "Number Detective keeps its English family name",
+);
+assert(
+  localizedFamilyName("bg", "number_detective") ===
+    "Открий числото",
+  "Number Detective keeps its Bulgarian family name",
+);
+assert(
+  localizedFamilyName("bg", "logic_detective") ===
+    "Логически детектив",
+  "Logic Detective keeps its Bulgarian family name",
+);
+
+const familyReasons = [
+  "family_insufficient_history",
+  "family_least_practiced",
+  "family_recent_corrections",
+  "family_variety",
+] as const;
+for (const reason of familyReasons) {
+  const english = localizeFamilyReason(
+    "en",
+    reason,
+    "number_detective",
+  );
+  const bulgarian = localizeFamilyReason(
+    "bg",
+    reason,
+    "number_detective",
+  );
+  assert(
+    english.includes("Number Detective") &&
+      !english.includes("number_detective"),
+    `${reason} must use the English family name`,
+  );
+  assert(
+    bulgarian.includes("Открий числото") &&
+      !bulgarian.includes("number_detective"),
+    `${reason} must use the Bulgarian family name`,
+  );
+}
+
+const recommendedEnglish = localizeRecommendationReason(
+  "en",
+  "Logical Reasoning",
+  0.4,
+  "insufficient_history",
+  0,
+  "family_recent_corrections",
+  "distribution_puzzles",
+);
+assert(
+  recommendedEnglish.includes("Logical Reasoning") &&
+    recommendedEnglish.includes("Distribution Puzzles") &&
+    !recommendedEnglish.includes("distribution_puzzles"),
+  "English recommendation text includes the family explanation",
+);
+const recommendedBulgarian = localizeRecommendationReason(
+  "bg",
+  "Логическо мислене",
+  0.4,
+  "insufficient_history",
+  0,
+  "family_variety",
+  "logic_detective",
+);
+assert(
+  recommendedBulgarian.includes("Логическо мислене") &&
+    recommendedBulgarian.includes("Логически детектив") &&
+    !recommendedBulgarian.includes("logic_detective"),
+  "Bulgarian recommendation text includes the family explanation",
 );
 
 console.log("i18n helper tests passed");

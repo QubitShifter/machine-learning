@@ -142,6 +142,7 @@ export interface AdaptiveRecommendation {
   mastery_key: string | null;
   generation_available: boolean;
   problem_id: string | null;
+  family?: string | null;
   metadata: Record<string, unknown>;
 }
 

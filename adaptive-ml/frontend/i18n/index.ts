@@ -174,12 +174,44 @@ export function trendDisplayLabel(
   return translate(locale, "trend.insufficient_history");
 }
 
+export function localizedFamilyName(
+  locale: Locale,
+  family: string | null | undefined,
+): string {
+  if (
+    family === "number_detective" ||
+    family === "distribution_puzzles" ||
+    family === "logic_detective"
+  ) {
+    return translate(locale, `path.family.${family}`);
+  }
+
+  return "";
+}
+
+export function localizeFamilyReason(
+  locale: Locale,
+  familyReason: string | undefined,
+  family: string | null | undefined,
+): string {
+  const familyName = localizedFamilyName(locale, family);
+  if (!familyReason || !familyName) {
+    return "";
+  }
+
+  const key = `adaptive.familyReason.${familyReason}`;
+  const text = translate(locale, key, { family: familyName });
+  return text === key ? "" : text;
+}
+
 export function localizeRecommendationReason(
   locale: Locale,
   topicName: string,
   mastery: number | null | undefined,
   adjustmentReason: string | undefined,
   recentSessionCount?: number,
+  familyReason?: string,
+  family?: string | null,
 ): string {
   const base = translate(locale, "adaptive.reason.base", {
     topic: topicName,
@@ -187,18 +219,17 @@ export function localizeRecommendationReason(
       typeof mastery === "number" ? mastery.toFixed(2) : "—",
   });
 
-  if (!adjustmentReason || adjustmentReason === "static_topic") {
-    return base;
+  let text = base;
+  if (adjustmentReason && adjustmentReason !== "static_topic") {
+    const suffixKey = `adaptive.reason.${adjustmentReason}`;
+    const suffix = translate(locale, suffixKey, {
+      sessions: recentSessionCount ?? 0,
+    });
+
+    if (suffix !== suffixKey) {
+      text = `${base}${suffix}`;
+    }
   }
 
-  const suffixKey = `adaptive.reason.${adjustmentReason}`;
-  const suffix = translate(locale, suffixKey, {
-    sessions: recentSessionCount ?? 0,
-  });
-
-  if (suffix === suffixKey) {
-    return base;
-  }
-
-  return `${base}${suffix}`;
+  return `${text}${localizeFamilyReason(locale, familyReason, family)}`;
 }

@@ -151,6 +151,7 @@ def get_student_progress(
                 recommendation.generation_available
             ),
             problem_id=recommendation.problem_id,
+            family=recommendation.family,
             metadata=recommendation.metadata,
         ),
         metadata={

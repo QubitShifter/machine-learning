@@ -165,6 +165,7 @@ class AdaptiveRecommendationResponse(BaseModel):
     mastery_key: str | None = None
     generation_available: bool = False
     problem_id: str | None = None
+    family: str | None = None
     metadata: dict[str, Any] = Field(
         default_factory=dict
     )

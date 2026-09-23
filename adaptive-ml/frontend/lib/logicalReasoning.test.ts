@@ -111,6 +111,46 @@ assert(
   "Other topics must not send a stale family",
 );
 
+const recommended = buildGenerateProblemRequest({
+  ...sharedFields,
+  topic: LOGICAL_REASONING_TOPIC,
+  family: "logic_detective",
+});
+assert(
+  recommended.family === "logic_detective",
+  "Recommended practice must pass a validated family",
+);
+
+const recommendedOtherTopic = buildGenerateProblemRequest({
+  ...sharedFields,
+  topic: "arithmetic",
+  family: "logic_detective",
+});
+assert(
+  recommendedOtherTopic.family === undefined,
+  "Recommended practice must omit family for other topics",
+);
+
+const recommendedInvalid = buildGenerateProblemRequest({
+  ...sharedFields,
+  topic: LOGICAL_REASONING_TOPIC,
+  family: "unsupported_family",
+});
+assert(
+  recommendedInvalid.family === undefined,
+  "Recommended practice must ignore unsupported family ids",
+);
+
+const explicitWithSeedIntent = buildGenerateProblemRequest({
+  ...sharedFields,
+  topic: LOGICAL_REASONING_TOPIC,
+  family: "logic_detective",
+});
+assert(
+  explicitWithSeedIntent.family === "logic_detective",
+  "An explicit family remains authoritative when a seed is also used",
+);
+
 assert(
   familySelectionForTopic("arithmetic", "number_detective") ===
     AUTOMATIC_FAMILY,

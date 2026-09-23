@@ -57,6 +57,14 @@ function readSessionCount(
   return typeof count === "number" ? count : undefined;
 }
 
+function readFamilyReason(
+  recommendation: AdaptiveRecommendation | undefined,
+) {
+  const reason = recommendation?.metadata.family_reason;
+
+  return typeof reason === "string" ? reason : undefined;
+}
+
 function TopicProgressCard({
   topic,
 }: {
@@ -207,6 +215,8 @@ export function ProgressDashboard({
         recommendation.mastery,
         readAdjustmentReason(recommendation),
         readSessionCount(recommendation),
+        readFamilyReason(recommendation),
+        recommendation.family,
       )
     : t("progress.noRecommendation");
 

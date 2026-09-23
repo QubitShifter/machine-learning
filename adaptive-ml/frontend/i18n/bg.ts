@@ -180,6 +180,14 @@ export const bg = {
   "adaptive.reason.insufficient_history":
     " Все още няма достатъчно скорошна история за корекция на трудността според тенденцията.",
   "adaptive.reason.static_topic": "",
+  "adaptive.familyReason.family_insufficient_history":
+    " Да започнем с {family}. Все още няма достатъчно история за отделните видове упражнения.",
+  "adaptive.familyReason.family_least_practiced":
+    " След това да опитаме {family}, което наскоро е упражнявано по-малко.",
+  "adaptive.familyReason.family_recent_corrections":
+    " Наскоро при {family} бяха нужни допълнителни поправки, затова следва още практика от този вид.",
+  "adaptive.familyReason.family_variety":
+    " Да опитаме друг вид упражнение: {family}.",
   "adaptive.practiceError":
     "Адаптивното упражнение не можа да започне.",
 

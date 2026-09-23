@@ -173,6 +173,14 @@ export const en = {
   "adaptive.reason.insufficient_history":
     " There is not yet enough recent history for a trend-based difficulty adjustment.",
   "adaptive.reason.static_topic": "",
+  "adaptive.familyReason.family_insufficient_history":
+    " Let's start with {family}. There is not enough family-specific history yet.",
+  "adaptive.familyReason.family_least_practiced":
+    " Next, let's try {family}, which you have practiced less recently.",
+  "adaptive.familyReason.family_recent_corrections":
+    " Recent {family} puzzles needed extra corrections, so here is more practice of that kind.",
+  "adaptive.familyReason.family_variety":
+    " Let's try a different kind of puzzle: {family}.",
   "adaptive.practiceError": "Could not start adaptive practice.",
 
   "login.eyebrow": "Account",

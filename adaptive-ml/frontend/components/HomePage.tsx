@@ -609,6 +609,11 @@ export function HomePage() {
       "number"
         ? recommendation.metadata.recent_session_count
         : undefined;
+    const familyReason =
+      typeof recommendation.metadata.family_reason ===
+      "string"
+        ? recommendation.metadata.family_reason
+        : undefined;
 
     setAdaptiveMessage(
       localizeRecommendationReason(
@@ -617,6 +622,8 @@ export function HomePage() {
         recommendation.mastery,
         adjustmentReason,
         sessionCount,
+        familyReason,
+        recommendation.family,
       ),
     );
 
@@ -631,13 +638,16 @@ export function HomePage() {
       recommendation.topic &&
       recommendation.difficulty !== null
     ) {
-      const generated = await generateProblem({
-        subject: recommendation.subject,
-        domain: recommendation.domain,
-        topic: recommendation.topic,
-        difficulty: recommendation.difficulty,
-        language: locale,
-      });
+      const generated = await generateProblem(
+        buildGenerateProblemRequest({
+          subject: recommendation.subject,
+          domain: recommendation.domain,
+          topic: recommendation.topic,
+          difficulty: recommendation.difficulty,
+          language: locale,
+          family: recommendation.family,
+        }),
+      );
       setProblems((currentProblems) => [
         ...currentProblems,
         generated,
