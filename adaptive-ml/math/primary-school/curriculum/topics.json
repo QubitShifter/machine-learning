@@ -5,42 +5,50 @@
       {
         "id": "arithmetic",
         "name": "Arithmetic",
-        "description": "Whole-number addition, subtraction, multiplication, and division."
+        "description": "Whole-number addition, subtraction, multiplication, and division.",
+        "prerequisites": []
       },
       {
         "id": "unknown_numbers",
         "name": "Unknown Numbers",
-        "description": "Find a unique unknown integer in a simple equation by using the inverse operation."
+        "description": "Find a unique unknown integer in a simple equation by using the inverse operation.",
+        "prerequisites": ["arithmetic"]
       },
       {
         "id": "fractions",
         "name": "Fractions",
-        "description": "Basic fractions, parts of a whole, and reasoning with halves and other simple fractions."
+        "description": "Basic fractions, parts of a whole, and reasoning with halves and other simple fractions.",
+        "prerequisites": []
       },
       {
         "id": "word_problems",
         "name": "Word Problems",
-        "description": "Understand written mathematical situations, identify known and unknown quantities, choose a strategy, and solve step by step."
+        "description": "Understand written mathematical situations, identify known and unknown quantities, choose a strategy, and solve step by step.",
+        "prerequisites": []
       },
       {
         "id": "story_problems",
         "name": "Story Problems",
-        "description": "Generated multi-step Grade 4 word problems with several operations, comparisons, and reverse reasoning."
+        "description": "Generated multi-step Grade 4 word problems with several operations, comparisons, and reverse reasoning.",
+        "prerequisites": ["arithmetic"]
       },
       {
         "id": "geometry",
         "name": "Geometry",
-        "description": "Basic shapes, perimeter, area, angles, and spatial reasoning."
+        "description": "Basic shapes, perimeter, area, angles, and spatial reasoning.",
+        "prerequisites": []
       },
       {
         "id": "number_patterns",
         "name": "Number Patterns",
-        "description": "Recognize and continue numerical patterns and solve digit-based logic problems."
+        "description": "Recognize and continue numerical patterns and solve digit-based logic problems.",
+        "prerequisites": []
       },
       {
         "id": "logical_reasoning",
         "name": "Logical Reasoning",
-        "description": "Solve number clues, quantity relationships and deduction puzzles."
+        "description": "Solve number clues, quantity relationships and deduction puzzles.",
+        "prerequisites": []
       }
     ]
   }
