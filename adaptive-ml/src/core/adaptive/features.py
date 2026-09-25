@@ -5,6 +5,7 @@ from typing import Sequence
 RECENT_HISTORY_LIMIT = 5
 MIN_RECENT_SESSIONS_FOR_TREND = 2
 FAMILY_MATH_ERROR_SESSION_THRESHOLD = 2
+FAMILY_HISTORY_LIMIT = 3
 
 LOGICAL_REASONING_FAMILY_ORDER = (
     "number_detective",
@@ -329,6 +330,140 @@ def family_window_stats(
             ),
         )
     return stats
+
+
+def parse_family_outcomes(
+    raw: object,
+) -> tuple[dict, ...]:
+    if not isinstance(raw, (list, tuple)):
+        return ()
+
+    outcomes: list[dict] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        if "math_error" not in item:
+            continue
+        outcomes.append(
+            {
+                "math_error": bool(item["math_error"]),
+            }
+        )
+    return tuple(outcomes[-FAMILY_HISTORY_LIMIT:])
+
+
+def parse_family_history(
+    raw: object,
+) -> dict[str, tuple[dict, ...]]:
+    if not isinstance(raw, dict):
+        return {}
+
+    history: dict[str, tuple[dict, ...]] = {}
+    for family in LOGICAL_REASONING_FAMILY_ORDER:
+        outcomes = parse_family_outcomes(
+            raw.get(family)
+        )
+        if outcomes:
+            history[family] = outcomes
+    return history
+
+
+def family_history_to_dict(
+    history: object,
+) -> dict:
+    parsed = parse_family_history(history)
+    payload: dict[str, list[dict]] = {}
+    for family in LOGICAL_REASONING_FAMILY_ORDER:
+        outcomes = parsed.get(family)
+        if not outcomes:
+            continue
+        payload[family] = [
+            {
+                "math_error": bool(
+                    outcome["math_error"]
+                ),
+            }
+            for outcome in outcomes
+        ]
+    return payload
+
+
+def derive_family_history_from_sessions(
+    sessions: Sequence[RecentSession],
+) -> dict[str, tuple[dict, ...]]:
+    collected: dict[str, list[dict]] = {
+        family: []
+        for family in LOGICAL_REASONING_FAMILY_ORDER
+    }
+    for session in annotated_logical_reasoning_sessions(
+        sessions
+    ):
+        family = session.family
+        if family is None:
+            continue
+        collected[family].append(
+            {
+                "math_error": (
+                    session_has_mathematical_error(
+                        session
+                    )
+                ),
+            }
+        )
+    return parse_family_history(collected)
+
+
+def resolve_family_history(
+    persisted: object,
+    recent_sessions: Sequence[RecentSession] = (),
+) -> dict[str, tuple[dict, ...]]:
+    parsed = parse_family_history(persisted)
+    if parsed:
+        return parsed
+    return derive_family_history_from_sessions(
+        recent_sessions
+    )
+
+
+def family_math_error_count(
+    outcomes: Sequence[dict],
+) -> int:
+    return sum(
+        1
+        for outcome in outcomes
+        if outcome.get("math_error")
+    )
+
+
+def family_is_targeted(
+    outcomes: Sequence[dict],
+) -> bool:
+    return (
+        family_math_error_count(outcomes)
+        >= FAMILY_MATH_ERROR_SESSION_THRESHOLD
+    )
+
+
+def append_family_outcome(
+    history: object,
+    family: str | None,
+    math_error: bool,
+) -> dict[str, tuple[dict, ...]]:
+    normalized = normalize_history_family(family)
+    parsed = parse_family_history(history)
+    if normalized is None:
+        return parsed
+
+    current = list(parsed.get(normalized, ()))
+    current.append(
+        {
+            "math_error": bool(math_error),
+        }
+    )
+    parsed[normalized] = tuple(
+        current[-FAMILY_HISTORY_LIMIT:]
+    )
+    return parse_family_history(parsed)
 
 
 def mathematical_answer_attempts(

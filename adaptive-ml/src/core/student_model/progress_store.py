@@ -3,6 +3,7 @@ from pathlib import Path
 
 from src.core.adaptive.features import (
     bound_recent_sessions,
+    family_history_to_dict,
 )
 
 
@@ -245,9 +246,18 @@ def update_skill_progress(
     last_first_attempt_success: bool | None = None,
     last_completed: bool | None = None,
     recent_session: dict | None = None,
+    family_history: dict | None = None,
 ) -> None:
     """
     Update persisted state for one skill.
+
+    family_history is an optional Logical Reasoning
+    field only. When a replacement value is supplied,
+    it is allowlisted, bounded to the last 3 outcomes
+    per family, and written only if non-empty. When
+    omitted (None), any previously stored
+    family_history is preserved. Unknown extra skill
+    keys are not copied.
     """
 
     skills = progress.setdefault(
@@ -310,5 +320,16 @@ def update_skill_progress(
         )
 
     updated["recent_sessions"] = sessions
+
+    if family_history is not None:
+        normalized_history = family_history_to_dict(
+            family_history
+        )
+    else:
+        normalized_history = family_history_to_dict(
+            previous.get("family_history")
+        )
+    if normalized_history:
+        updated["family_history"] = normalized_history
 
     skills[skill] = updated

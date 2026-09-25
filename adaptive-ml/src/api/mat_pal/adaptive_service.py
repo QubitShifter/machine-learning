@@ -15,8 +15,15 @@ from src.core.adaptive import (
     SessionPerformanceSummary,
 )
 from src.core.adaptive.features import (
+    append_family_outcome,
     build_adaptive_features,
+    derive_family_history_from_sessions,
+    family_history_to_dict,
+    normalize_history_family,
+    parse_family_history,
+    parse_recent_session,
     parse_recent_sessions,
+    session_has_mathematical_error,
 )
 from src.core.student_model.progress_store import (
     DEFAULT_PROGRESS_PATH,
@@ -159,6 +166,10 @@ def record_session_completion(
         if summary.completed
         else None
     )
+    family_history = _updated_family_history(
+        current=current,
+        summary=summary,
+    )
 
     update_skill_progress(
         progress=progress,
@@ -174,6 +185,7 @@ def record_session_completion(
         ),
         last_completed=summary.completed,
         recent_session=recent_session,
+        family_history=family_history,
     )
     save_student_record(
         file_data,
@@ -416,6 +428,51 @@ def _topic_state_from_registration(
         last_completed=last_completed,
         recent_sessions=recent_sessions,
         features=features,
+        family_history=parse_family_history(
+            skill_progress.get("family_history")
+        ),
+    )
+
+
+def _updated_family_history(
+    current: dict,
+    summary: SessionPerformanceSummary,
+) -> dict | None:
+    family = normalize_history_family(summary.family)
+    if (
+        not summary.completed
+        or summary.topic != "logical_reasoning"
+        or family is None
+    ):
+        return None
+
+    persisted = parse_family_history(
+        current.get("family_history")
+    )
+    if persisted:
+        base = persisted
+    else:
+        base = derive_family_history_from_sessions(
+            parse_recent_sessions(
+                current.get("recent_sessions", [])
+            )
+        )
+
+    outcome_session = parse_recent_session(
+        _recent_session_record(summary)
+    )
+    math_error = (
+        outcome_session is not None
+        and session_has_mathematical_error(
+            outcome_session
+        )
+    )
+    return family_history_to_dict(
+        append_family_outcome(
+            base,
+            family,
+            math_error,
+        )
     )
 
 

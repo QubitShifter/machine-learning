@@ -2,16 +2,17 @@ from dataclasses import dataclass, field
 
 from src.core.adaptive.features import (
     AdaptivePerformanceFeatures,
-    FAMILY_MATH_ERROR_SESSION_THRESHOLD,
     LOGICAL_REASONING_FAMILY_ORDER,
     RecentSession,
     build_adaptive_features,
+    family_is_targeted,
     family_window_stats,
     features_as_metadata,
     is_strong_recent_trend,
     is_weak_recent_trend,
     last_completed_known_family,
     mathematical_incorrect_attempts,
+    resolve_family_history,
 )
 
 
@@ -79,6 +80,7 @@ class AdaptiveTopicState:
     last_completed: bool = False
     recent_sessions: tuple[RecentSession, ...] = ()
     features: AdaptivePerformanceFeatures | None = None
+    family_history: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -224,7 +226,11 @@ class RuleBasedAdaptivePolicy:
         last_family = last_completed_known_family(
             topic_state.recent_sessions
         )
-        if last_family is None:
+        history = resolve_family_history(
+            topic_state.family_history,
+            topic_state.recent_sessions,
+        )
+        if last_family is None and not history:
             return (
                 LOGICAL_REASONING_FAMILY_ORDER[0],
                 FAMILY_INSUFFICIENT_HISTORY,
@@ -236,8 +242,9 @@ class RuleBasedAdaptivePolicy:
         targeted = [
             family
             for family in LOGICAL_REASONING_FAMILY_ORDER
-            if stats[family].mathematical_error_sessions
-            >= FAMILY_MATH_ERROR_SESSION_THRESHOLD
+            if family_is_targeted(
+                history.get(family, ())
+            )
         ]
         targeted_not_last = [
             family
