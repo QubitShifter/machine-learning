@@ -192,6 +192,8 @@ def simulate_exercise(problem):
     assert engine.session.get_current_step().step_number == 1
     invalid = engine.submit(StudentSubmission("not-a-number"))
     assert invalid.status == "incorrect"
+    assert invalid.metadata["error_type"] == "not_numeric"
+    assert invalid.metadata.get("guidance_mode") == "independent"
     assert engine.session.get_current_step().step_number == 1
     for step in problem.solution_steps:
         current = engine.session.get_current_step()

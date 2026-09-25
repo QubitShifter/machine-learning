@@ -309,12 +309,17 @@ def assert_progressive_hints_and_incorrect():
         assert "26 - 8 = 18" not in (wrong.feedback or "")
         assert "13" not in wrong.feedback
         assert wrong.suggestion is None
+        assert wrong.metadata.get("guidance_mode") == "independent"
+        assert wrong.metadata.get("guidance_reason") == (
+            "guidance_after_error"
+        )
 
         stored = _sessions[started.session_id]
         used_after_wrong = (
             stored.engine.session.get_hints_for_current_step()
         )
         assert used_after_wrong == 3
+        assert stored.engine.session.get_math_errors_for_current_step() == 1
         step = stored.engine.session.get_current_step()
         correct = submit_answer(
             started.session_id,
@@ -414,6 +419,39 @@ def assert_families_and_other_engines():
         assert physics.suggested_questions == []
     finally:
         set_question_engine(previous)
+
+
+def assert_format_errors_stay_independent():
+    started = start_registered(make_bottle(), "en")
+    empty = submit_answer(
+        started.session_id,
+        AnswerRequest(answer="", input_type="number"),
+    )
+    assert empty.status == "incorrect"
+    assert empty.metadata["error_type"] == "empty_answer"
+    assert "please enter an answer" in empty.feedback.lower()
+    assert empty.metadata.get("guidance_mode") == "independent"
+    stored = _sessions[started.session_id]
+    assert stored.engine.session.get_math_errors_for_current_step() == 0
+    numeric = submit_answer(
+        started.session_id,
+        AnswerRequest(answer="twelve", input_type="number"),
+    )
+    assert numeric.metadata["error_type"] == "not_numeric"
+    assert stored.engine.session.get_math_errors_for_current_step() == 0
+    fractional = submit_answer(
+        started.session_id,
+        AnswerRequest(answer="1.5", input_type="number"),
+    )
+    assert fractional.metadata["error_type"] == "not_integer"
+    assert stored.engine.session.get_math_errors_for_current_step() == 0
+    wrong = submit_answer(
+        started.session_id,
+        AnswerRequest(answer="9", input_type="number"),
+    )
+    assert wrong.metadata["error_type"] == "incorrect_answer"
+    assert wrong.metadata["guidance_mode"] == "independent"
+    assert stored.engine.session.get_math_errors_for_current_step() == 1
 
 
 def assert_questions_do_not_consume_hints():
@@ -616,6 +654,7 @@ def main():
         assert_browser_bottle_three_distinct_hints()
         assert_bottle_freeform_is_local_and_safe()
         assert_progressive_hints_and_incorrect()
+        assert_format_errors_stay_independent()
         assert_families_and_other_engines()
         assert_questions_do_not_consume_hints()
         assert_guided_id_still_validated()

@@ -24,6 +24,10 @@ class PrimarySchoolSession:
         default_factory=dict
     )
 
+    math_errors_by_step: dict[int, int] = field(
+        default_factory=dict
+    )
+
     completed: bool = False
 
 
@@ -131,6 +135,51 @@ class PrimarySchoolSession:
             return 0
 
         return self.hints_used_by_step.get(
+            step.step_number,
+            0,
+        )
+
+
+    def record_math_error(
+        self,
+    ) -> None:
+        """
+        Record one genuine mathematical error for
+        the current step. Format errors are not
+        recorded here.
+        """
+
+        step = self.get_current_step()
+
+        if step is None:
+            return
+
+        step_number = step.step_number
+
+        current_count = self.math_errors_by_step.get(
+            step_number,
+            0,
+        )
+
+        self.math_errors_by_step[
+            step_number
+        ] = current_count + 1
+
+
+    def get_math_errors_for_current_step(
+        self,
+    ) -> int:
+        """
+        Return genuine mathematical errors on the
+        current step.
+        """
+
+        step = self.get_current_step()
+
+        if step is None:
+            return 0
+
+        return self.math_errors_by_step.get(
             step.step_number,
             0,
         )

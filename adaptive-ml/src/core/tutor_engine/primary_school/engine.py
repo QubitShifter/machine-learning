@@ -4,15 +4,23 @@ from src.core.tutor_engine.concept_guidance.logical_reasoning_guidance import (
     correct_logical_nudge,
     incorrect_logical_nudge,
     progressive_logical_hint,
+    _hint_text as logical_hint_text,
 )
 from src.core.tutor_engine.concept_guidance.story_step_guidance import (
     build_story_guidance_context,
     incorrect_story_nudge,
     progressive_hint,
+    unevaluated_setup,
+    _hint_text as story_hint_text,
 )
 from src.core.tutor_engine.contracts import (
     StudentSubmission,
     TutorResponse,
+)
+from src.core.tutor_engine.guidance_policy import (
+    GUIDANCE_TOPICS,
+    MATH_ERROR_TYPE,
+    choose_guidance_mode,
 )
 
 from src.core.tutor_engine.primary_school.checker import (
@@ -223,49 +231,42 @@ class PrimarySchoolTutorEngine:
             self.session
             .get_attempts_for_current_step()
         )
+        error_type = evaluation["error_type"]
         feedback = evaluation["feedback"]
-        if self.problem.topic == "story_problems":
-            live = type(
-                "Live",
-                (),
-                {"current_step": step.step_number},
-            )()
-            story = build_story_guidance_context(
-                self.problem,
-                live,
-                self.problem.language,
+        suggestion = None
+        extra_metadata = {}
+        if self.problem.topic in GUIDANCE_TOPICS:
+            if error_type == MATH_ERROR_TYPE:
+                self.session.record_math_error()
+            math_errors = (
+                self.session
+                .get_math_errors_for_current_step()
             )
-            if story is not None:
-                feedback = incorrect_story_nudge(story)
-        elif self.problem.topic == "logical_reasoning":
-            live = type(
-                "Live",
-                (),
-                {"current_step": step.step_number},
-            )()
-            logic = build_logical_guidance_context(
-                self.problem,
-                live,
-                self.problem.language,
+            mode, reason = choose_guidance_mode(
+                math_errors
             )
-            if logic is not None:
-                feedback = incorrect_logical_nudge(logic)
+            extra_metadata["guidance_mode"] = mode
+            extra_metadata["guidance_reason"] = reason
+            if error_type == MATH_ERROR_TYPE:
+                feedback, suggestion = (
+                    _adaptive_incorrect_content(
+                        self.problem,
+                        step,
+                        mode,
+                        fallback_feedback=feedback,
+                    )
+                )
+        else:
+            suggestion = (
+                step.hint
+                if attempts >= 2
+                else None
+            )
 
         return TutorResponse(
             status="incorrect",
             feedback=feedback,
-            suggestion=(
-                None
-                if self.problem.topic in {
-                    "story_problems",
-                    "logical_reasoning",
-                }
-                else (
-                    step.hint
-                    if attempts >= 2
-                    else None
-                )
-            ),
+            suggestion=suggestion,
             current_step=(
                 step.step_number
             ),
@@ -276,10 +277,9 @@ class PrimarySchoolTutorEngine:
             hint_available=self._hint_available(step),
             expected_input_type=_input_type_for_step(step),
             metadata={
-                "error_type": (
-                    evaluation["error_type"]
-                ),
+                "error_type": error_type,
                 "attempts_on_step": attempts,
+                **extra_metadata,
             },
         )
 
@@ -344,6 +344,51 @@ class PrimarySchoolTutorEngine:
 
 def _uses_progressive_hints(problem) -> bool:
     return problem.topic in {"story_problems", "logical_reasoning"}
+
+
+def _live_for_step(step):
+    return type(
+        "Live",
+        (),
+        {"current_step": step.step_number},
+    )()
+
+
+def _adaptive_incorrect_content(
+    problem,
+    step,
+    mode,
+    fallback_feedback,
+):
+    if problem.topic == "story_problems":
+        story = build_story_guidance_context(
+            problem,
+            _live_for_step(step),
+            problem.language,
+        )
+        if story is None:
+            return fallback_feedback, None
+        nudge = incorrect_story_nudge(story)
+        if mode == "independent":
+            return nudge, None
+        if mode == "guided":
+            return story_hint_text(story, 1), None
+        return nudge, unevaluated_setup(story)
+    if problem.topic == "logical_reasoning":
+        logic = build_logical_guidance_context(
+            problem,
+            _live_for_step(step),
+            problem.language,
+        )
+        if logic is None:
+            return fallback_feedback, None
+        nudge = incorrect_logical_nudge(logic)
+        if mode == "independent":
+            return nudge, None
+        if mode == "guided":
+            return logical_hint_text(logic, 1), None
+        return nudge, logical_hint_text(logic, 3)
+    return fallback_feedback, None
 
 
 def _story_or_static_hint(problem, step, used: int):

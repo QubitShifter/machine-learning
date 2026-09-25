@@ -113,9 +113,18 @@ def assert_progressive_hints(family):
     print("  L1:", first.feedback)
     print("  L2:", second.feedback)
     print("  L3:", third.feedback)
+    empty = engine.submit(StudentSubmission(""))
+    assert empty.status == "incorrect"
+    assert empty.metadata["error_type"] == "empty_answer"
+    assert empty.metadata.get("guidance_mode") == "independent"
+    assert engine.session.get_math_errors_for_current_step() == 0
+    assert engine.session.get_hints_for_current_step() == 3
     wrong = engine.submit(StudentSubmission("0"))
     assert wrong.status == "incorrect"
     assert engine.session.get_hints_for_current_step() == 3
+    if (problem.solution_steps[0].expected_answer != 0):
+        assert wrong.metadata.get("guidance_mode") == "independent"
+        assert engine.session.get_math_errors_for_current_step() == 1
     live = _live(1)
     allowed = {
         item.question_id
