@@ -236,9 +236,10 @@ Phase 18 is still heuristic and deterministic. It is:
 - not modeling prerequisite graphs
 
 Primary School `topics.json` now records explicit prerequisite metadata.
-Runtime adaptive recommendation does not consume it yet. The field is
-sequencing metadata, not an access lock. The live edges are Arithmetic
-to Unknown Numbers and Arithmetic to Story Problems.
+A generic runtime curriculum loader can read it. Adaptive recommendation
+still does not consume prerequisite metadata. The field is sequencing
+metadata, not an access lock. The live edges are Arithmetic to Unknown
+Numbers and Arithmetic to Story Problems.
 
 Those limits are intentional. The feature layer is meant to be reused later by
 BKT, IRT, DKT, RL, or other models.
