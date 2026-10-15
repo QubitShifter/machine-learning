@@ -1,9 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 
 from src.api.mat_pal import catalog
 from src.api.mat_pal import adaptive_service
+from src.api.mat_pal import image_extraction
 from src.api.mat_pal import session_store
 from src.core.question_engine.guided_questions import (
     GuidedQuestionError,
@@ -14,7 +15,9 @@ from src.api.mat_pal.schemas import (
     AdaptiveRecommendationResponse,
     AnswerRequest,
     CatalogResponse,
+    ExtractedProblem,
     GenerateProblemRequest,
+    ImageExtractionStatusResponse,
     ProblemDetail,
     ProblemSummary,
     QuestionRequest,
@@ -145,6 +148,29 @@ def generate_problem(
             status_code=400,
             detail=str(error),
         ) from error
+
+
+@app.get(
+    "/problems/from-image/status",
+    response_model=ImageExtractionStatusResponse,
+)
+def get_image_extraction_status(
+) -> ImageExtractionStatusResponse:
+    return image_extraction.get_status()
+
+
+@app.post(
+    "/problems/from-image",
+    response_model=ExtractedProblem,
+)
+async def extract_problem_from_image(
+    file: UploadFile = File(...),
+    locale_hint: str | None = None,
+) -> ExtractedProblem:
+    return await image_extraction.extract_from_upload(
+        upload=file,
+        locale_hint=locale_hint,
+    )
 
 
 @app.get(

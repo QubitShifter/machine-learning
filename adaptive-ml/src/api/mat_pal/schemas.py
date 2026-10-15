@@ -210,3 +210,56 @@ class StudentProgressResponse(BaseModel):
     metadata: dict[str, Any] = Field(
         default_factory=dict
     )
+
+
+class DiagramFact(BaseModel):
+    kind: str
+    label: str | None = None
+    value: str | None = None
+    unit: str | None = None
+
+
+class Ambiguity(BaseModel):
+    observation: str
+    span: str | None = None
+    candidates: list[str] = Field(
+        default_factory=list
+    )
+
+
+class SourceImageMetadata(BaseModel):
+    content_type: str
+    byte_size: int
+
+
+class ExtractedProblem(BaseModel):
+    transcription: str
+    language: Literal["en", "bg", "unknown"]
+    problem_type_hint: str | None = None
+    topic_hint: str | None = None
+    latex_expressions: list[str] = Field(
+        default_factory=list
+    )
+    diagram_present: bool = False
+    diagram_type: str | None = None
+    diagram_facts: list[DiagramFact] = Field(
+        default_factory=list
+    )
+    ambiguities: list[Ambiguity] = Field(
+        default_factory=list
+    )
+    warnings: list[str] = Field(
+        default_factory=list
+    )
+    multiple_problems_detected: bool = False
+    confidence: Literal[
+        "low",
+        "medium",
+        "high",
+    ] | None = None
+    source: SourceImageMetadata
+
+
+class ImageExtractionStatusResponse(BaseModel):
+    available: bool
+    reason: str | None = None
