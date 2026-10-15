@@ -217,6 +217,7 @@ export function ProgressDashboard({
         readSessionCount(recommendation),
         readFamilyReason(recommendation),
         recommendation.family,
+        recommendation.metadata,
       )
     : t("progress.noRecommendation");
 

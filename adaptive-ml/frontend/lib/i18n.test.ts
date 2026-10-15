@@ -752,4 +752,81 @@ assert(
   "Bulgarian recommendation text includes the family explanation",
 );
 
+const prerequisiteMetadata = {
+  prerequisite_reason: "prerequisite_foundation",
+  prerequisite_for_topic: "story_problems",
+  prerequisite_for_topic_name: "Story Problems",
+};
+const prerequisiteEnglish = localizeRecommendationReason(
+  "en",
+  "Arithmetic",
+  0.35,
+  "insufficient_history",
+  0,
+  undefined,
+  null,
+  prerequisiteMetadata,
+);
+assert(
+  prerequisiteEnglish.includes(
+    "Arithmetic supports Story Problems",
+  ) &&
+    prerequisiteEnglish.includes("completed practice") &&
+    !prerequisiteEnglish.includes(
+      "prerequisite_foundation",
+    ) &&
+    !prerequisiteEnglish.includes("story_problems"),
+  "English prerequisite explanation uses display names",
+);
+
+const prerequisiteBulgarian = localizeRecommendationReason(
+  "bg",
+  "Аритметика",
+  0.35,
+  "insufficient_history",
+  0,
+  undefined,
+  null,
+  prerequisiteMetadata,
+);
+assert(
+  prerequisiteBulgarian.includes(
+    "Темата „Аритметика“ е основа за „Сюжетни задачи“",
+  ) &&
+    prerequisiteBulgarian.includes("завършените упражнения") &&
+    !prerequisiteBulgarian.includes(
+      "prerequisite_foundation",
+    ) &&
+    !prerequisiteBulgarian.includes("story_problems") &&
+    !prerequisiteBulgarian.includes("Story Problems"),
+  "Bulgarian prerequisite explanation is fully localized",
+);
+
+const normalRecommendation = localizeRecommendationReason(
+  "en",
+  "Arithmetic",
+  0.35,
+  "recent_mixed",
+  2,
+);
+const malformedPrerequisite = localizeRecommendationReason(
+  "en",
+  "Arithmetic",
+  0.35,
+  "recent_mixed",
+  2,
+  undefined,
+  undefined,
+  {
+    prerequisite_reason: "prerequisite_foundation",
+  },
+);
+assert(
+  malformedPrerequisite === normalRecommendation &&
+    normalRecommendation.includes(
+      "Recent performance is mixed",
+    ),
+  "Missing prerequisite metadata preserves normal explanation",
+);
+
 console.log("i18n helper tests passed");

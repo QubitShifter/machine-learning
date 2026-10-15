@@ -624,6 +624,7 @@ export function HomePage() {
         sessionCount,
         familyReason,
         recommendation.family,
+        recommendation.metadata,
       ),
     );
 

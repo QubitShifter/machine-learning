@@ -212,6 +212,7 @@ export function localizeRecommendationReason(
   recentSessionCount?: number,
   familyReason?: string,
   family?: string | null,
+  metadata?: Record<string, unknown>,
 ): string {
   const base = translate(locale, "adaptive.reason.base", {
     topic: topicName,
@@ -228,6 +229,44 @@ export function localizeRecommendationReason(
 
     if (suffix !== suffixKey) {
       text = `${base}${suffix}`;
+    }
+  }
+
+  const prerequisiteReason =
+    metadata?.prerequisite_reason;
+  const prerequisiteForTopic =
+    metadata?.prerequisite_for_topic;
+  const prerequisiteForTopicName =
+    metadata?.prerequisite_for_topic_name;
+  if (
+    prerequisiteReason === "prerequisite_foundation" &&
+    typeof prerequisiteForTopic === "string" &&
+    prerequisiteForTopic.trim().length > 0
+  ) {
+    const fallbackName =
+      typeof prerequisiteForTopicName === "string"
+        ? prerequisiteForTopicName.trim()
+        : "";
+    const targetName = catalogDisplayName(
+      "topic",
+      prerequisiteForTopic.trim(),
+      fallbackName,
+      locale,
+    );
+    if (targetName.trim()) {
+      const prerequisiteKey =
+        `adaptive.prerequisiteReason.${prerequisiteReason}`;
+      const prerequisiteText = translate(
+        locale,
+        prerequisiteKey,
+        {
+          prerequisite: topicName,
+          target: targetName,
+        },
+      );
+      if (prerequisiteText !== prerequisiteKey) {
+        text = `${text}${prerequisiteText}`;
+      }
     }
   }
 

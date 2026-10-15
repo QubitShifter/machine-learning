@@ -173,6 +173,8 @@ export const en = {
   "adaptive.reason.insufficient_history":
     " There is not yet enough recent history for a trend-based difficulty adjustment.",
   "adaptive.reason.static_topic": "",
+  "adaptive.prerequisiteReason.prerequisite_foundation":
+    " {prerequisite} supports {target}; your completed practice shows this foundation still needs more practice.",
   "adaptive.familyReason.family_insufficient_history":
     " Let's start with {family}. There is not enough family-specific history yet.",
   "adaptive.familyReason.family_least_practiced":

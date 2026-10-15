@@ -180,6 +180,8 @@ export const bg = {
   "adaptive.reason.insufficient_history":
     " Все още няма достатъчно скорошна история за корекция на трудността според тенденцията.",
   "adaptive.reason.static_topic": "",
+  "adaptive.prerequisiteReason.prerequisite_foundation":
+    " Темата „{prerequisite}“ е основа за „{target}“; завършените упражнения показват, че е нужна още практика по тази основа.",
   "adaptive.familyReason.family_insufficient_history":
     " Да започнем с {family}. Все още няма достатъчно история за отделните видове упражнения.",
   "adaptive.familyReason.family_least_practiced":
