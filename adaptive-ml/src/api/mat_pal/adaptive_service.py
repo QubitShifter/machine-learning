@@ -25,6 +25,11 @@ from src.core.adaptive.features import (
     parse_recent_sessions,
     session_has_mathematical_error,
 )
+from src.core.curriculum import (
+    PRIMARY_SCHOOL_TOPICS_PATH,
+    load_curriculum_topics,
+    prerequisite_graph,
+)
 from src.core.student_model.progress_store import (
     DEFAULT_PROGRESS_PATH,
     DEFAULT_STUDENT_ID,
@@ -212,9 +217,25 @@ def recommend_next(
         path=path,
         student_id=student_id,
     )
+    prerequisite_graphs = {}
+    if any(
+        candidate.subject == "mathematics"
+        and candidate.domain == "primary_school"
+        for candidate in candidates
+    ):
+        try:
+            curriculum = load_curriculum_topics(
+                PRIMARY_SCHOOL_TOPICS_PATH
+            )
+            prerequisite_graphs[
+                ("mathematics", "primary_school")
+            ] = prerequisite_graph(curriculum)
+        except (OSError, UnicodeError, ValueError):
+            pass
 
     return RuleBasedAdaptivePolicy().recommend_next(
-        candidates
+        candidates,
+        prerequisite_graphs=prerequisite_graphs,
     )
 
 

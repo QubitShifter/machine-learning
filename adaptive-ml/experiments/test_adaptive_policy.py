@@ -41,10 +41,12 @@ def make_topic(
     generation_available: bool = True,
     problem_id: str | None = None,
     recent_sessions: tuple[RecentSession, ...] = (),
+    subject: str = "mathematics",
+    domain: str = "ode",
 ) -> AdaptiveTopicState:
     return AdaptiveTopicState(
-        subject="mathematics",
-        domain="ode",
+        subject=subject,
+        domain=domain,
         topic=topic,
         topic_name=topic.replace("_", " ").title(),
         mastery_key=topic,
@@ -835,6 +837,187 @@ def assert_difficulty_stays_within_supported_levels():
             assert difficulty in (1, 2, 3)
 
 
+def primary_topic(
+    topic: str,
+    mastery: float,
+    **kwargs,
+) -> AdaptiveTopicState:
+    return make_topic(
+        topic,
+        mastery,
+        subject="mathematics",
+        domain="primary_school",
+        **kwargs,
+    )
+
+
+def primary_graphs(
+    graph: dict[str, tuple[str, ...]] | None = None,
+):
+    return {
+        ("mathematics", "primary_school"): (
+            graph
+            if graph is not None
+            else {
+                "arithmetic": (),
+                "unknown_numbers": ("arithmetic",),
+                "story_problems": ("arithmetic",),
+                "number_patterns": (),
+                "logical_reasoning": (),
+            }
+        )
+    }
+
+
+def assert_prerequisite_redirect_policy():
+    policy = RuleBasedAdaptivePolicy()
+
+    unknown_history = policy.recommend_next(
+        [
+            primary_topic("story_problems", 0.10),
+            primary_topic(
+                "arithmetic",
+                0.20,
+                questions_completed=0,
+            ),
+        ],
+        prerequisite_graphs=primary_graphs(),
+    )
+    assert unknown_history.topic == "story_problems"
+
+    redirected = policy.recommend_next(
+        [
+            primary_topic("story_problems", 0.10),
+            primary_topic(
+                "arithmetic",
+                0.35,
+                questions_completed=3,
+            ),
+        ],
+        prerequisite_graphs=primary_graphs(),
+    )
+    assert redirected.topic == "arithmetic"
+    assert redirected.mastery == 0.35
+    assert redirected.mastery_key == "arithmetic"
+    assert redirected.metadata["prerequisite_reason"] == (
+        "prerequisite_foundation"
+    )
+    assert redirected.metadata["prerequisite_for_topic"] == (
+        "story_problems"
+    )
+    assert "supports Story Problems" in redirected.reason
+
+    at_threshold = policy.recommend_next(
+        [
+            primary_topic("story_problems", 0.10),
+            primary_topic(
+                "arithmetic",
+                0.40,
+                questions_completed=4,
+            ),
+        ],
+        prerequisite_graphs=primary_graphs(),
+    )
+    assert at_threshold.topic == "story_problems"
+
+    unknown_numbers = policy.recommend_next(
+        [
+            primary_topic("unknown_numbers", 0.05),
+            primary_topic(
+                "arithmetic",
+                0.10,
+                questions_completed=2,
+            ),
+        ],
+        prerequisite_graphs=primary_graphs(),
+    )
+    assert unknown_numbers.topic == "arithmetic"
+
+    no_edge = policy.recommend_next(
+        [
+            primary_topic("number_patterns", 0.05),
+            primary_topic(
+                "arithmetic",
+                0.10,
+                questions_completed=2,
+            ),
+        ],
+        prerequisite_graphs=primary_graphs(),
+    )
+    assert no_edge.topic == "number_patterns"
+
+
+def assert_prerequisite_redirect_uses_final_topic_policy():
+    policy = RuleBasedAdaptivePolicy()
+    strong_sessions = (
+        make_session(),
+        make_session(),
+    )
+    recommendation = policy.recommend_next(
+        [
+            primary_topic("story_problems", 0.10),
+            primary_topic(
+                "arithmetic",
+                0.35,
+                questions_completed=3,
+                recent_sessions=strong_sessions,
+            ),
+        ],
+        prerequisite_graphs=primary_graphs(),
+    )
+    assert recommendation.topic == "arithmetic"
+    assert recommendation.difficulty == 2
+    assert recommendation.family is None
+    assert recommendation.metadata["adjustment_reason"] == (
+        "recent_strong"
+    )
+
+
+def assert_prerequisites_preserve_ranking_and_family_rules():
+    policy = RuleBasedAdaptivePolicy()
+    candidates = [
+        primary_topic("logical_reasoning", 0.05),
+        primary_topic(
+            "arithmetic",
+            0.10,
+            questions_completed=2,
+        ),
+    ]
+    without_graph = policy.recommend_next(candidates)
+    with_graph = policy.recommend_next(
+        candidates,
+        prerequisite_graphs=primary_graphs(),
+    )
+    assert without_graph.topic == "logical_reasoning"
+    assert with_graph.topic == without_graph.topic
+    assert with_graph.family == "number_detective"
+
+    synthetic_redirect = policy.recommend_next(
+        candidates,
+        prerequisite_graphs=primary_graphs(
+            {
+                "logical_reasoning": ("arithmetic",),
+                "arithmetic": (),
+            }
+        ),
+    )
+    assert synthetic_redirect.topic == "arithmetic"
+    assert synthetic_redirect.family is None
+
+    other_domain = policy.recommend_next(
+        [
+            make_topic("story_problems", 0.05),
+            make_topic(
+                "arithmetic",
+                0.10,
+                questions_completed=2,
+            ),
+        ],
+        prerequisite_graphs=primary_graphs(),
+    )
+    assert other_domain.topic == "story_problems"
+
+
 def main():
     assert_mastery_thresholds()
     assert_recent_performance_adjustments()
@@ -861,6 +1044,9 @@ def main():
     assert_legacy_history_keeps_previous_difficulty()
     assert_invalid_annotations_do_not_change_topic_rank()
     assert_difficulty_stays_within_supported_levels()
+    assert_prerequisite_redirect_policy()
+    assert_prerequisite_redirect_uses_final_topic_policy()
+    assert_prerequisites_preserve_ranking_and_family_rules()
 
     print("adaptive_policy tests passed")
 

@@ -1,7 +1,10 @@
 import json
+import tempfile
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+from src.api.mat_pal import adaptive_service, progress_service
 from src.api.mat_pal.app import app
 from src.core.student_model.progress_store import (
     DEFAULT_PROGRESS_PATH,
@@ -533,6 +536,182 @@ def assert_recommendation_metadata_for_history_profiles():
     assert "hints" in weak["reason"]
 
 
+def assert_primary_school_prerequisite_api_behavior():
+    with tempfile.TemporaryDirectory() as directory:
+        progress_path = Path(directory) / "progress.json"
+        original_recommend_next = (
+            adaptive_service.recommend_next
+        )
+        original_get_student_progress = (
+            progress_service.get_student_progress
+        )
+
+        def temporary_recommend_next(
+            subject=None,
+            domain=None,
+            path=progress_path,
+            student_id="local_student",
+        ):
+            return original_recommend_next(
+                subject=subject,
+                domain=domain,
+                path=progress_path,
+                student_id=student_id,
+            )
+
+        def temporary_get_student_progress(
+            subject=None,
+            domain=None,
+            path=progress_path,
+            student_id=None,
+        ):
+            return original_get_student_progress(
+                subject=subject,
+                domain=domain,
+                path=progress_path,
+                student_id=student_id,
+            )
+
+        adaptive_service.recommend_next = (
+            temporary_recommend_next
+        )
+        progress_service.get_student_progress = (
+            temporary_get_student_progress
+        )
+        try:
+            progress_path.write_text(
+                json.dumps(
+                    {
+                        "skills": {
+                            "grade4_word_problems": {
+                                "mastery": 0.10,
+                                "questions_completed": 1,
+                                "first_attempt_streak": 0,
+                            },
+                            "grade4_arithmetic": {
+                                "mastery": 0.35,
+                                "questions_completed": 3,
+                                "first_attempt_streak": 0,
+                            },
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            redirected = recommendation(
+                domain="primary_school"
+            )
+            assert redirected["topic"] == "arithmetic"
+            assert redirected["topic_name"] == "Arithmetic"
+            assert redirected["mastery"] == 0.35
+            assert redirected["mastery_key"] == (
+                "grade4_arithmetic"
+            )
+            assert redirected["difficulty"] == 1
+            assert redirected["family"] is None
+            assert redirected["metadata"][
+                "prerequisite_reason"
+            ] == "prerequisite_foundation"
+            assert redirected["metadata"][
+                "prerequisite_for_topic"
+            ] == "story_problems"
+            assert redirected["metadata"][
+                "prerequisite_for_topic_name"
+            ] == "Story Problems"
+            assert "supports Story Problems" in redirected[
+                "reason"
+            ]
+
+            progress_response = client.get(
+                "/progress",
+                params={
+                    "subject": "mathematics",
+                    "domain": "primary_school",
+                },
+            )
+            assert progress_response.status_code == 200
+            embedded = progress_response.json()[
+                "recommendation"
+            ]
+            assert embedded["topic"] == redirected["topic"]
+            assert embedded["difficulty"] == (
+                redirected["difficulty"]
+            )
+            assert embedded["metadata"][
+                "prerequisite_reason"
+            ] == "prerequisite_foundation"
+
+            manual = client.post(
+                "/problems/generate",
+                json={
+                    "subject": "mathematics",
+                    "domain": "primary_school",
+                    "topic": "story_problems",
+                    "difficulty": 1,
+                    "seed": 27,
+                },
+            )
+            assert manual.status_code == 200
+            assert manual.json()["topic"] == "story_problems"
+
+            progress_path.write_text(
+                json.dumps(
+                    {
+                        "skills": {
+                            "grade4_word_problems": {
+                                "mastery": 0.10,
+                                "questions_completed": 1,
+                                "first_attempt_streak": 0,
+                            },
+                            "grade4_arithmetic": {
+                                "mastery": 0.20,
+                                "questions_completed": 0,
+                                "first_attempt_streak": 0,
+                            },
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            no_history = recommendation(
+                domain="primary_school"
+            )
+            assert no_history["topic"] == "story_problems"
+            assert "prerequisite_reason" not in (
+                no_history["metadata"]
+            )
+
+            original_loader = (
+                adaptive_service.load_curriculum_topics
+            )
+
+            def unavailable_curriculum(_path):
+                raise OSError("curriculum unavailable")
+
+            adaptive_service.load_curriculum_topics = (
+                unavailable_curriculum
+            )
+            try:
+                loader_failure = recommendation(
+                    domain="primary_school"
+                )
+            finally:
+                adaptive_service.load_curriculum_topics = (
+                    original_loader
+                )
+            assert loader_failure["topic"] == "story_problems"
+            assert "prerequisite_reason" not in (
+                loader_failure["metadata"]
+            )
+        finally:
+            adaptive_service.recommend_next = (
+                original_recommend_next
+            )
+            progress_service.get_student_progress = (
+                original_get_student_progress
+            )
+
+
 def main():
     had_progress = DEFAULT_PROGRESS_PATH.exists()
     original_progress = (
@@ -551,6 +730,7 @@ def main():
         assert_no_available_content_is_safe()
         assert_generated_completion_updates_mastery_and_difficulty()
         assert_recommendation_metadata_for_history_profiles()
+        assert_primary_school_prerequisite_api_behavior()
 
     finally:
         if had_progress and original_progress is not None:

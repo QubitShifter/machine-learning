@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Mapping
 
 from src.core.adaptive.features import (
     AdaptivePerformanceFeatures,
@@ -13,6 +14,10 @@ from src.core.adaptive.features import (
     last_completed_known_family,
     mathematical_incorrect_attempts,
     resolve_family_history,
+)
+from src.core.adaptive.prerequisites import (
+    PrerequisiteResolution,
+    resolve_prerequisite_topic,
 )
 
 
@@ -129,6 +134,12 @@ class RuleBasedAdaptivePolicy:
     def recommend_next(
         self,
         candidates: list[AdaptiveTopicState],
+        *,
+        prerequisite_graphs: Mapping[
+            tuple[str, str],
+            Mapping[str, tuple[str, ...]],
+        ]
+        | None = None,
     ) -> AdaptiveRecommendation:
         runnable = [
             candidate
@@ -148,10 +159,50 @@ class RuleBasedAdaptivePolicy:
                 ),
             )
 
-        selected = sorted(
+        ranked = sorted(
             runnable,
             key=self._topic_sort_key,
-        )[0]
+        )
+        initial = ranked[0]
+        selected = initial
+        resolution = PrerequisiteResolution(
+            initial_topic=initial.topic,
+            final_topic=initial.topic,
+        )
+        scope_graph = (
+            prerequisite_graphs or {}
+        ).get(
+            (initial.subject, initial.domain)
+        )
+        if scope_graph is not None:
+            scope_ranked = [
+                candidate
+                for candidate in ranked
+                if (
+                    candidate.subject == initial.subject
+                    and candidate.domain == initial.domain
+                )
+            ]
+            states_by_id = {
+                candidate.topic: candidate
+                for candidate in scope_ranked
+            }
+            resolution = resolve_prerequisite_topic(
+                initial.topic,
+                prerequisite_graph=scope_graph,
+                topic_states_by_id=states_by_id,
+                ordered_topic_ids=tuple(
+                    candidate.topic
+                    for candidate in scope_ranked
+                ),
+                low_mastery_threshold=(
+                    LOW_MASTERY_THRESHOLD
+                ),
+            )
+            selected = states_by_id.get(
+                resolution.final_topic,
+                initial,
+            )
         decision = self._difficulty_decision(
             selected
         )
@@ -188,6 +239,18 @@ class RuleBasedAdaptivePolicy:
         if family is not None:
             metadata["family"] = family
             metadata["family_reason"] = family_reason
+        if resolution.redirected:
+            metadata.update(
+                {
+                    "prerequisite_reason": (
+                        resolution.reason_code
+                    ),
+                    "prerequisite_for_topic": initial.topic,
+                    "prerequisite_for_topic_name": (
+                        initial.topic_name
+                    ),
+                }
+            )
 
         return AdaptiveRecommendation(
             recommendation_available=True,
@@ -209,6 +272,11 @@ class RuleBasedAdaptivePolicy:
                 decision,
                 family=family,
                 family_reason=family_reason,
+                prerequisite_for=(
+                    initial
+                    if resolution.redirected
+                    else None
+                ),
             ),
             metadata=metadata,
         )
@@ -464,12 +532,21 @@ class RuleBasedAdaptivePolicy:
         decision: dict,
         family: str | None = None,
         family_reason: str | None = None,
+        prerequisite_for: AdaptiveTopicState | None = None,
     ) -> str:
         reason = (
             f"Practice {topic_state.topic_name} next "
             f"because its current mastery is "
             f"{topic_state.mastery:.2f}."
         )
+        if prerequisite_for is not None:
+            reason = (
+                reason
+                + f" {topic_state.topic_name} supports "
+                + f"{prerequisite_for.topic_name}, and its "
+                + "mastery remains low after completed "
+                + "practice."
+            )
         adjustment_reason = decision[
             "adjustment_reason"
         ]
