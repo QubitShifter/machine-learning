@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { MathContent } from "@/components/math/MathContent";
 import {
+  createImportedProblem,
   extractProblemFromImage,
   getImageExtractionStatus,
 } from "@/lib/api";
@@ -12,15 +13,21 @@ import {
   assignPreviewUrl,
   buildConfirmedImageProblem,
   canConfirmExtraction,
+  canStartGuidedSolve,
   confidenceCopyKey,
   fileIssueCopyKey,
   formatDiagramFact,
   formatFileSize,
+  importedGuidanceErrorIsRetryable,
+  importedHandoffPlan,
   isBlockingUnreadable,
   languageCopyKey,
   mapImageUploadError,
+  mapImportedHandoffError,
+  nextPendingImportedProblemId,
   revokePreviewUrl,
   shouldApplyExtraction,
+  shouldApplyImportedStart,
   validateImageFile,
   warningCopyKey,
 } from "@/lib/imageProblem";
@@ -29,7 +36,16 @@ import type {
   ExtractedProblem,
 } from "@/types/imageProblem";
 
-export function ImageProblemUpload() {
+interface ImageProblemUploadProps {
+  onStartImportedProblem: (
+    problemId: string,
+    options?: { signal?: AbortSignal },
+  ) => Promise<void>;
+}
+
+export function ImageProblemUpload({
+  onStartImportedProblem,
+}: ImageProblemUploadProps) {
   const { locale, t } = useLanguage();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const previewUrlRef = useRef<string | null>(null);
@@ -37,6 +53,15 @@ export function ImageProblemUpload() {
   const startedForFileRef = useRef<File | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const selectedFileRef = useRef<File | null>(null);
+  const confirmedRef = useRef<ConfirmedImageProblem | null>(
+    null,
+  );
+  const startedForConfirmedRef =
+    useRef<ConfirmedImageProblem | null>(null);
+  const startingRef = useRef(false);
+  const pendingImportedProblemIdRef = useRef<string | null>(
+    null,
+  );
 
   const [availability, setAvailability] = useState<
     "checking" | "available" | "unavailable"
@@ -52,6 +77,8 @@ export function ImageProblemUpload() {
   const [analyzing, setAnalyzing] = useState(false);
   const [confirmed, setConfirmed] =
     useState<ConfirmedImageProblem | null>(null);
+  const [startingGuidedSolve, setStartingGuidedSolve] =
+    useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(
     null,
   );
@@ -80,6 +107,14 @@ export function ImageProblemUpload() {
     return () => {
       ignore = true;
       abortRef.current?.abort();
+      requestIdRef.current += 1;
+      startingRef.current = false;
+      pendingImportedProblemIdRef.current =
+        nextPendingImportedProblemId({
+          pendingProblemId:
+            pendingImportedProblemIdRef.current,
+          clear: true,
+        });
       revokePreviewUrl(previewUrlRef.current);
       previewUrlRef.current = null;
     };
@@ -91,12 +126,32 @@ export function ImageProblemUpload() {
     }
   }
 
+  function clearPendingImportedProblem() {
+    pendingImportedProblemIdRef.current =
+      nextPendingImportedProblemId({
+        pendingProblemId:
+          pendingImportedProblemIdRef.current,
+        clear: true,
+      });
+  }
+
+  function setConfirmedProblem(
+    next: ConfirmedImageProblem | null,
+  ) {
+    confirmedRef.current = next;
+    setConfirmed(next);
+  }
+
   function clearWorkflow() {
     abortRef.current?.abort();
     abortRef.current = null;
     requestIdRef.current += 1;
     startedForFileRef.current = null;
+    startedForConfirmedRef.current = null;
+    startingRef.current = false;
+    clearPendingImportedProblem();
     selectedFileRef.current = null;
+    confirmedRef.current = null;
     revokePreviewUrl(previewUrlRef.current);
     previewUrlRef.current = null;
     setPreviewUrl(null);
@@ -104,7 +159,8 @@ export function ImageProblemUpload() {
     setExtraction(null);
     setTranscription("");
     setAnalyzing(false);
-    setConfirmed(null);
+    setStartingGuidedSolve(false);
+    setConfirmedProblem(null);
     setErrorKey(null);
     resetInputValue();
   }
@@ -126,6 +182,9 @@ export function ImageProblemUpload() {
     abortRef.current = null;
     requestIdRef.current += 1;
     startedForFileRef.current = null;
+    startedForConfirmedRef.current = null;
+    startingRef.current = false;
+    clearPendingImportedProblem();
     const nextUrl = assignPreviewUrl(
       previewUrlRef.current,
       file,
@@ -137,7 +196,8 @@ export function ImageProblemUpload() {
     setExtraction(null);
     setTranscription("");
     setAnalyzing(false);
-    setConfirmed(null);
+    setStartingGuidedSolve(false);
+    setConfirmedProblem(null);
     setErrorKey(null);
     resetInputValue();
   }
@@ -146,7 +206,8 @@ export function ImageProblemUpload() {
     if (
       availability !== "available" ||
       !selectedFile ||
-      analyzing
+      analyzing ||
+      startingRef.current
     ) {
       return;
     }
@@ -157,9 +218,11 @@ export function ImageProblemUpload() {
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     startedForFileRef.current = selectedFile;
+    clearPendingImportedProblem();
     setAnalyzing(true);
     setErrorKey(null);
-    setConfirmed(null);
+    setStartingGuidedSolve(false);
+    setConfirmedProblem(null);
 
     try {
       const result = await extractProblemFromImage(
@@ -214,12 +277,111 @@ export function ImageProblemUpload() {
       return;
     }
 
-    setConfirmed(
+    clearPendingImportedProblem();
+    setConfirmedProblem(
       buildConfirmedImageProblem(
         extraction,
         transcription,
       ),
     );
+    setErrorKey(null);
+  }
+
+  async function handleSolveWithGuidance() {
+    if (
+      startingRef.current ||
+      !canStartGuidedSolve(
+        confirmed,
+        startingGuidedSolve,
+        errorKey,
+      ) ||
+      !confirmed
+    ) {
+      return;
+    }
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    startedForConfirmedRef.current = confirmed;
+    startingRef.current = true;
+    setStartingGuidedSolve(true);
+    setErrorKey(null);
+
+    try {
+      const plan = importedHandoffPlan(
+        pendingImportedProblemIdRef.current,
+      );
+      let problemId = plan.startProblemId;
+      if (plan.callFromConfirmed) {
+        const created = await createImportedProblem(
+          confirmed,
+          locale,
+          { signal: controller.signal },
+        );
+        if (
+          !shouldApplyImportedStart(
+            requestIdRef.current,
+            requestId,
+            confirmedRef.current,
+            startedForConfirmedRef.current,
+          )
+        ) {
+          return;
+        }
+        problemId = created.problem_id;
+        pendingImportedProblemIdRef.current =
+          nextPendingImportedProblemId({
+            pendingProblemId:
+              pendingImportedProblemIdRef.current,
+            createdProblemId: problemId,
+          });
+      } else if (
+        !shouldApplyImportedStart(
+          requestIdRef.current,
+          requestId,
+          confirmedRef.current,
+          startedForConfirmedRef.current,
+        )
+      ) {
+        return;
+      }
+      if (!problemId) {
+        return;
+      }
+      await onStartImportedProblem(problemId, {
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (
+        !shouldApplyImportedStart(
+          requestIdRef.current,
+          requestId,
+          confirmedRef.current,
+          startedForConfirmedRef.current,
+        )
+      ) {
+        return;
+      }
+      const mapped = mapImportedHandoffError(
+        error,
+        importedHandoffPlan(
+          pendingImportedProblemIdRef.current,
+        ).callFromConfirmed
+          ? "create"
+          : "start",
+      );
+      if (mapped) {
+        setErrorKey(mapped);
+      }
+    } finally {
+      if (requestIdRef.current === requestId) {
+        startingRef.current = false;
+        setStartingGuidedSolve(false);
+      }
+    }
   }
 
   const available = availability === "available";
@@ -234,6 +396,16 @@ export function ImageProblemUpload() {
   );
   const showReview =
     extraction !== null && confirmed === null;
+  const showSolve = canStartGuidedSolve(
+    confirmed,
+    false,
+    errorKey,
+  );
+  const showGuidanceRetry =
+    Boolean(confirmed) &&
+    importedGuidanceErrorIsRetryable(errorKey) &&
+    !startingGuidedSolve;
+  const busy = analyzing || startingGuidedSolve;
   const uniqueWarnings = extraction
     ? [...new Set(extraction.warnings)]
     : [];
@@ -266,7 +438,7 @@ export function ImageProblemUpload() {
                   accept="image/jpeg,image/png"
                   aria-label={t("imageUpload.choose")}
                   className="image-problem-upload-input"
-                  disabled={!available || analyzing}
+                  disabled={!available || busy}
                   onChange={(event) => {
                     handleFileList(event.target.files);
                   }}
@@ -282,6 +454,7 @@ export function ImageProblemUpload() {
               {selectedFile ? (
                 <button
                   className="secondary-button"
+                  disabled={busy}
                   onClick={clearWorkflow}
                   type="button"
                 >
@@ -290,7 +463,7 @@ export function ImageProblemUpload() {
               ) : null}
               {selectedFile && available ? (
                 <button
-                  disabled={analyzing}
+                  disabled={busy}
                   onClick={() => {
                     void handleAnalyze();
                   }}
@@ -318,12 +491,33 @@ export function ImageProblemUpload() {
           </p>
         ) : null}
 
+        {startingGuidedSolve ? (
+          <p
+            aria-live="polite"
+            className="image-problem-upload-status"
+            role="status"
+          >
+            {t("imageUpload.preparingGuidance")}
+          </p>
+        ) : null}
+
         {errorKey ? (
           <div className="image-problem-upload-error-row">
             <p className="error-message" role="alert">
               {t(errorKey)}
             </p>
-            {selectedFile && available ? (
+            {showGuidanceRetry ? (
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  void handleSolveWithGuidance();
+                }}
+                type="button"
+              >
+                {t("imageUpload.tryAgain")}
+              </button>
+            ) : null}
+            {!confirmed && selectedFile && available ? (
               <button
                 className="secondary-button"
                 disabled={analyzing}
@@ -506,12 +700,25 @@ export function ImageProblemUpload() {
             <p role="status">
               {t("imageUpload.confirmed")}
             </p>
-            <p>{t("imageUpload.confirmedNextStep")}</p>
             <div className="image-problem-upload-actions">
+              {showSolve ? (
+                <button
+                  disabled={startingGuidedSolve}
+                  onClick={() => {
+                    void handleSolveWithGuidance();
+                  }}
+                  type="button"
+                >
+                  {t("imageUpload.solveWithGuidance")}
+                </button>
+              ) : null}
               <button
                 className="secondary-button"
+                disabled={startingGuidedSolve}
                 onClick={() => {
-                  setConfirmed(null);
+                  clearPendingImportedProblem();
+                  setConfirmedProblem(null);
+                  setErrorKey(null);
                 }}
                 type="button"
               >
@@ -519,6 +726,7 @@ export function ImageProblemUpload() {
               </button>
               <button
                 className="secondary-button"
+                disabled={startingGuidedSolve}
                 onClick={clearWorkflow}
                 type="button"
               >

@@ -304,8 +304,19 @@ export const bg = {
   "imageUpload.looksCorrect": "Изглежда правилно",
   "imageUpload.editAgain": "Редактирай отново",
   "imageUpload.confirmed": "Задачата е потвърдена.",
-  "imageUpload.confirmedNextStep":
-    "Насоченото решаване ще бъде свързано в следващата стъпка.",
+  "imageUpload.solveWithGuidance": "Реши с насоки",
+  "imageUpload.preparingGuidance":
+    "Подготвям решаването с насоки...",
+  "imageUpload.guidanceUnsupported":
+    "Задачата е разчетена, но този тип задача все още не се поддържа за решаване с насоки.",
+  "imageUpload.guidanceUnavailable":
+    "Решаването с насоки временно не е достъпно.",
+  "imageUpload.guidanceTimeout":
+    "Подготовката на задачата отне твърде дълго. Опитай отново.",
+  "imageUpload.guidanceFailed":
+    "MAT-PAL не успя да подготви надеждно решение с насоки за тази задача.",
+  "imageUpload.sessionStartFailed":
+    "Задачата беше подготвена, но MAT-PAL не успя да стартира учебната сесия. Опитай отново.",
   "imageUpload.another": "Разчети друго изображение",
   "imageUpload.tryAgain": "Опитай отново",
   "imageUpload.tooLarge":

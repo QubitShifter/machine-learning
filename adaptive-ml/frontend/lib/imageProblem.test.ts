@@ -8,18 +8,31 @@ import { MatPalApiError } from "./matPalApiError.ts";
 import {
   assignPreviewUrl,
   buildConfirmedImageProblem,
+  buildConfirmedProblemRequest,
   buildImageExtractRequest,
+  buildImportedProblemRequest,
   canConfirmExtraction,
+  canStartGuidedSolve,
   confidenceCopyKey,
   fileIssueCopyKey,
   formatDiagramFact,
   formatFileSize,
   imageExtractionStatusPath,
+  catalogSessionStartProblemId,
+  importedGuidanceErrorIsRetryable,
+  importedHandoffPlan,
+  importedProblemPath,
+  importedSessionStartRequest,
+  mapImportedHandoffError,
+  nextPendingImportedProblemId,
   isBlockingUnreadable,
   mapImageUploadError,
+  mapImportedProblemError,
   MAX_IMAGE_BYTES,
+  readImportedProblemId,
   revokePreviewUrl,
   shouldApplyExtraction,
+  shouldApplyImportedStart,
   validateImageFile,
   warningCopyKey,
 } from "./imageProblem.ts";
@@ -56,7 +69,13 @@ const IMAGE_UPLOAD_KEYS = [
   "imageUpload.looksCorrect",
   "imageUpload.editAgain",
   "imageUpload.confirmed",
-  "imageUpload.confirmedNextStep",
+  "imageUpload.solveWithGuidance",
+  "imageUpload.preparingGuidance",
+  "imageUpload.guidanceUnsupported",
+  "imageUpload.guidanceUnavailable",
+  "imageUpload.guidanceTimeout",
+  "imageUpload.guidanceFailed",
+  "imageUpload.sessionStartFailed",
   "imageUpload.another",
   "imageUpload.tryAgain",
   "imageUpload.tooLarge",
@@ -536,6 +555,434 @@ const noHint = buildImageExtractRequest(file);
 assert(
   !noHint.url.includes("locale_hint"),
   "locale_hint is omitted when not provided",
+);
+
+assert(
+  !("imageUpload.confirmedNextStep" in en),
+  "old next-phase placeholder key is gone from EN",
+);
+assert(
+  !("imageUpload.confirmedNextStep" in bg),
+  "old next-phase placeholder key is gone from BG",
+);
+assert(
+  translate("en", "imageUpload.solveWithGuidance") ===
+    "Solve with guidance",
+  "English solve with guidance label",
+);
+assert(
+  translate("bg", "imageUpload.solveWithGuidance") ===
+    "Реши с насоки",
+  "Bulgarian solve with guidance label",
+);
+assert(
+  !translate("en", "imageUpload.solveWithGuidance")
+    .toLowerCase()
+    .includes("next step"),
+  "solve action is not a next-phase placeholder",
+);
+
+const confirmedEn = buildConfirmedImageProblem(
+  sampleExtraction({
+    transcription: "2x + 5 = 17",
+    language: "en",
+    latex_expressions: ["2x + 5 = 17"],
+    topic_hint: "geometry",
+    problem_type_hint: "triangle",
+  }),
+  "2x + 5 = 17",
+);
+const enRequest = buildConfirmedProblemRequest(
+  confirmedEn,
+  "bg",
+);
+assert(enRequest.transcription === "2x + 5 = 17", "EN transcription mapped");
+assert(enRequest.language === "en", "known EN language is not overwritten by BG UI");
+assert(
+  enRequest.latex_expressions[0] === "2x + 5 = 17",
+  "latexExpressions map to latex_expressions",
+);
+assert(enRequest.topic_hint === "geometry", "topicHint maps to topic_hint");
+assert(
+  enRequest.problem_type_hint === "triangle",
+  "problemTypeHint maps to problem_type_hint",
+);
+assert(
+  Object.keys(enRequest).join(",") ===
+    "transcription,language,latex_expressions,topic_hint,problem_type_hint",
+  "confirmed request has only the backend contract fields",
+);
+
+const confirmedBg = buildConfirmedImageProblem(
+  sampleExtraction({
+    transcription: "Иван има 4 ябълки.",
+    language: "bg",
+  }),
+  "Иван има 4 ябълки.",
+);
+assert(
+  buildConfirmedProblemRequest(confirmedBg, "en").language ===
+    "bg",
+  "known BG language is not overwritten by EN UI",
+);
+
+const confirmedUnknown = buildConfirmedImageProblem(
+  sampleExtraction({ language: "unknown" }),
+  "2x + 5 = 17",
+);
+assert(
+  buildConfirmedProblemRequest(confirmedUnknown, "bg")
+    .language === "bg",
+  "unknown language falls back to BG UI locale",
+);
+assert(
+  buildConfirmedProblemRequest(confirmedUnknown, "en")
+    .language === "en",
+  "unknown language falls back to EN UI locale",
+);
+
+const importedHttp = buildImportedProblemRequest(
+  confirmedEn,
+  "en",
+);
+assert(importedHttp.init.method === "POST", "imported create is POST");
+assert(
+  importedHttp.url.endsWith("/problems/from-confirmed"),
+  "imported create uses from-confirmed",
+);
+assert(
+  importedProblemPath() === "/problems/from-confirmed",
+  "imported path matches backend contract",
+);
+assert(
+  (importedHttp.init.headers as Record<string, string>)[
+    "Content-Type"
+  ] === "application/json",
+  "imported create sends JSON Content-Type",
+);
+assert(
+  typeof importedHttp.init.body === "string",
+  "imported create uses a JSON string body, not FormData",
+);
+const importedBody = JSON.parse(importedHttp.init.body as string);
+assert(
+  JSON.stringify(importedBody) === JSON.stringify(enRequest),
+  "imported JSON body matches confirmed mapping",
+);
+assert(
+  !JSON.stringify(importedBody).toLowerCase().includes("image"),
+  "imported request has no image field",
+);
+assert(
+  !JSON.stringify(importedBody).includes("base64"),
+  "imported request has no base64",
+);
+assert(
+  !JSON.stringify(importedBody).includes("blob:"),
+  "imported request has no object URL",
+);
+assert(
+  !JSON.stringify(importedBody).includes("filename"),
+  "imported request has no filename",
+);
+assert(
+  !("source" in importedBody),
+  "imported request has no source metadata",
+);
+assert(
+  !("previewUrl" in importedBody),
+  "imported request has no preview URL",
+);
+
+const createdResponse = {
+  problem_id: "imported_generated_abc123",
+  topic: "unknown_numbers",
+  language: "en",
+  title: "Unknown number",
+};
+assert(
+  readImportedProblemId(createdResponse) ===
+    "imported_generated_abc123",
+  "successful create returns problem_id",
+);
+const sessionStart = importedSessionStartRequest(
+  createdResponse.problem_id,
+  "student-1",
+  "en",
+);
+assert(
+  sessionStart.problem_id === createdResponse.problem_id,
+  "imported problem_id goes through existing session-start path",
+);
+assert(sessionStart.student_id === "student-1", "session start keeps student id");
+assert(sessionStart.language === "en", "session start keeps UI language");
+assert(
+  !("mastery" in sessionStart) && !("progress" in sessionStart),
+  "session start does not send mastery or progress",
+);
+
+assert(
+  canStartGuidedSolve(confirmedEn, false) === true,
+  "confirmed state can start guided solve",
+);
+assert(
+  canStartGuidedSolve(confirmedEn, true) === false,
+  "duplicate Solve click is prevented while starting",
+);
+assert(
+  canStartGuidedSolve(
+    confirmedEn,
+    false,
+    "imageUpload.guidanceUnsupported",
+  ) === false,
+  "unsupported error still allows Edit again instead of Solve",
+);
+assert(
+  importedGuidanceErrorIsRetryable(
+    "imageUpload.guidanceUnavailable",
+  ) === true,
+  "503 offers Try again",
+);
+assert(
+  importedGuidanceErrorIsRetryable(
+    "imageUpload.guidanceTimeout",
+  ) === true,
+  "504 offers Try again",
+);
+assert(
+  importedGuidanceErrorIsRetryable("imageUpload.networkError") ===
+    true,
+  "network failure offers Try again",
+);
+assert(
+  importedGuidanceErrorIsRetryable(
+    "imageUpload.guidanceUnsupported",
+  ) === false,
+  "unsupported 422 is not a retry prompt",
+);
+assert(
+  importedGuidanceErrorIsRetryable(
+    "imageUpload.guidanceFailed",
+  ) === false,
+  "planning failure is not auto-retried",
+);
+
+assert(
+  mapImportedProblemError(
+    new MatPalApiError("unsupported_problem_type", 422),
+  ) === "imageUpload.guidanceUnsupported",
+  "422 unsupported mapped correctly",
+);
+assert(
+  mapImportedProblemError(
+    new MatPalApiError("Imported solution plan could not be parsed.", 422),
+  ) === "imageUpload.guidanceFailed",
+  "422 planning failure mapped correctly",
+);
+assert(
+  mapImportedProblemError(
+    new MatPalApiError("Imported problem planner unavailable.", 503),
+  ) === "imageUpload.guidanceUnavailable",
+  "503 unavailable mapped correctly",
+);
+assert(
+  mapImportedProblemError(
+    new MatPalApiError("Imported problem planner timed out.", 504),
+  ) === "imageUpload.guidanceTimeout",
+  "504 timeout mapped correctly",
+);
+assert(
+  mapImportedProblemError(new TypeError("Failed to fetch")) ===
+    "imageUpload.networkError",
+  "network failure mapped correctly",
+);
+assert(
+  mapImportedProblemError({ name: "AbortError" }) === null,
+  "imported abort is ignored",
+);
+
+const retryRequest = buildConfirmedProblemRequest(
+  confirmedEn,
+  "en",
+);
+assert(
+  retryRequest.transcription === confirmedEn.transcription,
+  "retry preserves confirmed transcription",
+);
+
+assert(
+  shouldApplyImportedStart(4, 4, confirmedEn, confirmedEn) ===
+    true,
+  "matching imported start applies",
+);
+assert(
+  shouldApplyImportedStart(5, 4, confirmedEn, confirmedEn) ===
+    false,
+  "stale imported start cannot launch tutor after reset",
+);
+assert(
+  shouldApplyImportedStart(4, 4, null, confirmedEn) === false,
+  "imported start after unconfirm/reset is ignored",
+);
+assert(
+  shouldApplyImportedStart(4, 4, confirmedBg, confirmedEn) ===
+    false,
+  "imported start for a replaced confirmation is ignored",
+);
+
+assert(
+  !JSON.stringify(buildConfirmedProblemRequest(confirmedEn, "en"))
+    .includes("mastery"),
+  "no mastery field in imported request",
+);
+
+const createdId = "imported_generated_abc123";
+const firstHandoff = importedHandoffPlan(null);
+assert(
+  firstHandoff.callFromConfirmed === true,
+  "imported creation is called when no pending problem_id exists",
+);
+assert(
+  firstHandoff.startProblemId === null,
+  "session start waits for created problem_id",
+);
+
+let pendingId = nextPendingImportedProblemId({
+  pendingProblemId: null,
+  createdProblemId: createdId,
+});
+assert(
+  pendingId === createdId,
+  "successful create retains pending imported problem_id",
+);
+
+const startFailure = mapImportedHandoffError(
+  new Error("MAT-PAL API request failed with 500"),
+  "start",
+);
+assert(
+  startFailure === "imageUpload.sessionStartFailed",
+  "session-start-specific error is shown, not a planning failure",
+);
+assert(
+  importedGuidanceErrorIsRetryable(startFailure) === true,
+  "session-start failure offers Try again",
+);
+assert(
+  translate("en", "imageUpload.sessionStartFailed").includes(
+    "tutoring session",
+  ),
+  "EN session-start copy exists",
+);
+assert(
+  translate("bg", "imageUpload.sessionStartFailed").includes(
+    "учебната сесия",
+  ),
+  "BG session-start copy exists",
+);
+
+const retryHandoff = importedHandoffPlan(pendingId);
+assert(
+  retryHandoff.callFromConfirmed === false,
+  "retry does NOT call /problems/from-confirmed again",
+);
+assert(
+  retryHandoff.startProblemId === createdId,
+  "retry uses existing imported problem_id",
+);
+
+pendingId = nextPendingImportedProblemId({
+  pendingProblemId: pendingId,
+  clear: true,
+});
+assert(
+  pendingId === null,
+  "Edit again clears pending problem_id",
+);
+assert(
+  importedHandoffPlan(pendingId).callFromConfirmed === true,
+  "after Edit again, create is required again",
+);
+
+pendingId = nextPendingImportedProblemId({
+  pendingProblemId: createdId,
+  clear: true,
+});
+assert(
+  pendingId === null,
+  "Analyze another clears pending problem_id",
+);
+
+pendingId = nextPendingImportedProblemId({
+  pendingProblemId: createdId,
+  createdProblemId: createdId,
+});
+pendingId = nextPendingImportedProblemId({
+  pendingProblemId: pendingId,
+  clear: true,
+});
+assert(
+  pendingId === null,
+  "changing confirmed content cannot reuse stale problem_id",
+);
+assert(
+  importedHandoffPlan(null).callFromConfirmed === true,
+  "new confirmed text must create a new imported problem",
+);
+
+assert(
+  mapImportedHandoffError(
+    new MatPalApiError("unsupported_problem_type", 422),
+    "create",
+  ) === "imageUpload.guidanceUnsupported",
+  "planning 422 unsupported mapping is unchanged",
+);
+assert(
+  mapImportedHandoffError(
+    new MatPalApiError("Imported solution plan could not be parsed.", 422),
+    "create",
+  ) === "imageUpload.guidanceFailed",
+  "planning 422 failure mapping is unchanged",
+);
+assert(
+  mapImportedHandoffError(
+    new MatPalApiError("Imported problem planner unavailable.", 503),
+    "create",
+  ) === "imageUpload.guidanceUnavailable",
+  "planning 503 mapping is unchanged",
+);
+assert(
+  mapImportedHandoffError(
+    new MatPalApiError("Imported problem planner timed out.", 504),
+    "create",
+  ) === "imageUpload.guidanceTimeout",
+  "planning 504 mapping is unchanged",
+);
+assert(
+  mapImportedHandoffError(
+    new TypeError("Failed to fetch"),
+    "create",
+  ) === "imageUpload.networkError",
+  "planning network mapping is unchanged",
+);
+
+assert(
+  catalogSessionStartProblemId(
+    "grade4_reverse_reasoning_001",
+    true,
+  ) === "grade4_reverse_reasoning_001",
+  "catalog session start still uses the selected catalog problem",
+);
+assert(
+  catalogSessionStartProblemId(
+    "grade4_reverse_reasoning_001",
+    false,
+  ) === null,
+  "catalog session start still requires a visible catalog problem",
+);
+assert(
+  catalogSessionStartProblemId("", true) === null,
+  "catalog session start does not fall back to an imported problem_id",
 );
 
 console.log("image_problem tests passed");

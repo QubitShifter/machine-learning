@@ -35,6 +35,10 @@ import {
   submitQuestion,
 } from "@/lib/api";
 import {
+  catalogSessionStartProblemId,
+  importedSessionStartRequest,
+} from "@/lib/imageProblem";
+import {
   HOME_HREF,
   LEARN_HREF,
   catalogSubjects,
@@ -275,8 +279,21 @@ export function HomePage() {
     }
   }
 
+  function applyStartedSession(nextSession: TutorSession) {
+    setSession(nextSession);
+    setCurrentPrompt(nextSession.feedback);
+    setAnswer("");
+    setLastGraded(null);
+    setElaborationLoading(false);
+  }
+
   function handleStart() {
-    if (!selection.problemId || !visibleProblem) {
+    const problemId = catalogSessionStartProblemId(
+      selection.problemId,
+      Boolean(visibleProblem),
+    );
+
+    if (!problemId) {
       setErrorMessage(
         t("path.chooseProblemFirst"),
       );
@@ -286,7 +303,7 @@ export function HomePage() {
     void runRequest(
       () =>
         startSession({
-          problem_id: selection.problemId,
+          problem_id: problemId,
           student_id: studentId,
           language: locale,
         }),
@@ -297,6 +314,39 @@ export function HomePage() {
         setElaborationLoading(false);
       },
     );
+  }
+
+  function handleRestart() {
+    if (!session) {
+      return;
+    }
+
+    void runRequest(
+      () =>
+        startSession({
+          problem_id: session.problem_id,
+          student_id: studentId,
+          language: locale,
+        }),
+      applyStartedSession,
+    );
+  }
+
+  async function handleImportedProblemReady(
+    problemId: string,
+    options?: { signal?: AbortSignal },
+  ) {
+    const nextSession = await startSession(
+      importedSessionStartRequest(
+        problemId,
+        studentId,
+        locale,
+      ),
+      options,
+    );
+    applyStartedSession(nextSession);
+    setAdaptiveMessage(null);
+    setErrorMessage(null);
   }
 
   function handleSubjectChange(value: string) {
@@ -844,7 +894,7 @@ export function HomePage() {
           onElaborate={handleElaborateExplanation}
           onPracticeNext={handlePracticeNext}
           onRequestHint={handleRequestHint}
-          onRestart={handleStart}
+          onRestart={handleRestart}
           onSubmitAnswer={handleSubmitAnswer}
           onSubmitQuestion={handleSubmitQuestion}
           onSubmitGuidedQuestion={handleSubmitGuidedQuestion}
@@ -890,7 +940,9 @@ export function HomePage() {
             )}
           </section>
 
-          <ImageProblemUpload />
+          <ImageProblemUpload
+            onStartImportedProblem={handleImportedProblemReady}
+          />
 
           <LearningPathSelector
             catalog={catalog}

@@ -1,6 +1,8 @@
 import type {
+  ConfirmedImageProblem,
   ExtractedProblem,
   ImageExtractionStatus,
+  ImportedProblemResponse,
 } from "@/types/imageProblem";
 import type {
   AdaptiveRecommendation,
@@ -17,6 +19,7 @@ import type {
 } from "@/types/tutor";
 import {
   buildImageExtractRequest,
+  buildImportedProblemRequest,
 } from "@/lib/imageProblem";
 import { MatPalApiError } from "@/lib/matPalApiError";
 
@@ -131,12 +134,14 @@ export function getStudentProgress(
 
 export function startSession(
   request: StartSessionRequest,
+  options?: { signal?: AbortSignal },
 ): Promise<TutorSession> {
   return requestJson<TutorSession>(
     "/sessions/start",
     {
       method: "POST",
       body: JSON.stringify(request),
+      signal: options?.signal,
     },
   );
 }
@@ -221,4 +226,35 @@ export async function extractProblemFromImage(
   }
 
   return response.json() as Promise<ExtractedProblem>;
+}
+
+export async function createImportedProblem(
+  confirmed: ConfirmedImageProblem,
+  uiLocale: string,
+  options?: { signal?: AbortSignal },
+): Promise<ImportedProblemResponse> {
+  const request = buildImportedProblemRequest(
+    confirmed,
+    uiLocale,
+    API_BASE_URL,
+  );
+
+  const response = await fetch(request.url, {
+    ...request.init,
+    signal: options?.signal,
+  });
+
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .catch(() => null);
+    const message =
+      typeof detail?.detail === "string"
+        ? detail.detail
+        : `MAT-PAL API request failed with ${response.status}`;
+
+    throw new MatPalApiError(message, response.status);
+  }
+
+  return response.json() as Promise<ImportedProblemResponse>;
 }

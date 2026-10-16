@@ -48,3 +48,18 @@ export interface ConfirmedImageProblem {
   topicHint: string | null;
   problemTypeHint: string | null;
 }
+
+export interface ConfirmedProblemRequest {
+  transcription: string;
+  language: ExtractionLanguage;
+  latex_expressions: string[];
+  topic_hint: string | null;
+  problem_type_hint: string | null;
+}
+
+export interface ImportedProblemResponse {
+  problem_id: string;
+  topic: string;
+  language: string;
+  title: string;
+}

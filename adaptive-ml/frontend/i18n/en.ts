@@ -296,8 +296,18 @@ export const en = {
   "imageUpload.looksCorrect": "Looks correct",
   "imageUpload.editAgain": "Edit again",
   "imageUpload.confirmed": "Problem confirmed.",
-  "imageUpload.confirmedNextStep":
-    "Starting guided solving will be added in the next step.",
+  "imageUpload.solveWithGuidance": "Solve with guidance",
+  "imageUpload.preparingGuidance": "Preparing guided solving...",
+  "imageUpload.guidanceUnsupported":
+    "This problem can be read, but guided solving for this type is not supported yet.",
+  "imageUpload.guidanceUnavailable":
+    "Guided solving is temporarily unavailable.",
+  "imageUpload.guidanceTimeout":
+    "Preparing this problem took too long. Please try again.",
+  "imageUpload.guidanceFailed":
+    "MAT-PAL could not prepare a reliable guided solution for this problem.",
+  "imageUpload.sessionStartFailed":
+    "The problem was prepared, but MAT-PAL could not start the tutoring session. Please try again.",
   "imageUpload.another": "Analyze another image",
   "imageUpload.tryAgain": "Try again",
   "imageUpload.tooLarge":

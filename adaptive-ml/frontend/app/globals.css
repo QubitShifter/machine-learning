@@ -1488,6 +1488,7 @@ a.secondary-button:hover {
 .image-problem-upload-supported,
 .image-problem-upload-status {
   margin: 0.75rem 0 0;
+  overflow-wrap: anywhere;
 }
 
 .image-problem-upload-actions {
@@ -1662,6 +1663,10 @@ a.secondary-button:hover {
   gap: 0.75rem;
   justify-items: start;
   margin-top: 0.75rem;
+}
+
+.image-problem-upload-error-row .error-message {
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 640px) {

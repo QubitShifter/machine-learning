@@ -1,7 +1,9 @@
 import type {
   ConfirmedImageProblem,
+  ConfirmedProblemRequest,
   ExtractedDiagramFact,
   ExtractedProblem,
+  ImportedProblemResponse,
 } from "@/types/imageProblem";
 import { MatPalApiError } from "./matPalApiError.ts";
 
@@ -309,4 +311,207 @@ export function isAbortError(error: unknown): boolean {
     "name" in error &&
     (error as { name?: string }).name === "AbortError"
   );
+}
+
+export function resolveImportedLanguage(
+  confirmedLanguage: ConfirmedImageProblem["language"],
+  uiLocale: string,
+): ConfirmedProblemRequest["language"] {
+  if (
+    confirmedLanguage === "unknown" &&
+    (uiLocale === "en" || uiLocale === "bg")
+  ) {
+    return uiLocale;
+  }
+
+  return confirmedLanguage;
+}
+
+export function buildConfirmedProblemRequest(
+  confirmed: ConfirmedImageProblem,
+  uiLocale: string,
+): ConfirmedProblemRequest {
+  return {
+    transcription: confirmed.transcription,
+    language: resolveImportedLanguage(
+      confirmed.language,
+      uiLocale,
+    ),
+    latex_expressions: confirmed.latexExpressions,
+    topic_hint: confirmed.topicHint,
+    problem_type_hint: confirmed.problemTypeHint,
+  };
+}
+
+export function importedProblemPath(): string {
+  return "/problems/from-confirmed";
+}
+
+export function buildImportedProblemRequest(
+  confirmed: ConfirmedImageProblem,
+  uiLocale: string,
+  apiBaseUrl = "http://localhost:8000",
+): { url: string; init: RequestInit } {
+  return {
+    url: `${apiBaseUrl}${importedProblemPath()}`,
+    init: {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        buildConfirmedProblemRequest(confirmed, uiLocale),
+      ),
+    },
+  };
+}
+
+export function importedSessionStartRequest(
+  problemId: string,
+  studentId: string,
+  language: "en" | "bg",
+) {
+  return {
+    problem_id: problemId,
+    student_id: studentId,
+    language,
+  };
+}
+
+export function canStartGuidedSolve(
+  confirmed: ConfirmedImageProblem | null,
+  starting: boolean,
+  errorKey: string | null = null,
+): boolean {
+  return (
+    confirmed !== null &&
+    !starting &&
+    errorKey !== "imageUpload.guidanceUnsupported"
+  );
+}
+
+export function importedGuidanceErrorIsRetryable(
+  errorKey: string | null,
+): boolean {
+  return (
+    errorKey === "imageUpload.guidanceUnavailable" ||
+    errorKey === "imageUpload.guidanceTimeout" ||
+    errorKey === "imageUpload.networkError" ||
+    errorKey === "imageUpload.sessionStartFailed"
+  );
+}
+
+export type ImportedHandoffPhase = "create" | "start";
+
+export function importedHandoffPlan(
+  pendingProblemId: string | null,
+): {
+  callFromConfirmed: boolean;
+  startProblemId: string | null;
+} {
+  if (pendingProblemId) {
+    return {
+      callFromConfirmed: false,
+      startProblemId: pendingProblemId,
+    };
+  }
+
+  return {
+    callFromConfirmed: true,
+    startProblemId: null,
+  };
+}
+
+export function nextPendingImportedProblemId(input: {
+  pendingProblemId: string | null;
+  createdProblemId?: string | null;
+  clear?: boolean;
+}): string | null {
+  if (input.clear) {
+    return null;
+  }
+
+  if (input.createdProblemId) {
+    return input.createdProblemId;
+  }
+
+  return input.pendingProblemId;
+}
+
+export function catalogSessionStartProblemId(
+  selectionProblemId: string,
+  hasVisibleProblem: boolean,
+): string | null {
+  if (!selectionProblemId || !hasVisibleProblem) {
+    return null;
+  }
+
+  return selectionProblemId;
+}
+
+export function mapImportedHandoffError(
+  error: unknown,
+  phase: ImportedHandoffPhase,
+): string | null {
+  if (phase === "start") {
+    if (isAbortError(error)) {
+      return null;
+    }
+    if (error instanceof TypeError) {
+      return "imageUpload.networkError";
+    }
+    return "imageUpload.sessionStartFailed";
+  }
+
+  return mapImportedProblemError(error);
+}
+
+export function shouldApplyImportedStart(
+  currentRequestId: number,
+  responseRequestId: number,
+  confirmed: ConfirmedImageProblem | null,
+  startedForConfirmed: ConfirmedImageProblem | null,
+): boolean {
+  return (
+    currentRequestId === responseRequestId &&
+    confirmed !== null &&
+    confirmed === startedForConfirmed
+  );
+}
+
+export function mapImportedProblemError(
+  error: unknown,
+): string | null {
+  if (isAbortError(error)) {
+    return null;
+  }
+
+  if (error instanceof MatPalApiError) {
+    if (error.status === 422) {
+      if (
+        error.message.toLowerCase().includes("unsupported")
+      ) {
+        return "imageUpload.guidanceUnsupported";
+      }
+      return "imageUpload.guidanceFailed";
+    }
+    if (error.status === 503) {
+      return "imageUpload.guidanceUnavailable";
+    }
+    if (error.status === 504) {
+      return "imageUpload.guidanceTimeout";
+    }
+  }
+
+  if (error instanceof TypeError) {
+    return "imageUpload.networkError";
+  }
+
+  return "imageUpload.guidanceFailed";
+}
+
+export function readImportedProblemId(
+  response: ImportedProblemResponse,
+): string {
+  return response.problem_id;
 }
