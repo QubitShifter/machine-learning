@@ -1,4 +1,8 @@
 import type {
+  ExtractedProblem,
+  ImageExtractionStatus,
+} from "@/types/imageProblem";
+import type {
   AdaptiveRecommendation,
   AdaptiveRecommendationRequest,
   AnswerRequest,
@@ -11,6 +15,12 @@ import type {
   StudentProgress,
   TutorSession,
 } from "@/types/tutor";
+import {
+  buildImageExtractRequest,
+} from "@/lib/imageProblem";
+import { MatPalApiError } from "@/lib/matPalApiError";
+
+export { MatPalApiError };
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_MAT_PAL_API_URL ??
@@ -174,4 +184,41 @@ export function requestHint(
       method: "POST",
     },
   );
+}
+
+export function getImageExtractionStatus(): Promise<ImageExtractionStatus> {
+  return requestJson<ImageExtractionStatus>(
+    "/problems/from-image/status",
+  );
+}
+
+export async function extractProblemFromImage(
+  file: File,
+  localeHint?: string,
+  options?: { signal?: AbortSignal },
+): Promise<ExtractedProblem> {
+  const request = buildImageExtractRequest(
+    file,
+    localeHint,
+    API_BASE_URL,
+  );
+
+  const response = await fetch(request.url, {
+    ...request.init,
+    signal: options?.signal,
+  });
+
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .catch(() => null);
+    const message =
+      typeof detail?.detail === "string"
+        ? detail.detail
+        : `MAT-PAL API request failed with ${response.status}`;
+
+    throw new MatPalApiError(message, response.status);
+  }
+
+  return response.json() as Promise<ExtractedProblem>;
 }

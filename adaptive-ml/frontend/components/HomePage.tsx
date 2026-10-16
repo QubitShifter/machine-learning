@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useStudentProfile } from "@/components/StudentProfileProvider";
 
 import { HomeHero } from "@/components/HomeHero";
+import { ImageProblemUpload } from "@/components/ImageProblemUpload";
 import { LearningPathSelector } from "@/components/LearningPathSelector";
 import { useLanguage } from "@/components/LanguageProvider";
 import { ProgressDashboard } from "@/components/ProgressDashboard";
@@ -888,6 +889,8 @@ export function HomePage() {
               <p>{t("home.loadingCatalog")}</p>
             )}
           </section>
+
+          <ImageProblemUpload />
 
           <LearningPathSelector
             catalog={catalog}

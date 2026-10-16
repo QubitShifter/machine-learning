@@ -279,4 +279,74 @@ export const bg = {
   "error.generate": "Новата задача не можа да се генерира.",
   "error.generic":
     "Възникна проблем при връзката с MAT-PAL.",
+
+  "imageUpload.title": "Качи задача по математика",
+  "imageUpload.description":
+    "Направи ясна снимка или избери сканирана задача във формат JPG/PNG и MAT-PAL ще я разчете.",
+  "imageUpload.choose": "Избери изображение",
+  "imageUpload.supported": "Поддържани формати: JPG, PNG · до 5 МБ",
+  "imageUpload.replace": "Смени изображението",
+  "imageUpload.remove": "Премахни изображението",
+  "imageUpload.analyze": "Разчети задачата",
+  "imageUpload.analyzing": "Разчитам задачата...",
+  "imageUpload.previewAlt":
+    "Преглед на избраната математическа задача",
+  "imageUpload.unavailable":
+    "Разпознаването на изображения в момента не е налично. Можеш да продължиш с обичайните учебни пътеки по-долу.",
+  "imageUpload.readAs": "Разчетох задачата така:",
+  "imageUpload.detectedLanguage": "Разпознат език",
+  "imageUpload.detectedFormulas": "Разпознати формули",
+  "imageUpload.diagramDetected": "Открита е схема",
+  "imageUpload.ambiguities": "Моля, провери тази част:",
+  "imageUpload.checkThis": "Моля, провери тази част:",
+  "imageUpload.possibleValues": "Възможни стойности:",
+  "imageUpload.warnings": "Моля, прегледай",
+  "imageUpload.looksCorrect": "Изглежда правилно",
+  "imageUpload.editAgain": "Редактирай отново",
+  "imageUpload.confirmed": "Задачата е потвърдена.",
+  "imageUpload.confirmedNextStep":
+    "Насоченото решаване ще бъде свързано в следващата стъпка.",
+  "imageUpload.another": "Разчети друго изображение",
+  "imageUpload.tryAgain": "Опитай отново",
+  "imageUpload.tooLarge":
+    "Изображението е по-голямо от 5 МБ. Избери по-малък JPG или PNG файл.",
+  "imageUpload.unsupportedType":
+    "Моля, избери изображение във формат JPG или PNG.",
+  "imageUpload.empty": "Избраният файл е празен.",
+  "imageUpload.invalidImage":
+    "Файлът не може да се прочете като валиден JPG или PNG.",
+  "imageUpload.unreadable":
+    "Не успях да разчета задачата достатъчно ясно.",
+  "imageUpload.couldNotRead":
+    "Не успях да разчета цяла задача от това изображение.",
+  "imageUpload.cropped":
+    "Част от задачата може да е отрязана. Моля, провери текста.",
+  "imageUpload.multipleProblems":
+    "Изображението изглежда съдържа повече от една задача. Качи изрязано изображение само с една задача.",
+  "imageUpload.handwritingHeavy":
+    "Ръкописът е труден за четене. Моля, провери разчетения текст.",
+  "imageUpload.noProblem":
+    "В изображението не беше открита цяла математическа задача.",
+  "imageUpload.lowContrast":
+    "Контрастът на изображението е слаб. Моля, провери разчетения текст.",
+  "imageUpload.genericWarning":
+    "Моля, провери разчетения текст преди да продължиш.",
+  "imageUpload.timeout":
+    "Разпознаването на изображението отне твърде дълго. Опитай отново.",
+  "imageUpload.parseError":
+    "Изображението не можа да бъде разчетено като структурирана задача.",
+  "imageUpload.networkError":
+    "Няма връзка със сървъра на MAT-PAL.",
+  "imageUpload.genericError":
+    "Възникна проблем при разчитането на изображението.",
+  "imageUpload.confidence": "Сигурност на разпознаването",
+  "imageUpload.confidenceLow":
+    "Сигурност на разпознаването: ниска. Моля, провери текста.",
+  "imageUpload.confidenceMedium":
+    "Сигурност на разпознаването: средна",
+  "imageUpload.confidenceHigh":
+    "Сигурност на разпознаването: висока",
+  "imageUpload.language.en": "английски",
+  "imageUpload.language.bg": "български",
+  "imageUpload.language.unknown": "неразпознат",
 } as const;

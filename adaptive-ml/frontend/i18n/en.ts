@@ -272,4 +272,73 @@ export const en = {
   "error.generate": "Could not generate a new problem.",
   "error.generic":
     "Something went wrong while contacting MAT-PAL.",
+
+  "imageUpload.title": "Upload a math problem",
+  "imageUpload.description":
+    "Take a clear photo or choose a scanned JPG/PNG problem and MAT-PAL will read it for you.",
+  "imageUpload.choose": "Choose image",
+  "imageUpload.supported": "Supported: JPG, PNG · Max 5 MB",
+  "imageUpload.replace": "Replace image",
+  "imageUpload.remove": "Remove image",
+  "imageUpload.analyze": "Analyze image",
+  "imageUpload.analyzing": "Reading the problem...",
+  "imageUpload.previewAlt": "Selected math problem preview",
+  "imageUpload.unavailable":
+    "Image recognition is currently unavailable. You can still use the normal learning paths below.",
+  "imageUpload.readAs": "I read the problem as:",
+  "imageUpload.detectedLanguage": "Detected language",
+  "imageUpload.detectedFormulas": "Detected formulas",
+  "imageUpload.diagramDetected": "Diagram detected",
+  "imageUpload.ambiguities": "Please check this part:",
+  "imageUpload.checkThis": "Please check this part:",
+  "imageUpload.possibleValues": "Possible values:",
+  "imageUpload.warnings": "Please review",
+  "imageUpload.looksCorrect": "Looks correct",
+  "imageUpload.editAgain": "Edit again",
+  "imageUpload.confirmed": "Problem confirmed.",
+  "imageUpload.confirmedNextStep":
+    "Starting guided solving will be added in the next step.",
+  "imageUpload.another": "Analyze another image",
+  "imageUpload.tryAgain": "Try again",
+  "imageUpload.tooLarge":
+    "This image is larger than 5 MB. Please choose a smaller JPG or PNG.",
+  "imageUpload.unsupportedType":
+    "Please choose a JPG or PNG image.",
+  "imageUpload.empty": "The selected file is empty.",
+  "imageUpload.invalidImage":
+    "This file could not be read as a valid JPG or PNG image.",
+  "imageUpload.unreadable":
+    "We could not read the problem clearly enough.",
+  "imageUpload.couldNotRead":
+    "We couldn't read a complete problem from this image.",
+  "imageUpload.cropped":
+    "Part of the problem may be cropped. Please check the text.",
+  "imageUpload.multipleProblems":
+    "This image appears to contain more than one problem. Please crop or upload an image containing one problem.",
+  "imageUpload.handwritingHeavy":
+    "The handwriting is hard to read. Please check the transcription.",
+  "imageUpload.noProblem":
+    "No complete math problem was found in this image.",
+  "imageUpload.lowContrast":
+    "The image contrast is low. Please check the transcription.",
+  "imageUpload.genericWarning":
+    "Please check the transcription before continuing.",
+  "imageUpload.timeout":
+    "Image recognition timed out. Please try again.",
+  "imageUpload.parseError":
+    "The image could not be interpreted as a structured problem.",
+  "imageUpload.networkError":
+    "Could not connect to the MAT-PAL backend.",
+  "imageUpload.genericError":
+    "Something went wrong while reading the image.",
+  "imageUpload.confidence": "Recognition confidence",
+  "imageUpload.confidenceLow":
+    "Recognition confidence: Low. Please check the transcription.",
+  "imageUpload.confidenceMedium":
+    "Recognition confidence: Medium",
+  "imageUpload.confidenceHigh":
+    "Recognition confidence: High",
+  "imageUpload.language.en": "English",
+  "imageUpload.language.bg": "Bulgarian",
+  "imageUpload.language.unknown": "Unknown",
 } as const;
