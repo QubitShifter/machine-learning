@@ -263,3 +263,30 @@ class ExtractedProblem(BaseModel):
 class ImageExtractionStatusResponse(BaseModel):
     available: bool
     reason: str | None = None
+
+
+class ConfirmedProblemRequest(BaseModel):
+    transcription: str = Field(
+        min_length=1,
+        max_length=10000,
+    )
+    language: Literal["en", "bg", "unknown"]
+    latex_expressions: list[str] = Field(
+        default_factory=list,
+        max_length=20,
+    )
+    topic_hint: str | None = Field(
+        default=None,
+        max_length=200,
+    )
+    problem_type_hint: str | None = Field(
+        default=None,
+        max_length=200,
+    )
+
+
+class ImportedProblemResponse(BaseModel):
+    problem_id: str
+    topic: str
+    language: str
+    title: str

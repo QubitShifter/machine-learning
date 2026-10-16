@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from src.api.mat_pal import catalog
 from src.api.mat_pal import adaptive_service
 from src.api.mat_pal import image_extraction
+from src.api.mat_pal import imported_problem
 from src.api.mat_pal import session_store
 from src.core.question_engine.guided_questions import (
     GuidedQuestionError,
@@ -15,9 +16,11 @@ from src.api.mat_pal.schemas import (
     AdaptiveRecommendationResponse,
     AnswerRequest,
     CatalogResponse,
+    ConfirmedProblemRequest,
     ExtractedProblem,
     GenerateProblemRequest,
     ImageExtractionStatusResponse,
+    ImportedProblemResponse,
     ProblemDetail,
     ProblemSummary,
     QuestionRequest,
@@ -170,6 +173,18 @@ async def extract_problem_from_image(
     return await image_extraction.extract_from_upload(
         upload=file,
         locale_hint=locale_hint,
+    )
+
+
+@app.post(
+    "/problems/from-confirmed",
+    response_model=ImportedProblemResponse,
+)
+def create_problem_from_confirmed(
+    request: ConfirmedProblemRequest,
+) -> ImportedProblemResponse:
+    return imported_problem.create_problem_from_confirmed(
+        request
     )
 
 

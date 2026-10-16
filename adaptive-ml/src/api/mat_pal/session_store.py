@@ -784,6 +784,11 @@ def _update_mastery_if_completed(
     ):
         return
 
+    metadata = stored_session.registration.metadata or {}
+    if metadata.get("imported"):
+        stored_session.mastery_updated = True
+        return
+
     summary = _build_performance_summary(
         stored_session,
         tutor_response,
