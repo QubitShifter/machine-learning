@@ -12,6 +12,22 @@ class VisionExtractorError(RuntimeError):
     pass
 
 
+class VisionProviderUnavailableError(VisionExtractorError):
+    pass
+
+
+class VisionProviderTimeoutError(VisionExtractorError):
+    pass
+
+
+class VisionProviderRequestError(VisionExtractorError):
+    pass
+
+
+class VisionResponseParseError(VisionExtractorError):
+    pass
+
+
 class NullVisionExtractor:
     def is_available(self) -> bool:
         return False
@@ -187,7 +203,13 @@ def get_vision_extractor() -> VisionExtractor:
     global _vision_extractor
 
     if _vision_extractor is None:
-        _vision_extractor = NullVisionExtractor()
+        from src.core.vision.config import (
+            build_vision_extractor_from_env,
+        )
+
+        _vision_extractor = (
+            build_vision_extractor_from_env()
+        )
 
     return _vision_extractor
 

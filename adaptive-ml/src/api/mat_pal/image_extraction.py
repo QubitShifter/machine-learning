@@ -15,6 +15,8 @@ from src.core.vision.contracts import (
 )
 from src.core.vision.extractor import (
     VisionExtractorError,
+    VisionProviderTimeoutError,
+    VisionResponseParseError,
     get_vision_extractor,
 )
 
@@ -40,6 +42,10 @@ DETAIL_MIME_MAGIC_MISMATCH = (
 DETAIL_TOO_LARGE = "Upload exceeds the 5 MiB limit."
 DETAIL_EMPTY = "Empty upload."
 DETAIL_UNAVAILABLE = "Vision provider unavailable."
+DETAIL_TIMEOUT = "Vision provider timed out."
+DETAIL_PARSE = (
+    "Vision extraction could not be parsed."
+)
 DETAIL_INVALID_RESULT = (
     "Vision extractor returned an invalid result."
 )
@@ -84,6 +90,16 @@ async def extract_from_upload(
             mime_type=mime_type,
             byte_size=len(image_bytes),
         )
+    except VisionProviderTimeoutError as error:
+        raise HTTPException(
+            status_code=504,
+            detail=DETAIL_TIMEOUT,
+        ) from error
+    except VisionResponseParseError as error:
+        raise HTTPException(
+            status_code=422,
+            detail=DETAIL_PARSE,
+        ) from error
     except VisionExtractorError as error:
         raise HTTPException(
             status_code=503,
