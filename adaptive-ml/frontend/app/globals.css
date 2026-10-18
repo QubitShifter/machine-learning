@@ -858,6 +858,7 @@ a.login-local-link {
 .problem-context-card,
 .adaptive-message,
 .prompt-card,
+.solved-results-card,
 .comparison-card,
 .completion-card,
 .feedback-panel {
@@ -865,6 +866,10 @@ a.login-local-link {
   border: 1px solid var(--border);
   border-radius: 1.25rem;
   padding: 1.25rem;
+}
+
+.completion-card + .feedback-panel {
+  margin-top: 1rem;
 }
 
 .problem-context-card {
@@ -918,6 +923,60 @@ a.login-local-link {
   font-size: clamp(1.2rem, 2.8vw, 1.45rem);
   font-weight: 500;
   line-height: 1.45;
+}
+
+.solved-results-card,
+.final-answer-block,
+.step-result {
+  margin-top: 0.85rem;
+}
+
+.solved-results-card {
+  margin-bottom: 1rem;
+}
+
+.completion-solved-results {
+  margin-top: 0.85rem;
+}
+
+.solved-results-list {
+  color: var(--text);
+  font-size: clamp(1.05rem, 2.4vw, 1.25rem);
+  font-weight: 500;
+  line-height: 1.45;
+  margin: 0;
+  padding-left: 1.4rem;
+}
+
+.solved-results-list li {
+  margin: 0 0 0.45rem;
+}
+
+.solved-results-list li:last-child {
+  margin-bottom: 0;
+}
+
+.final-answer-block h2,
+.step-result {
+  color: var(--text);
+}
+
+.final-answer-block h2 {
+  font-size: 1rem;
+  margin: 0 0 0.35rem;
+}
+
+.final-answer-block + button {
+  margin-top: 1rem;
+}
+
+.step-result .math-content,
+.final-answer-block .math-content,
+.solved-results-card .math-content,
+.completion-solved-results .math-content {
+  color: var(--text);
+  font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+  font-weight: 600;
 }
 
 .math-inline {

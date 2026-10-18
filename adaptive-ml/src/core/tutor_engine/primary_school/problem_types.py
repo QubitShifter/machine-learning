@@ -66,6 +66,7 @@ class SolutionStep:
 
     input_type: str | None = None
     answer_format: str | None = None
+    result_latex: str | None = None
 
     metadata: dict[str, Any] = field(
         default_factory=dict

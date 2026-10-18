@@ -28,6 +28,7 @@ _PRIVATE_METADATA_KEYS = frozenset(
         "expected_answer",
         "step_specs",
         "final_answer",
+        "result_latex",
         "slots",
         "quantities",
         "relations",

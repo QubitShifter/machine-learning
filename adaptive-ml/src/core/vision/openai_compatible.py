@@ -11,6 +11,10 @@ from src.core.vision.extractor import (
     VisionProviderUnavailableError,
     VisionResponseParseError,
 )
+from src.core.openai_compatible_sampling import (
+    completion_token_parameter,
+    supports_custom_temperature,
+)
 from src.core.vision.parse import parse_extracted_problem
 from src.core.vision.prompt import (
     SYSTEM_EXTRACTION_PROMPT,
@@ -190,10 +194,9 @@ def build_vision_request_payload(
         image_bytes,
         mime_type,
     )
-    return {
+    payload = {
         "model": model,
-        "temperature": VISION_TEMPERATURE,
-        "max_tokens": MAX_OUTPUT_TOKENS,
+        completion_token_parameter(model): MAX_OUTPUT_TOKENS,
         "messages": [
             {
                 "role": "system",
@@ -216,6 +219,9 @@ def build_vision_request_payload(
             },
         ],
     }
+    if supports_custom_temperature(model):
+        payload["temperature"] = VISION_TEMPERATURE
+    return payload
 
 
 def encode_image_data_url(

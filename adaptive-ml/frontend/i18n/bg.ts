@@ -222,6 +222,8 @@ export const bg = {
   "tutor.completeEyebrow": "Сесията е завършена",
   "tutor.completeTitle":
     "Отлична работа. Приключихте тази задача.",
+  "tutor.finalAnswer": "Краен отговор",
+  "tutor.solvedSteps": "Решени стъпки",
   "tutor.currentStep": "Текуща стъпка",
   "tutor.guidedHeading": "Не знаеш откъде да започнеш?",
   "tutor.explainDifferently": "Обясни по друг начин",

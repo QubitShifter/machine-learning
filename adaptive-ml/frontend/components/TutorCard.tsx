@@ -23,6 +23,7 @@ import {
   hintButtonDisabled,
   hintButtonLabelKey,
 } from "@/components/hintControls";
+import { presentSolvedStepDisplay } from "@/lib/solvedResults";
 import type { TutorSession } from "@/types/tutor";
 
 interface TutorCardProps {
@@ -161,6 +162,11 @@ export function TutorCard({
       question: t("tutor.comparisonQuestion"),
     },
   );
+  const solvedDisplay = presentSolvedStepDisplay({
+    status: session.status,
+    completed: session.completed,
+    metadata: session.metadata,
+  });
 
   function handleQuestionSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -237,6 +243,32 @@ export function TutorCard({
           <p className="eyebrow">{t("tutor.completeEyebrow")}</p>
           <h1>{t("tutor.completeTitle")}</h1>
           <MathContent text={session.feedback} />
+          {solvedDisplay.showSolutionSummary ? (
+            <div className="completion-solved-results">
+              <p className="eyebrow">
+                {t("tutor.solvedSteps")}
+              </p>
+              <ol className="solved-results-list">
+                {solvedDisplay.history.map((item) => (
+                  <li key={item.stepNumber}>
+                    <MathContent
+                      forceMath
+                      text={item.resultLatex}
+                    />
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+          {solvedDisplay.finalResultLatex ? (
+            <div className="final-answer-block">
+              <h2>{t("tutor.finalAnswer")}</h2>
+              <MathContent
+                forceMath
+                text={solvedDisplay.finalResultLatex}
+              />
+            </div>
+          ) : null}
           <button
             disabled={loading}
             onClick={onRestart}
@@ -256,6 +288,24 @@ export function TutorCard({
         </section>
       ) : (
         <>
+          {solvedDisplay.showHistoryBeforeCurrentStep ? (
+            <section className="solved-results-card">
+              <p className="eyebrow">
+                {t("tutor.solvedSteps")}
+              </p>
+              <ol className="solved-results-list">
+                {solvedDisplay.history.map((item) => (
+                  <li key={item.stepNumber}>
+                    <MathContent
+                      forceMath
+                      text={item.resultLatex}
+                    />
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
+
           <section className="prompt-card">
             <p className="eyebrow">
               {t("tutor.currentStep")}

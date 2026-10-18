@@ -25,6 +25,7 @@ class PlannedStep:
     instruction: str
     expected_answer: int
     hints: tuple[str, ...]
+    result_latex: str | None = None
 
 
 @dataclass(frozen=True)

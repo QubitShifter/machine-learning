@@ -215,6 +215,8 @@ export const en = {
   "tutor.completeEyebrow": "Session complete",
   "tutor.completeTitle":
     "Great work. You finished this problem.",
+  "tutor.finalAnswer": "Final answer",
+  "tutor.solvedSteps": "Solved steps",
   "tutor.currentStep": "Current step",
   "tutor.guidedHeading": "Not sure where to start?",
   "tutor.explainDifferently": "Explain differently",

@@ -34,6 +34,7 @@ from src.core.vision.config import (
 from src.core.vision.openai_compatible import (
     MAX_OUTPUT_TOKENS,
     VISION_TEMPERATURE,
+    build_vision_request_payload,
 )
 from src.core.vision.prompt import (
     REPAIR_EXTRACTION_PROMPT,
@@ -594,6 +595,9 @@ def assert_request_shape():
         VISION_TEMPERATURE
     )
     assert payload["max_tokens"] == MAX_OUTPUT_TOKENS
+    assert "max_completion_tokens" not in payload
+    assert "top_p" not in payload
+    assert "reasoning" not in payload
     assert transport.requests[0]["timeout"] == 45
     messages = payload["messages"]
     assert messages[0]["role"] == "system"
@@ -624,6 +628,41 @@ def assert_request_shape():
     assert "Do not solve" in user_text
     assert "x = 4" not in user_text
     assert "final_answer" not in user_text
+
+
+def assert_gpt6_astra_request_compatibility():
+    for model in (
+        "gpt-6-astra",
+        "GPT-6-Astra",
+        "gpt-6-astra-preview",
+        "openai/gpt-6-astra",
+    ):
+        payload = build_vision_request_payload(
+            model=model,
+            image_bytes=PNG_BYTES,
+            mime_type="image/png",
+            locale_hint="en",
+            repair=False,
+        )
+        assert "temperature" not in payload
+        assert "max_tokens" not in payload
+        assert payload["max_completion_tokens"] == (
+            MAX_OUTPUT_TOKENS
+        )
+        assert payload["model"] == model
+        user = payload["messages"][1]["content"]
+        assert user[1]["type"] == "image_url"
+
+    compatible = build_vision_request_payload(
+        model="gpt-4o-mini",
+        image_bytes=PNG_BYTES,
+        mime_type="image/png",
+        locale_hint="en",
+        repair=False,
+    )
+    assert compatible["temperature"] == VISION_TEMPERATURE
+    assert compatible["max_tokens"] == MAX_OUTPUT_TOKENS
+    assert "max_completion_tokens" not in compatible
 
 
 def assert_urlopen_path_uses_chat_completions():
@@ -877,6 +916,7 @@ def main():
             assert_no_real_network_call()
             assert_prompt_contains_contract_markers()
             assert_request_shape()
+            assert_gpt6_astra_request_compatibility()
             assert_status_does_not_probe_network()
             assert_api_maps_timeout_and_parse()
             assert_logs_do_not_leak_secrets()

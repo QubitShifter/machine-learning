@@ -31,9 +31,15 @@ STEP_KEYS = frozenset(
         "hints",
     }
 )
+OPTIONAL_STEP_KEYS = frozenset(
+    {
+        "result_latex",
+    }
+)
 MAX_STEPS = 8
 MAX_TITLE_CHARS = 120
 MAX_TEXT_CHARS = 800
+MAX_RESULT_LATEX_CHARS = 160
 MAX_ANSWER_ABS = 10_000_000
 
 
@@ -134,7 +140,7 @@ def parse_steps(value: object) -> list[PlannedStep]:
     for item in value:
         if not isinstance(item, dict):
             raise ImportedPlanParseError("Invalid steps.")
-        extra = set(item) - STEP_KEYS
+        extra = set(item) - STEP_KEYS - OPTIONAL_STEP_KEYS
         missing = STEP_KEYS - set(item)
         if extra or missing:
             raise ImportedPlanParseError(
@@ -153,9 +159,25 @@ def parse_steps(value: object) -> list[PlannedStep]:
                     item["expected_answer"]
                 ),
                 hints=tuple(hints),
+                result_latex=parse_result_latex(
+                    item.get("result_latex")
+                ),
             )
         )
     return steps
+
+
+def parse_result_latex(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or isinstance(value, bool):
+        raise ImportedPlanParseError("Invalid result_latex.")
+    text = " ".join(value.split())
+    if not text:
+        return None
+    if len(text) > MAX_RESULT_LATEX_CHARS:
+        raise ImportedPlanParseError("Invalid result_latex.")
+    return text
 
 
 def parse_hints(value: object) -> list[str]:

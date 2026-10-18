@@ -19,6 +19,10 @@ from src.core.imported_problem.prompt import (
     repair_plan_task,
     user_plan_task,
 )
+from src.core.openai_compatible_sampling import (
+    completion_token_parameter,
+    supports_custom_temperature,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -165,10 +169,9 @@ def build_plan_request_payload(
             confirmed.latex_expressions,
         )
     )
-    return {
+    payload = {
         "model": model,
-        "temperature": PLANNER_TEMPERATURE,
-        "max_tokens": MAX_OUTPUT_TOKENS,
+        completion_token_parameter(model): MAX_OUTPUT_TOKENS,
         "messages": [
             {
                 "role": "system",
@@ -180,6 +183,9 @@ def build_plan_request_payload(
             },
         ],
     }
+    if supports_custom_temperature(model):
+        payload["temperature"] = PLANNER_TEMPERATURE
+    return payload
 
 
 def read_message_content(body: object) -> str:

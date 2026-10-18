@@ -318,6 +318,85 @@ def assert_unknown_schema_and_extra_and_empty_steps():
     assert post_confirmed().status_code == 422
 
 
+def assert_result_latex_reveal_after_correct():
+    set_imported_planner(FakeImportedProblemPlanner())
+    created = post_confirmed(transcription="2x + 5 = 17")
+    assert created.status_code == 200, created.text
+    problem_id = created.json()["problem_id"]
+    stored = get_generated_problem(problem_id)
+    engine = stored.create_engine("en")
+    assert engine.problem.solution_steps[0].result_latex == (
+        "2x = 12"
+    )
+    assert engine.problem.solution_steps[1].result_latex == (
+        "x = 6"
+    )
+
+    start = client.post(
+        "/sessions/start",
+        json={
+            "problem_id": problem_id,
+            "student_id": "imported_result_student",
+            "language": "en",
+        },
+    )
+    assert start.status_code == 200, start.text
+    started = start.json()
+    session_id = started["session_id"]
+    started_text = json.dumps(started)
+    assert started["status"] == "waiting_for_answer"
+    assert "completed_result_latex" not in started["metadata"]
+    assert "final_result_latex" not in started["metadata"]
+    assert "solved_results" not in started["metadata"]
+    assert "result_latex" not in started["metadata"]
+    assert "2x = 12" not in started_text
+    assert "x = 6" not in started_text
+
+    wrong = client.post(
+        f"/sessions/{session_id}/answer",
+        json={"answer": "11", "input_type": "number"},
+    )
+    assert wrong.status_code == 200, wrong.text
+    wrong_payload = wrong.json()
+    assert wrong_payload["status"] == "incorrect"
+    wrong_text = json.dumps(wrong_payload)
+    assert "completed_result_latex" not in wrong_payload["metadata"]
+    assert "2x = 12" not in wrong_text
+    assert "x = 6" not in wrong_text
+
+    first = client.post(
+        f"/sessions/{session_id}/answer",
+        json={"answer": "12", "input_type": "number"},
+    )
+    assert first.status_code == 200, first.text
+    first_payload = first.json()
+    assert first_payload["status"] == "correct"
+    assert first_payload["metadata"]["completed_result_latex"] == (
+        "2x = 12"
+    )
+    assert first_payload["metadata"]["solved_results"] == [
+        {"step_number": 1, "result_latex": "2x = 12"},
+    ]
+    assert "final_result_latex" not in first_payload["metadata"]
+    assert "x = 6" not in json.dumps(first_payload)
+
+    second = client.post(
+        f"/sessions/{session_id}/answer",
+        json={"answer": "6", "input_type": "number"},
+    )
+    assert second.status_code == 200, second.text
+    completed = second.json()
+    assert completed["completed"] is True
+    assert completed["metadata"]["completed_result_latex"] == (
+        "x = 6"
+    )
+    assert completed["metadata"]["final_result_latex"] == "x = 6"
+    assert completed["metadata"]["solved_results"] == [
+        {"step_number": 1, "result_latex": "2x = 12"},
+        {"step_number": 2, "result_latex": "x = 6"},
+    ]
+
+
 def assert_session_answer_hint_question():
     set_imported_planner(FakeImportedProblemPlanner())
     set_question_engine(
@@ -437,6 +516,7 @@ def main():
         assert_malformed_after_retry()
         assert_repair_via_openai_planner()
         assert_unknown_schema_and_extra_and_empty_steps()
+        assert_result_latex_reveal_after_correct()
         assert_session_answer_hint_question()
         assert_imported_skips_mastery_generated_still_records()
         assert_adaptive_unchanged()

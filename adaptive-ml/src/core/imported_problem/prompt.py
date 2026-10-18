@@ -36,13 +36,21 @@ When supported is true:
 - statement is the confirmed problem text
 - final_answer is an integer
 - steps is a non-empty array of tutoring steps
-- each step has exact keys: instruction, expected_answer, hints
+- each step has exact keys: instruction, expected_answer, hints, result_latex
 - instruction is non-empty
 - expected_answer is an integer
 - hints is an array of short strings
+- result_latex is a concise mathematical state after that step
+- result_latex contains only the solved equation or result, not prose
+- examples of result_latex: "2x = 12", "x = 6", "24 - 5 = 19", "\\frac{12}{3} = 4"
+- do not put chain-of-thought, hidden reasoning, or a derivation in result_latex
 - the last expected_answer equals final_answer
 - do not reveal the final answer in the first instruction
 - at most 8 steps
+
+For unknown_numbers linear equations such as ax + b = c:
+- first isolate the variable term, then divide
+- example: 2x + 5 = 17 → result_latex "2x = 12", then "x = 6"
 
 When supported is false:
 - normalized_topic is "unsupported"

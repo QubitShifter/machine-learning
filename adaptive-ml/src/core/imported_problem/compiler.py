@@ -93,6 +93,7 @@ def compile_imported_problem(
             step_type=SolutionStepType.CALCULATION,
             input_type="number",
             answer_format=AnswerFormat.INTEGER.value,
+            result_latex=step.result_latex,
         )
         for index, step in enumerate(plan.steps, start=1)
     ]

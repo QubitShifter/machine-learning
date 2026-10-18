@@ -104,28 +104,32 @@ def unknown_number_plan(language: str) -> StructuredSolutionPlan:
     if language == "bg":
         steps = (
             PlannedStep(
-                "Кое число се прибавя към неизвестното?",
-                5,
-                ("Погледни събираемото до x.",),
-            ),
-            PlannedStep(
-                "Колко е неизвестното число?",
+                "Извади 5 от двете страни. Колко е стойността на 2x?",
                 12,
                 ("Извади 5 от 17.",),
+                "2x = 12",
+            ),
+            PlannedStep(
+                "Раздели двете страни на 2. Колко е x?",
+                6,
+                ("Раздели 12 на 2.",),
+                "x = 6",
             ),
         )
         title = "Неизвестно число"
     else:
         steps = (
             PlannedStep(
-                "What known number is added to the unknown?",
-                5,
-                ("Look at the number added to x.",),
-            ),
-            PlannedStep(
-                "What is the unknown number?",
+                "Subtract 5 from both sides. What is the value of 2x?",
                 12,
                 ("Subtract 5 from 17.",),
+                "2x = 12",
+            ),
+            PlannedStep(
+                "Divide both sides by 2. What is x?",
+                6,
+                ("Divide 12 by 2.",),
+                "x = 6",
             ),
         )
         title = "Unknown number"
@@ -134,7 +138,7 @@ def unknown_number_plan(language: str) -> StructuredSolutionPlan:
         normalized_topic="unknown_numbers",
         title=title,
         statement="2x + 5 = 17",
-        final_answer=12,
+        final_answer=6,
         steps=steps,
     )
 

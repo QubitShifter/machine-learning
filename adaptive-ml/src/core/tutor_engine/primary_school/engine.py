@@ -97,11 +97,14 @@ class PrimarySchoolTutorEngine:
                 ),
                 completed=True,
                 hint_available=False,
-                metadata={
-                    "final_answer": (
-                        self.problem.final_answer
-                    ),
-                },
+                metadata=_revealed_result_metadata(
+                    self.session,
+                    {
+                        "final_answer": (
+                            self.problem.final_answer
+                        ),
+                    },
+                ),
             )
 
         return TutorResponse(
@@ -114,12 +117,15 @@ class PrimarySchoolTutorEngine:
             completed=False,
             hint_available=self._hint_available(step),
             expected_input_type=_input_type_for_step(step),
-            metadata={
-                "skill_id": step.skill_id,
-                "step_type": (
-                    step.step_type.value
-                ),
-            },
+            metadata=_revealed_result_metadata(
+                self.session,
+                {
+                    "skill_id": step.skill_id,
+                    "step_type": (
+                        step.step_type.value
+                    ),
+                },
+            ),
         )
 
 
@@ -171,14 +177,18 @@ class PrimarySchoolTutorEngine:
                     ),
                     completed=True,
                     hint_available=False,
-                    metadata={
-                        "final_answer": (
-                            self.problem.final_answer
-                        ),
-                        "completed_step": (
-                            completed_step_number
-                        ),
-                    },
+                    metadata=_revealed_result_metadata(
+                        self.session,
+                        {
+                            "final_answer": (
+                                self.problem.final_answer
+                            ),
+                            "completed_step": (
+                                completed_step_number
+                            ),
+                        },
+                        completed_step=step,
+                    ),
                 )
 
             next_step = (
@@ -217,14 +227,18 @@ class PrimarySchoolTutorEngine:
                 expected_input_type=_input_type_for_step(
                     next_step
                 ),
-                metadata={
-                    "completed_step": (
-                        completed_step_number
-                    ),
-                    "next_prompt": (
-                        next_step.prompt
-                    ),
-                },
+                metadata=_revealed_result_metadata(
+                    self.session,
+                    {
+                        "completed_step": (
+                            completed_step_number
+                        ),
+                        "next_prompt": (
+                            next_step.prompt
+                        ),
+                    },
+                    completed_step=step,
+                ),
             )
 
         attempts = (
@@ -276,11 +290,14 @@ class PrimarySchoolTutorEngine:
             completed=False,
             hint_available=self._hint_available(step),
             expected_input_type=_input_type_for_step(step),
-            metadata={
-                "error_type": error_type,
-                "attempts_on_step": attempts,
-                **extra_metadata,
-            },
+            metadata=_revealed_result_metadata(
+                self.session,
+                {
+                    "error_type": error_type,
+                    "attempts_on_step": attempts,
+                    **extra_metadata,
+                },
+            ),
         )
 
 
@@ -323,14 +340,17 @@ class PrimarySchoolTutorEngine:
             completed=False,
             hint_available=not exhausted,
             expected_input_type=_input_type_for_step(step),
-            metadata={
-                "hints_used_on_step": (
-                    self.session.get_hints_for_current_step()
-                ),
-                "hint_level": level,
-                "hint_exhausted": exhausted,
-                "hint_counted": not progressive_exhausted,
-            },
+            metadata=_revealed_result_metadata(
+                self.session,
+                {
+                    "hints_used_on_step": (
+                        self.session.get_hints_for_current_step()
+                    ),
+                    "hint_level": level,
+                    "hint_exhausted": exhausted,
+                    "hint_counted": not progressive_exhausted,
+                },
+            ),
         )
 
 
@@ -423,3 +443,37 @@ def _input_type_for_step(step) -> str:
     if value:
         return value
     return "text"
+
+
+def _revealed_result_metadata(
+    session,
+    extra: dict | None = None,
+    *,
+    completed_step=None,
+) -> dict:
+    metadata = dict(extra or {})
+    solved = []
+    completed_count = session.get_completed_step_count()
+    for step in session.problem.solution_steps[:completed_count]:
+        latex = step.result_latex
+        if latex:
+            solved.append(
+                {
+                    "step_number": step.step_number,
+                    "result_latex": latex,
+                }
+            )
+    if solved:
+        metadata["solved_results"] = solved
+    if (
+        completed_step is not None
+        and completed_step.result_latex
+    ):
+        metadata["completed_result_latex"] = (
+            completed_step.result_latex
+        )
+    if session.is_complete() and solved:
+        metadata["final_result_latex"] = solved[-1][
+            "result_latex"
+        ]
+    return metadata

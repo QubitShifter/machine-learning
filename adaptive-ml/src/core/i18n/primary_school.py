@@ -696,6 +696,7 @@ def localize_primary_school_problem(
                 step_type=step.step_type,
                 input_type=step.input_type,
                 answer_format=step.answer_format,
+                result_latex=step.result_latex,
                 metadata=dict(step.metadata or {}),
             )
         )

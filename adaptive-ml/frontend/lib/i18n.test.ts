@@ -155,6 +155,22 @@ assert(
   "Bulgarian explanation heading",
 );
 assert(
+  translate("en", "tutor.finalAnswer") === "Final answer",
+  "English final-answer heading",
+);
+assert(
+  translate("bg", "tutor.finalAnswer") === "Краен отговор",
+  "Bulgarian final-answer heading",
+);
+assert(
+  translate("en", "tutor.solvedSteps") === "Solved steps",
+  "English solved-steps heading",
+);
+assert(
+  translate("bg", "tutor.solvedSteps") === "Решени стъпки",
+  "Bulgarian solved-steps heading",
+);
+assert(
   translate("en", "tutor.lastAnswer") === "Last answer",
   "English last-answer heading",
 );
