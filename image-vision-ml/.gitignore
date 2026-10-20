@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables
+.env
+.env.*
+
+# Keep example environment files
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ML artifacts
+ml/artifacts/*
+!ml/artifacts/.gitkeep
+
+# Datasets
+data/raw/*
+data/processed/*
+data/labels/*
+data/predictions/*
+
+# Keep directory placeholders
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/labels/.gitkeep
+!data/predictions/.gitkeep
+
+# Frontend
+node_modules/
+frontend/dist/
+frontend/build/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

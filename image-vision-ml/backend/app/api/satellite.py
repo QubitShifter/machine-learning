@@ -1,0 +1,216 @@
+"""Versioned satellite image analysis endpoints."""
+
+from __future__ import annotations
+
+import logging
+
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
+
+from backend.app.schemas.satellite import (
+    DatasetDetailResponse,
+    DatasetListResponse,
+    DatasetProcessResponse,
+    DatasetQualityResponse,
+    DatasetScenesResponse,
+    DatasetTimeseriesResponse,
+    ImageListResponse,
+    ImageMetadataResponse,
+    MonthlyNdviResponse,
+    NdviComparisonResponse,
+    NdviStatsResponse,
+    ProcessRequest,
+    ProcessResponse,
+    SceneQualityResponse,
+    YearlyNdviResponse,
+)
+from backend.app.services import satellite_service
+from ml.preprocessing.errors import (
+    CatalogSearchError,
+    CorruptedRasterError,
+    DatasetConfigError,
+    DatasetNotFoundError,
+    DownloadError,
+    InvalidImageIdError,
+    InvalidMetadataError,
+    MissingBandError,
+    MissingProcessedOutputError,
+    NoValidPixelsError,
+    RasterAlignmentError,
+    SatelliteProcessingError,
+    UnsupportedCalibrationError,
+)
+
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+_STATUS_CODES = {
+    InvalidImageIdError: 400,
+    DatasetNotFoundError: 404,
+    MissingProcessedOutputError: 404,
+    MissingBandError: 422,
+    CorruptedRasterError: 422,
+    InvalidMetadataError: 422,
+    UnsupportedCalibrationError: 422,
+    RasterAlignmentError: 422,
+    NoValidPixelsError: 422,
+    DatasetConfigError: 422,
+    CatalogSearchError: 502,
+    DownloadError: 422,
+    SatelliteProcessingError: 422,
+}
+
+
+@router.get("/images", response_model=ImageListResponse)
+def list_images() -> ImageListResponse:
+    return _call(satellite_service.list_images)
+
+
+@router.get("/images/{image_id}/metadata", response_model=ImageMetadataResponse)
+def get_metadata(image_id: str) -> ImageMetadataResponse:
+    return _call(satellite_service.get_metadata, image_id)
+
+
+@router.post("/images/{image_id}/process", response_model=ProcessResponse)
+def process_image(
+    image_id: str,
+    request: ProcessRequest | None = None,
+) -> ProcessResponse:
+    return _call(satellite_service.process_image, image_id, request)
+
+
+@router.get("/images/{image_id}/ndvi/stats", response_model=NdviStatsResponse)
+def get_ndvi_stats(image_id: str) -> NdviStatsResponse:
+    return _call(satellite_service.get_ndvi_stats, image_id)
+
+
+@router.get("/images/{image_id}/rgb")
+def get_rgb_preview(image_id: str) -> FileResponse:
+    path = _call(satellite_service.get_rgb_preview_path, image_id)
+    return FileResponse(
+        path,
+        media_type="image/png",
+        filename="rgb_preview.png",
+    )
+
+
+@router.get("/images/{image_id}/ndvi/preview")
+def get_ndvi_preview(image_id: str) -> FileResponse:
+    path = _call(satellite_service.get_ndvi_preview_path, image_id)
+    return FileResponse(
+        path,
+        media_type="image/png",
+        filename="ndvi_corrected.png",
+    )
+
+
+@router.get("/datasets", response_model=DatasetListResponse)
+def list_datasets() -> DatasetListResponse:
+    return _call(satellite_service.list_datasets)
+
+
+@router.get("/datasets/{dataset_id}", response_model=DatasetDetailResponse)
+def get_dataset(dataset_id: str) -> DatasetDetailResponse:
+    return _call(satellite_service.get_dataset, dataset_id)
+
+
+@router.get(
+    "/datasets/{dataset_id}/scenes",
+    response_model=DatasetScenesResponse,
+)
+def list_dataset_scenes(dataset_id: str) -> DatasetScenesResponse:
+    return _call(satellite_service.list_dataset_scenes, dataset_id)
+
+
+@router.get(
+    "/datasets/{dataset_id}/timeseries/ndvi",
+    response_model=DatasetTimeseriesResponse,
+)
+def get_dataset_timeseries(dataset_id: str) -> DatasetTimeseriesResponse:
+    return _call(satellite_service.get_dataset_timeseries, dataset_id)
+
+
+@router.get(
+    "/datasets/{dataset_id}/quality",
+    response_model=DatasetQualityResponse,
+)
+def get_dataset_quality(dataset_id: str) -> DatasetQualityResponse:
+    return _call(satellite_service.get_dataset_quality, dataset_id)
+
+
+@router.get(
+    "/datasets/{dataset_id}/scenes/{scene_id}/quality",
+    response_model=SceneQualityResponse,
+)
+def get_scene_quality(dataset_id: str, scene_id: str) -> SceneQualityResponse:
+    return _call(satellite_service.get_scene_quality, dataset_id, scene_id)
+
+
+@router.get(
+    "/datasets/{dataset_id}/timeseries/ndvi/monthly",
+    response_model=MonthlyNdviResponse,
+)
+def get_dataset_monthly_ndvi(dataset_id: str) -> MonthlyNdviResponse:
+    return _call(satellite_service.get_dataset_monthly_ndvi, dataset_id)
+
+
+@router.get(
+    "/datasets/{dataset_id}/timeseries/ndvi/yearly",
+    response_model=YearlyNdviResponse,
+)
+def get_dataset_yearly_ndvi(dataset_id: str) -> YearlyNdviResponse:
+    return _call(satellite_service.get_dataset_yearly_ndvi, dataset_id)
+
+
+@router.get(
+    "/datasets/{dataset_id}/timeseries/ndvi/comparison",
+    response_model=NdviComparisonResponse,
+)
+def get_dataset_ndvi_comparison(dataset_id: str) -> NdviComparisonResponse:
+    return _call(satellite_service.get_dataset_ndvi_comparison, dataset_id)
+
+
+@router.get("/datasets/{dataset_id}/quality/report")
+def get_dataset_quality_report(dataset_id: str) -> FileResponse:
+    path = _call(satellite_service.get_dataset_quality_report_path, dataset_id)
+    return FileResponse(
+        path,
+        media_type="application/json",
+        filename="dataset_quality.json",
+    )
+
+
+@router.get("/datasets/{dataset_id}/timeseries/ndvi/chart")
+def get_dataset_chart(dataset_id: str) -> FileResponse:
+    path = _call(satellite_service.get_dataset_chart_path, dataset_id)
+    return FileResponse(
+        path,
+        media_type="image/png",
+        filename="ndvi_timeseries.png",
+    )
+
+
+@router.post(
+    "/datasets/{dataset_id}/process",
+    response_model=DatasetProcessResponse,
+)
+def process_dataset(dataset_id: str) -> DatasetProcessResponse:
+    return _call(satellite_service.process_registered_dataset, dataset_id)
+
+
+def _call(func, *args, **kwargs):
+    try:
+        return func(*args, **kwargs)
+    except Exception as exc:
+        status = _STATUS_CODES.get(type(exc))
+        if status is None:
+            for error_type, code in _STATUS_CODES.items():
+                if isinstance(exc, error_type):
+                    status = code
+                    break
+        if status is None:
+            raise
+        logger.warning("Satellite API error: %s", exc)
+        raise HTTPException(status_code=status, detail=str(exc)) from exc

@@ -1,0 +1,51 @@
+dataset_id: plovdiv_2023_2025
+
+source:
+  provider: earth_search
+  collection: sentinel-2-l2a
+  stac_url: https://earth-search.aws.element84.com/v1
+
+area:
+  name: plovdiv_test
+  crs: EPSG:4326
+  bbox:
+    - 24.65
+    - 42.05
+    - 24.68
+    - 42.08
+
+period:
+  start: "2023-01-01"
+  end: "2025-12-31"
+
+discovery:
+  max_scene_cloud_cover: 30
+  min_footprint_overlap_pct: 95
+
+processing:
+  target_crs: EPSG:32635
+  target_resolution_m: 10
+  bands:
+    - blue
+    - green
+    - red
+    - nir
+    - scl
+  calculate_ndvi: true
+  apply_scl_mask: true
+  valid_scl_classes: [4, 5]
+
+quality:
+  min_aoi_coverage_pct: 95
+  min_valid_ndvi_pct: 70
+  warning_valid_ndvi_pct: 85
+  calibration_policy: verified_only
+  include_partial_coverage_in_full_series: false
+
+downloads:
+  max_scenes_per_run: 5
+  concurrency: 2
+  retries: 3
+  timeout_seconds: 60
+  selection_strategy: stratified_seasonal
+  scenes_per_year: 3

@@ -1,0 +1,71 @@
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "image-vision-ml"
+version = "0.1.0"
+description = "Multimodal image analysis and environmental forecasting"
+requires-python = ">=3.11"
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+    "python-dotenv",
+    "numpy",
+    "matplotlib",
+    "rasterio",
+    "pyyaml",
+    "pystac-client",
+    "shapely",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx2>=2.0.0",
+]
+
+ml = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "lightgbm",
+    "joblib",
+    "matplotlib",
+    "rasterio",
+    "geopandas",
+    "shapely",
+    "xarray",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "backend",
+    "backend.*",
+    "ml",
+    "ml.*",
+]
+exclude = [
+    "tests",
+    "tests.*",
+    "frontend",
+    "frontend.*",
+    "data",
+    "data.*",
+    "configs",
+    "configs.*",
+    "notebooks",
+    "notebooks.*",
+    "scripts",
+    "scripts.*",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "backend/tests",
+]

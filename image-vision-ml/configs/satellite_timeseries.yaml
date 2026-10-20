@@ -1,0 +1,35 @@
+dataset_id: plovdiv_2025
+
+source:
+  provider: earth_search
+  collection: sentinel-2-l2a
+  stac_url: https://earth-search.aws.element84.com/v1
+
+area:
+  name: plovdiv_test
+  bbox:
+    - 24.65
+    - 42.05
+    - 24.68
+    - 42.08
+  crs: EPSG:4326
+
+period:
+  start: "2025-01-01"
+  end: "2025-12-31"
+
+filters:
+  max_scene_cloud_cover: 20.0
+
+processing:
+  bands:
+    - blue
+    - green
+    - red
+    - nir
+    - scl
+  calculate_ndvi: true
+  apply_scl_mask: true
+  valid_scl_classes: [4, 5]
+  target_resolution_m: 10
+  target_crs: EPSG:32635
