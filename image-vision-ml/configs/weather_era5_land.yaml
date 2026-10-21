@@ -1,0 +1,58 @@
+dataset_id: plovdiv_weather_2023_2025
+
+source:
+  provider: cds
+  dataset: reanalysis-era5-land
+  data_format: netcdf
+  download_format: unarchived
+
+area:
+  name: plovdiv_test
+  bbox:
+    - 24.65
+    - 42.05
+    - 24.68
+    - 42.08
+  crs: EPSG:4326
+
+period:
+  start: "2023-01-01"
+  end: "2025-12-31"
+
+time:
+  timezone: UTC
+  daily_aggregation: true
+
+variables:
+  - 2m_temperature
+  - 2m_dewpoint_temperature
+  - total_precipitation
+  - 10m_u_component_of_wind
+  - 10m_v_component_of_wind
+  - total_evaporation
+
+spatial:
+  method: nearest_grid_cell
+  native_resolution_deg: 0.1
+  # CDS area order: north, west, south, east. Must contain a 0.1° cell.
+  # The study AOI above is too small to crop ERA5-Land directly.
+  retrieval_area:
+    - 42.20
+    - 24.50
+    - 41.90
+    - 24.90
+
+downloads:
+  partition: monthly
+  retries: 3
+  timeout_seconds: 120
+  include_next_day_boundary: true
+
+quality:
+  require_complete_days: true
+  reject_invalid_units: true
+  preserve_missing_values: true
+
+features:
+  dry_day_precipitation_mm: 1.0
+  windows_days: [7, 14, 30]

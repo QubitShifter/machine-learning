@@ -83,6 +83,14 @@ def _seed_dataset(raw: Path, processed: Path) -> None:
         json.dumps(quality["scenes"][0]),
         encoding="utf-8",
     )
+    png = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01"
+        b"\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00"
+        b"\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18"
+        b"\xd8N\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    (scene_quality / "rgb_preview.png").write_bytes(png)
+    (scene_quality / "ndvi_preview.png").write_bytes(png)
 
 
 def test_list_and_describe_datasets(monkeypatch, tmp_path: Path):
@@ -167,6 +175,23 @@ def test_quality_and_extended_timeseries_endpoints(monkeypatch, tmp_path: Path):
     assert report.status_code == 200
     assert report.headers["content-type"].startswith("application/json")
 
+    rgb = client.get(
+        "/api/v1/satellite/datasets/plovdiv_2025/scenes/S2B_35TLG_20250916_1_L2A/rgb"
+    )
+    assert rgb.status_code == 200
+    assert rgb.headers["content-type"].startswith("image/png")
+    assert rgb.content[:8] == b"\x89PNG\r\n\x1a\n"
+
+    preview = client.get(
+        "/api/v1/satellite/datasets/plovdiv_2025/scenes/S2B_35TLG_20250916_1_L2A/ndvi/preview"
+    )
+    assert preview.status_code == 200
+    assert preview.headers["content-type"].startswith("image/png")
+
+    assert client.get(
+        "/api/v1/satellite/datasets/plovdiv_2025/scenes/missing/rgb"
+    ).status_code in {400, 404}
+
     assert client.get("/api/v1/satellite/datasets/missing/quality").status_code == 404
     assert client.get(
         "/api/v1/satellite/datasets/plovdiv_2025/scenes/missing/quality"
@@ -184,3 +209,6 @@ def test_existing_endpoints_and_swagger_include_datasets():
     assert "/api/v1/satellite/datasets/{dataset_id}/timeseries/ndvi/monthly" in paths
     assert "/api/v1/satellite/datasets/{dataset_id}/timeseries/ndvi/yearly" in paths
     assert "/api/v1/satellite/datasets/{dataset_id}/timeseries/ndvi/comparison" in paths
+    assert "/api/v1/satellite/datasets/{dataset_id}/scenes/{scene_id}/map/metadata" in paths
+    assert "/api/v1/satellite/datasets/{dataset_id}/scenes/{scene_id}/map/rgb" in paths
+    assert "/api/v1/satellite/datasets/{dataset_id}/scenes/{scene_id}/map/ndvi" in paths

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 
 from backend.app.schemas.satellite import (
@@ -16,6 +16,8 @@ from backend.app.schemas.satellite import (
     DatasetTimeseriesResponse,
     ImageListResponse,
     ImageMetadataResponse,
+    MapNdviSampleResponse,
+    MapOverlayMetadataResponse,
     MonthlyNdviResponse,
     NdviComparisonResponse,
     NdviStatsResponse,
@@ -24,7 +26,7 @@ from backend.app.schemas.satellite import (
     SceneQualityResponse,
     YearlyNdviResponse,
 )
-from backend.app.services import satellite_service
+from backend.app.services import satellite_map, satellite_service
 from ml.preprocessing.errors import (
     CatalogSearchError,
     CorruptedRasterError,
@@ -146,6 +148,67 @@ def get_dataset_quality(dataset_id: str) -> DatasetQualityResponse:
 )
 def get_scene_quality(dataset_id: str, scene_id: str) -> SceneQualityResponse:
     return _call(satellite_service.get_scene_quality, dataset_id, scene_id)
+
+
+@router.get("/datasets/{dataset_id}/scenes/{scene_id}/rgb")
+def get_dataset_scene_rgb(dataset_id: str, scene_id: str) -> FileResponse:
+    path = _call(
+        satellite_service.get_dataset_scene_preview_path,
+        dataset_id,
+        scene_id,
+        "rgb",
+    )
+    return FileResponse(path, media_type="image/png", filename="rgb_preview.png")
+
+
+@router.get("/datasets/{dataset_id}/scenes/{scene_id}/ndvi/preview")
+def get_dataset_scene_ndvi(dataset_id: str, scene_id: str) -> FileResponse:
+    path = _call(
+        satellite_service.get_dataset_scene_preview_path,
+        dataset_id,
+        scene_id,
+        "ndvi",
+    )
+    return FileResponse(path, media_type="image/png", filename="ndvi_preview.png")
+
+
+@router.get(
+    "/datasets/{dataset_id}/scenes/{scene_id}/map/metadata",
+    response_model=MapOverlayMetadataResponse,
+)
+def get_scene_map_metadata(dataset_id: str, scene_id: str) -> MapOverlayMetadataResponse:
+    return _call(satellite_map.get_map_metadata, dataset_id, scene_id)
+
+
+@router.get("/datasets/{dataset_id}/scenes/{scene_id}/map/rgb")
+def get_scene_map_rgb(dataset_id: str, scene_id: str) -> FileResponse:
+    path = _call(satellite_map.get_map_overlay_path, dataset_id, scene_id, "rgb")
+    return FileResponse(path, media_type="image/png", filename="map_rgb.png")
+
+
+@router.get("/datasets/{dataset_id}/scenes/{scene_id}/map/ndvi")
+def get_scene_map_ndvi(dataset_id: str, scene_id: str) -> FileResponse:
+    path = _call(satellite_map.get_map_overlay_path, dataset_id, scene_id, "ndvi")
+    return FileResponse(path, media_type="image/png", filename="map_ndvi.png")
+
+
+@router.get(
+    "/datasets/{dataset_id}/scenes/{scene_id}/map/ndvi/sample",
+    response_model=MapNdviSampleResponse,
+)
+def get_scene_ndvi_sample(
+    dataset_id: str,
+    scene_id: str,
+    longitude: float = Query(..., ge=-180, le=180),
+    latitude: float = Query(..., ge=-90, le=90),
+) -> MapNdviSampleResponse:
+    return _call(
+        satellite_map.get_ndvi_sample,
+        dataset_id,
+        scene_id,
+        longitude,
+        latitude,
+    )
 
 
 @router.get(

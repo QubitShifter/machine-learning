@@ -13,7 +13,7 @@
 - [x] Discover historical Sentinel-2 scenes from Earth Search STAC
 - [x] Download a limited multi-date AOI archive
 - [x] Build a validated multi-year Sentinel-2 dataset with quality gates
-- [ ] Retrieve historical weather data
+- [x] Retrieve historical weather data
 - [ ] Retrieve soil data
 - [x] Store geospatial metadata and dataset manifests
 
@@ -26,6 +26,7 @@
 - [x] Align multi-date scenes to a shared grid
 - [x] Build a descriptive NDVI time series
 - [x] Monthly, yearly, and interannual NDVI summaries
+- [x] Join satellite NDVI with leakage-safe historical weather features
 - [ ] Generate training features
 
 ## Phase 4 - Model Development
@@ -39,9 +40,12 @@
 ## Phase 5 - Application
 
 - [x] Satellite analysis and time-series endpoints
-- [ ] Web interface
-- [ ] Geographical map
-- [ ] Visualization dashboard
+- [x] ERA5-Land weather dataset endpoints
+- [x] Web interface
+- [x] Geographical map
+- [x] Georeferenced RGB/NDVI map overlays
+- [x] Visualization dashboard
+- [x] Combined Sentinel-2 + ERA5-Land analytics page
 
 ## Phase 6 - Advanced AI
 

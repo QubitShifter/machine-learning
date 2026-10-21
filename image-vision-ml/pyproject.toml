@@ -20,6 +20,10 @@ dependencies = [
     "pyyaml",
     "pystac-client",
     "shapely",
+    "pandas",
+    "xarray",
+    "netcdf4",
+    "cdsapi>=0.7.7",
 ]
 
 [project.optional-dependencies]

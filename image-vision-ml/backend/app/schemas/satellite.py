@@ -95,9 +95,11 @@ class DatasetSceneRecord(BaseModel):
     scene_id: str
     acquisition_date: str | None = None
     status: str | None = None
+    platform: str | None = None
     cloud_cover: float | None = None
     aoi_coverage: float | None = None
     valid_percentage: float | None = None
+    overlay_ready: bool = False
 
 
 class DatasetScenesResponse(BaseModel):
@@ -130,12 +132,19 @@ class DatasetProcessResponse(BaseModel):
 class SceneQualityResponse(BaseModel):
     scene_id: str | None = None
     acquisition_date: str | None = None
+    satellite_platform: str | None = None
     quality_status: str | None = None
     reasons: list[str] = Field(default_factory=list)
     geometric_footprint_overlap_pct: float | None = None
     actual_aoi_coverage_pct: float | None = None
     valid_ndvi_pct: float | None = None
+    ndvi_minimum: float | None = None
     ndvi_mean: float | None = None
+    ndvi_maximum: float | None = None
+    ndvi_median: float | None = None
+    cloud_shadow_fraction_pct: float | None = None
+    valid_pixels: int | None = None
+    total_aoi_pixels: int | None = None
     grid_aligned: bool | None = None
     calibration: dict | None = None
     missing_assets: list[str] = Field(default_factory=list)
@@ -185,3 +194,39 @@ class NdviComparisonResponse(BaseModel):
     dataset_id: str
     metric: str = "ndvi"
     comparison: dict
+
+
+class MapOverlayMetadataResponse(BaseModel):
+    scene_id: str
+    overlay_available: bool
+    supported_modes: list[str] = Field(default_factory=list)
+    unavailable_reason: str | None = None
+    native_crs: str | None = None
+    native_width: int | None = None
+    native_height: int | None = None
+    native_pixel_size_m: list[float] | None = None
+    native_bounds: dict | None = None
+    rendered_crs: str | None = None
+    rendered_width: int | None = None
+    rendered_height: int | None = None
+    rendered_resolution_m: list[float] | None = None
+    rendered_downsampled: bool = False
+    geographic_extent: dict | None = None
+    maplibre_coordinates: list[list[float]] | None = None
+    valid_mask_policy: str | None = None
+    render_version: str | None = None
+    cache_id: str | None = None
+    ndvi_color_scale: list[dict] = Field(default_factory=list)
+    quality_limitations: list[str] = Field(default_factory=list)
+
+
+class MapNdviSampleResponse(BaseModel):
+    scene_id: str
+    longitude: float
+    latitude: float
+    crs: str = "EPSG:4326"
+    inside_raster: bool
+    valid: bool
+    ndvi: float | None = None
+    sampling: str = "nearest"
+    message: str | None = None

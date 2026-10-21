@@ -53,3 +53,19 @@ class CatalogSearchError(SatelliteProcessingError):
 
 class DownloadError(SatelliteProcessingError):
     """A satellite asset download failed or was incomplete."""
+
+
+class WeatherConfigError(DatasetConfigError):
+    """A weather dataset configuration file is invalid."""
+
+
+class CdsAuthenticationError(SatelliteProcessingError):
+    """CDS API credentials are missing or incomplete."""
+
+
+class WeatherDownloadError(DownloadError):
+    """A weather asset download failed or was incomplete."""
+
+
+class PermanentCdsRequestError(WeatherDownloadError):
+    """CDS rejected the request permanently; retrying will not help."""

@@ -31,12 +31,14 @@ ml/artifacts/*
 # Datasets
 data/raw/*
 data/processed/*
+data/cache/*
 data/labels/*
 data/predictions/*
 
 # Keep directory placeholders
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+!data/cache/.gitkeep
 !data/labels/.gitkeep
 !data/predictions/.gitkeep
 

@@ -1,7 +1,9 @@
 
 from fastapi import FastAPI
 
+from backend.app.api.integration import router as integration_router
 from backend.app.api.satellite import router as satellite_router
+from backend.app.api.weather import router as weather_router
 
 app = FastAPI(
     title="Image Vision ML API",
@@ -19,6 +21,16 @@ app.include_router(
     satellite_router,
     prefix="/api/v1/satellite",
     tags=["satellite"],
+)
+app.include_router(
+    weather_router,
+    prefix="/api/v1/weather",
+    tags=["weather"],
+)
+app.include_router(
+    integration_router,
+    prefix="/api/v1/integration",
+    tags=["integration"],
 )
 
 

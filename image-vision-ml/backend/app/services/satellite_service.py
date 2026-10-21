@@ -218,6 +218,46 @@ def get_ndvi_preview_path(image_id: str) -> Path:
     return _require_output(image_id, OUTPUT_NDVI_PNG, "NDVI preview")
 
 
+def get_dataset_scene_preview_path(
+    dataset_id: str,
+    scene_id: str,
+    kind: str,
+) -> Path:
+    dataset_id = validate_image_id(dataset_id)
+    scene_id = validate_image_id(scene_id)
+    _require_dataset_manifest(dataset_id)
+    root = (_processed_root() / dataset_id / "scenes").resolve()
+    directory = (root / scene_id).resolve()
+    if not directory.is_relative_to(root):
+        raise InvalidImageIdError(
+            "Scene ID must be a local name and cannot contain path separators."
+        )
+    names = {
+        "rgb": ("rgb_preview.png",),
+        "ndvi": ("ndvi_preview.png", OUTPUT_NDVI_PNG),
+    }
+    candidates = names.get(kind)
+    if not candidates:
+        raise MissingProcessedOutputError(
+            "Requested scene preview kind is not available."
+        )
+    for filename in candidates:
+        path = directory / filename
+        if path.is_file():
+            return path
+    raise MissingProcessedOutputError(
+        f"{kind.upper()} preview is not available for this scene."
+    )
+
+
+def _scene_overlay_ready(dataset_id: str, scene_id: str, status: object) -> bool:
+    if str(status or "") != "processed":
+        return False
+    from backend.app.services.satellite_map import overlay_ready
+
+    return overlay_ready(dataset_id, scene_id)
+
+
 def validate_image_id(image_id: str) -> str:
     if not IMAGE_ID_PATTERN.fullmatch(image_id or ""):
         raise InvalidImageIdError(
@@ -376,13 +416,16 @@ def list_dataset_scenes(dataset_id: str) -> DatasetScenesResponse:
     scenes = []
     for record in scene_records(manifest):
         extra = processed_scenes.get(record["scene_id"], {})
+        status = extra.get("status") or record.get("status")
         scenes.append(DatasetSceneRecord(
             scene_id=record["scene_id"],
             acquisition_date=record.get("acquisition_date"),
-            status=extra.get("status") or record.get("status"),
+            status=status,
+            platform=record.get("platform") or extra.get("platform"),
             cloud_cover=_as_float(record.get("cloud_cover")),
             aoi_coverage=_as_float(record.get("aoi_coverage")),
             valid_percentage=_as_float(extra.get("valid_percentage")),
+            overlay_ready=_scene_overlay_ready(dataset_id, record["scene_id"], status),
         ))
     return DatasetScenesResponse(dataset_id=dataset_id, scenes=scenes)
 
