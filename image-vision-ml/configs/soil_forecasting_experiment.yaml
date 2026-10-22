@@ -1,0 +1,134 @@
+experiment_id: plovdiv_soil_forecast_baselines_v1
+experiment_version: "4.1.0"
+pipeline_version: "4.1.0"
+stage_label: research_reanalysis
+operational_forecast: false
+suitable_for_modeling_unchanged: true
+
+source:
+  ml_dataset_id: plovdiv_agricultural_ml_2023_2025
+  ml_dataset_version: "4.0.0"
+  ml_config: configs/agricultural_ml_dataset.yaml
+  directory: data/processed/ml/plovdiv_agricultural_ml_2023_2025
+  aoi_id: plovdiv_test
+  target_source_kind: modeled_reanalysis
+  is_ground_truth: false
+  is_measured_soil_moisture: false
+
+issue_time:
+  convention: beginning_of_utc_day
+  clock: "00:00:00Z"
+  last_complete_observation: D-1
+  research_mode: research_reanalysis
+  operational_availability_verified: false
+
+target:
+  variable: swvl1
+  field: swvl1_mean
+  depth_label: 0-7 cm
+  unit: m3 m-3
+  aggregation: daily_mean_of_complete_utc_day
+  kind: daily_mean_state
+  horizons_days: [1, 3, 7]
+  change_baseline: last_complete_historical_day
+  persistence_feature: swvl1_prev1
+
+splits:
+  source: split_membership.csv
+  training: training
+  validation: validation
+  test: test
+  respect_horizon_purge: true
+  final_training_policy: training_partition_only
+
+missing_data:
+  policy: complete_case
+  never_fill_with_zero: true
+  impute: false
+
+feature_sets:
+  A:
+    name: persistence_information
+    columns: [swvl1_prev1]
+  B:
+    name: soil_history_seasonal
+    columns:
+      - swvl1_prev1
+      - swvl1_prev3d_mean
+      - swvl1_prev7d_mean
+      - swvl1_delta_prev1
+      - day_of_year_sin
+      - day_of_year_cos
+  C:
+    name: soil_weather
+    columns:
+      - swvl1_prev1
+      - swvl1_prev3d_mean
+      - swvl1_prev7d_mean
+      - swvl1_delta_prev1
+      - precip_prev_1d_mm
+      - precip_prev_3d_mm
+      - precip_prev_7d_mm
+      - precip_prev_14d_mm
+      - api_k090_mm
+      - temp_mean_prev_7d_c
+      - evap_prev_7d_mm
+      - day_of_year_sin
+      - day_of_year_cos
+  D:
+    name: satellite_context
+    enabled: false
+    reason: Sentinel-2 acquisition_datetime is absent; timestamps are synthesized midnight UTC from date-only fields.
+    columns: []
+
+primary_feature_set: C
+matched_comparison_feature_set: C
+satellite_features_enabled: false
+
+models:
+  persistence:
+    enabled: true
+  seasonal:
+    enabled: true
+    method: training_year_monthly_mean
+    label: training_year_seasonal_reference
+  ridge:
+    enabled: true
+    alphas: [0.01, 0.1, 1.0, 10.0, 100.0]
+    feature_sets: [B, C]
+  gradient_boosting:
+    enabled: true
+    estimator: HistGradientBoostingRegressor
+    feature_sets: [B, C]
+    random_seed: 42
+    grid:
+      max_depth: [2, 3]
+      learning_rate: [0.05, 0.1]
+      max_iter: [50, 100]
+    early_stopping: false
+
+selection:
+  criterion: validation_mae
+  minimize: true
+  primary_feature_set: C
+  freeze_families: [persistence, seasonal, ridge, gradient_boosting]
+
+evaluation:
+  direction_tolerance: 0.0001
+  volumetric_lower: 0.0
+  volumetric_upper: 1.0
+  extreme_daily_change: 0.15
+  recent_rainfall_prev7_mm: 10.0
+  dry_prev7_mm: 1.0
+  seasons:
+    winter: [12, 1, 2]
+    spring: [3, 4, 5]
+    summer: [6, 7, 8]
+    autumn: [9, 10, 11]
+  block_bootstrap: false
+
+output:
+  directory: data/processed/ml/experiments/plovdiv_soil_forecast_baselines_v1
+
+random_seed: 42
+python_requires: ">=3.11"

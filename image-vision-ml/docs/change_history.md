@@ -43,4 +43,7 @@ python -m scripts.change_log refresh
 | `CHG-0005` | unknown | 3.5 Scientific Satellite Explorer | feature | retrospective | Retrospective of Phase 3.5 histograms, SCL overlay, pixel inspector, and multi-AOI preparation | `uncommitted` | [CHG-0005](changes/CHG-0005.md) |
 | `CHG-0006` | 2026-10-22T16:14:22Z | Soil Analysis UI Enhancement | feature | verified | Year-over-year historical soil-moisture comparison on Soil Analysis | `uncommitted` | [CHG-0006](changes/CHG-0006.md) |
 | `CHG-0007` | 2026-10-22T16:35:43Z | Soil Analysis UX Refinement | enhancement | verified | Soil Analysis contextual workspaces for historical comparison and detailed analysis | `uncommitted` | [CHG-0007](changes/CHG-0007.md) |
+| `CHG-0008` | 2026-10-22T17:13:30Z | Phase 4.0 | feature | verified | Leakage-safe agricultural ML research dataset (Phase 4.0) | `uncommitted` | [CHG-0008](changes/CHG-0008.md) |
+| `CHG-0009` | 2026-10-22T18:38:09Z | Phase 4.1 | feature | verified | First agricultural soil-moisture forecasting baselines (Phase 4.1) | `uncommitted` | [CHG-0009](changes/CHG-0009.md) |
+| `CHG-0010` | 2026-10-22T19:18:10Z | Phase 4.1-UI | feature | verified | ML Training Laboratory research dashboard (Phase 4.1-UI) | `uncommitted` | [CHG-0010](changes/CHG-0010.md) |
 <!-- CHANGE_TABLE_END -->

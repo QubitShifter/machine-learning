@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 
@@ -23,22 +23,24 @@ const SoilAnalysisPage = lazy(() =>
 const AoiPage = lazy(() =>
   import("@/pages/AoiPage").then((module) => ({ default: module.AoiPage })),
 );
+const MLTrainingPage = lazy(() =>
+  import("@/pages/MLTrainingPage").then((module) => ({ default: module.MLTrainingPage })),
+);
 
 export function App() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-slate-400">Loading workspace…</div>}>
-      <Routes>
-        <Route element={<AppShell />}>
-          <Route path="/" element={<OverviewPage />} />
-          <Route path="/satellite" element={<SatelliteExplorerPage />} />
-          <Route path="/integration" element={<IntegrationAnalyticsPage />} />
-          <Route path="/weather" element={<WeatherAnalyticsPage />} />
-          <Route path="/soil" element={<SoilAnalysisPage />} />
-          <Route path="/quality" element={<DataQualityPage />} />
-          <Route path="/aoi" element={<AoiPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </Suspense>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route path="/" element={<OverviewPage />} />
+        <Route path="/satellite" element={<SatelliteExplorerPage />} />
+        <Route path="/integration" element={<IntegrationAnalyticsPage />} />
+        <Route path="/weather" element={<WeatherAnalyticsPage />} />
+        <Route path="/soil" element={<SoilAnalysisPage />} />
+        <Route path="/quality" element={<DataQualityPage />} />
+        <Route path="/ml/training" element={<MLTrainingPage />} />
+        <Route path="/aoi" element={<AoiPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   );
 }

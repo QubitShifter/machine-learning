@@ -663,3 +663,22 @@ export interface CombinedSoilWeather {
   limit?: number;
   records: CombinedSoilWeatherRow[];
 }
+
+export interface AgriculturalMlSummary {
+  available: boolean;
+  label: string;
+  dataset_id: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  feature_row_count: number | null;
+  feature_catalog_count: number | null;
+  target_row_count: number | null;
+  horizons_days: number[];
+  leakage_status: string | null;
+  historical_research_readiness: string | null;
+  operational_forecast_readiness: string | null;
+  independent_ground_truth_readiness: string | null;
+  suitable_for_modeling: boolean;
+  trained_model_present: boolean;
+  eligible_satellite_scenes: number | null;
+}

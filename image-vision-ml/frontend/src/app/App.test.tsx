@@ -704,6 +704,29 @@ function mockApi(overrides: Record<string, unknown> = {}) {
       if (url.endsWith("/api/v1/soil/datasets")) {
         return jsonResponse(overrides.soilDatasets ?? soilDatasets);
       }
+      if (url.includes("/api/v1/ml/experiments")) {
+        return jsonResponse(overrides.mlExperiments ?? []);
+      }
+      if (url.includes("/api/v1/ml/")) {
+        return jsonResponse({
+          available: true,
+          label: "Research dataset — no trained model yet.",
+          dataset_id: "plovdiv_agricultural_ml_2023_2025",
+          period_start: "2023-01-01",
+          period_end: "2025-12-31",
+          feature_row_count: 1096,
+          feature_catalog_count: 40,
+          target_row_count: 16440,
+          horizons_days: [1, 3, 7],
+          leakage_status: "passed",
+          historical_research_readiness: "limited",
+          operational_forecast_readiness: "not_ready",
+          independent_ground_truth_readiness: "not_ready",
+          suitable_for_modeling: false,
+          trained_model_present: false,
+          eligible_satellite_scenes: 15,
+        });
+      }
       if (url.endsWith("/quality")) return jsonResponse(overrides.weatherQuality ?? weatherQuality);
       if (url.endsWith("/monthly")) return jsonResponse(overrides.monthly ?? monthly);
       if (url.includes("/summary")) {
@@ -777,6 +800,8 @@ describe("UI Phase 1.0", () => {
     expect(await screen.findByText("Historical Comparison")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("link", { name: "Data Quality" }));
     expect(await screen.findByText("Quality dimensions")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("link", { name: "ML Training Lab" }));
+    expect(await screen.findByText("ML Training Laboratory")).toBeInTheDocument();
     expect(screen.getByText("Coming later")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Predictions/ })).not.toBeInTheDocument();
   });
@@ -825,6 +850,8 @@ describe("UI Phase 1.0", () => {
     expect(screen.getByText("Integration readiness")).toBeInTheDocument();
     expect(await screen.findByLabelText("2023-01 downloaded")).toBeInTheDocument();
     expect(screen.getByLabelText("2023-02 missing_source")).toBeInTheDocument();
+    expect(await screen.findByText("Research dataset — no trained model yet.")).toBeInTheDocument();
+    expect(screen.getByText("Agricultural ML research dataset")).toBeInTheDocument();
   });
 
   it("updates the satellite scene selector", async () => {

@@ -5,6 +5,7 @@ import { QueryState } from "@/components/common/QueryState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CoverageMatrix } from "@/components/quality/CoverageMatrix";
 import { TaskReadiness } from "@/components/quality/TaskReadiness";
+import { useAgriculturalMlSummary } from "@/hooks/useMl";
 import { useSatelliteQuality } from "@/hooks/useSatellite";
 import { useSoilDatasets, useSoilQuality } from "@/hooks/useSoil";
 import { useWeatherQuality } from "@/hooks/useWeather";
@@ -22,6 +23,7 @@ export function DataQualityPage() {
   const soilList = useSoilDatasets();
   const soilId = preferredSoilDataset(soilList.data ?? []);
   const soil = useSoilQuality(soilId);
+  const research = useAgriculturalMlSummary();
   const navigate = useNavigate();
   const hourly = weather.data?.hourly ?? {};
   const daily = weather.data?.daily ?? {};
@@ -132,6 +134,48 @@ export function DataQualityPage() {
             </p>
           </QueryState>
         )}
+      </Card>
+
+      <Card title="Agricultural ML research dataset">
+        <QueryState
+          isLoading={research.isLoading}
+          error={research.error}
+          onRetry={() => void research.refetch()}
+        >
+          <p className="mb-3 text-sm font-medium text-sand-100">
+            {research.data?.label ?? "Research dataset — no trained model yet."}
+          </p>
+          {!research.data?.available ? (
+            <p className="text-sm text-slate-400">
+              Features and targets have not been generated. Run the agricultural ML dataset
+              pipeline locally. No trained forecast is shown here.
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <Metric label="Dataset" value={research.data.dataset_id ?? "—"} />
+                <Metric label="Feature rows" value={formatNumber(research.data.feature_row_count, 0)} />
+                <Metric label="Target rows" value={formatNumber(research.data.target_row_count, 0)} />
+                <Metric
+                  label="Horizons"
+                  value={(research.data.horizons_days ?? []).map((item) => `${item}d`).join(", ") || "—"}
+                />
+                <Metric label="Leakage" value={formatStatus(research.data.leakage_status)} />
+                <Metric label="Research readiness" value={formatStatus(research.data.historical_research_readiness)} />
+                <Metric label="Operational readiness" value={formatStatus(research.data.operational_forecast_readiness)} />
+                <Metric label="Ground truth" value={formatStatus(research.data.independent_ground_truth_readiness)} />
+              </div>
+              <p className="mt-3 text-sm text-sand-300">
+                Coverage {research.data.period_start ?? "—"} through {research.data.period_end ?? "—"}.
+                suitable_for_modeling remains false. Operational replay is not verified.
+                {" "}
+                <Link className="text-moss-300 hover:underline" to="/ml/training">
+                  Open ML Training Lab
+                </Link>
+              </p>
+            </>
+          )}
+        </QueryState>
       </Card>
 
       <Card title="Modeling readiness by task">

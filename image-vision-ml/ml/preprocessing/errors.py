@@ -63,6 +63,14 @@ class SoilConfigError(DatasetConfigError):
     """A soil-moisture dataset configuration file is invalid."""
 
 
+class AgriculturalMlError(DatasetConfigError):
+    """Agricultural research-dataset configuration or validation failure."""
+
+
+class SoilForecastingError(AgriculturalMlError):
+    """Soil-moisture forecasting experiment configuration or validation failure."""
+
+
 class CdsAuthenticationError(SatelliteProcessingError):
     """CDS API credentials are missing or incomplete."""
 

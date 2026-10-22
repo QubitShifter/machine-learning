@@ -27,7 +27,7 @@ Status: `planned`. Satellite processing version 1.1.0 and integration version 3.
 
 ## 3. Purpose
 
-Eventually predict crop and water-stress outcomes. Training is out of scope until labelled, leakage-safe datasets exist. Issue/valid-time contracts are documented separately as `forecasting.issue_valid_time_contracts` and are not a trained model.
+Eventually predict crop and water-stress outcomes. Operational agricultural forecasting remains unimplemented. Phase 4.1 trains research baselines on ERA5-Land modeled soil moisture under [`ml.soil_forecast_experiment`](../ml/soil_forecast_experiment.md); those results are not operational forecasts, irrigation advice, or field-validated skill.
 
 ## 4. Scientific background
 
@@ -99,6 +99,9 @@ Planned. NDVI time series is not a yield forecast.
 ## 19. Related feature dependencies
 
 - [`integration.modeling_eligibility`](../integration/modeling_eligibility.md)
+- [`ml.agricultural_research_dataset`](../ml/agricultural_research_dataset.md)
+- [`ml.forecast_evaluation_contracts`](../ml/forecast_evaluation_contracts.md)
+- [`ml.soil_forecast_experiment`](../ml/soil_forecast_experiment.md)
 
 ## 20. Related bug/fix IDs
 

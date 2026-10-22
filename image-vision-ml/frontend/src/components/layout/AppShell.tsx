@@ -1,11 +1,11 @@
+import { Suspense, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChartNoAxesCombined, CloudSun, LayoutDashboard, Layers, MapPinned, Satellite, ShieldCheck, Sparkles } from "lucide-react";
+import { ChartNoAxesCombined, CloudSun, FlaskConical, LayoutDashboard, Layers, MapPinned, Satellite, ShieldCheck, Sparkles } from "lucide-react";
 import { useSatelliteDatasets } from "@/hooks/useSatellite";
 import { useSoilDatasets } from "@/hooks/useSoil";
 import { useWeatherDatasets, useWeatherQuality } from "@/hooks/useWeather";
 import { preferredSatelliteDataset, preferredSoilDataset, preferredWeatherDataset, formatStatus } from "@/utils/format";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { useState } from "react";
 
 const NAV = [
   { to: "/", label: "Overview", icon: LayoutDashboard, end: true },
@@ -14,6 +14,7 @@ const NAV = [
   { to: "/weather", label: "Weather Analytics", icon: CloudSun },
   { to: "/soil", label: "Soil Analysis", icon: Layers },
   { to: "/quality", label: "Data Quality", icon: ShieldCheck },
+  { to: "/ml/training", label: "ML Training Lab", icon: FlaskConical },
   { to: "/aoi", label: "Study Areas", icon: MapPinned },
 ];
 
@@ -24,6 +25,7 @@ const TITLES: Record<string, string> = {
   "/weather": "Weather Analytics",
   "/soil": "Soil Analysis",
   "/quality": "Data Quality",
+  "/ml/training": "ML Training Lab",
   "/aoi": "Study Areas",
 };
 
@@ -127,7 +129,9 @@ export function AppShell() {
               </button>
             </div>
           ) : null}
-          <Outlet context={{ satelliteId, weatherId, soilId }} />
+          <Suspense fallback={<div className="p-6 text-sm text-slate-400">Loading workspace…</div>}>
+            <Outlet context={{ satelliteId, weatherId, soilId }} />
+          </Suspense>
         </main>
       </div>
     </div>

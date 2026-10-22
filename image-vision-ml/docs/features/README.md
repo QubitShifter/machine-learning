@@ -5,7 +5,9 @@ This directory holds one Markdown file per significant Image Vision ML capabilit
 - Index: [`../feature_registry.md`](../feature_registry.md)
 - Bug history: [`../bug_fix_history.md`](../bug_fix_history.md)
 - Change history: [`../change_history.md`](../change_history.md)
-- Layout: `satellite/`, `weather/`, `soil/`, `integration/`, `forecasting/`, `sources/`, `aoi/`, `ui/`
+- Layout: `satellite/`, `weather/`, `soil/`, `integration/`, `forecasting/`, `sources/`, `aoi/`, `ui/`, `ml/`
+- Mathematics: [`../ml/agricultural_forecasting_mathematics.md`](../ml/agricultural_forecasting_mathematics.md), [`../ml/soil_forecasting_model_baselines.md`](../ml/soil_forecasting_model_baselines.md)
+- Training laboratory UI: [`../ml/ml_training_laboratory.md`](../ml/ml_training_laboratory.md)
 
 Validate with:
 
