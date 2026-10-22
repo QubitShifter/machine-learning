@@ -153,6 +153,8 @@ def get_quality(dataset_id: str) -> IntegrationQualityResponse:
         window_30d_complete_count=payload.get("window_30d_complete_count"),
         weather_integration_readiness=payload.get("weather_integration_readiness"),
         satellite_training_readiness=payload.get("satellite_training_readiness"),
+        task_readiness=payload.get("task_readiness"),
+        suitable_for_modeling_meaning=payload.get("suitable_for_modeling_meaning"),
         weather_spatial=payload.get("weather_spatial"),
         issues=list(payload.get("issues") or []),
         sources_changed=payload.get("sources_changed"),

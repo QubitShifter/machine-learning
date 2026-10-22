@@ -21,6 +21,33 @@ def season_name(date_text: str) -> str:
     return "SON"
 
 
+def select_requested_scenes(
+    records: list[dict[str, Any]],
+    scene_ids: list[str],
+) -> list[dict[str, Any]]:
+    """Return catalog records for explicit scene IDs, preserving request order.
+
+    Duplicate IDs are ignored after the first occurrence. Unknown IDs raise
+    ``ValueError`` so a download batch cannot silently substitute another scene.
+    """
+    if not scene_ids:
+        return []
+    by_id = {item["scene_id"]: item for item in records}
+    missing = [scene_id for scene_id in scene_ids if scene_id not in by_id]
+    if missing:
+        raise ValueError(
+            "Requested scene_id(s) were not in the catalog: " + ", ".join(missing)
+        )
+    selected: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for scene_id in scene_ids:
+        if scene_id in seen:
+            continue
+        seen.add(scene_id)
+        selected.append(by_id[scene_id])
+    return selected
+
+
 def select_stratified_scenes(
     records: list[dict[str, Any]],
     *,

@@ -16,6 +16,8 @@
 
 Soil and environmental forecasting.
 
+Implemented scientific methods, source paths, and tests are indexed in [`feature_registry.md`](feature_registry.md). Confirmed defects and data-quality decisions are recorded in [`bug_fix_history.md`](bug_fix_history.md).
+
 ## Planned Data Sources
 
 - Sentinel-2

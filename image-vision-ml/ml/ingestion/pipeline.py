@@ -18,7 +18,7 @@ from ml.ingestion.manifest import (
     validate_safe_id,
     write_json_atomic,
 )
-from ml.ingestion.selection import select_stratified_scenes
+from ml.ingestion.selection import select_requested_scenes, select_stratified_scenes
 from ml.ingestion.stac import search_sentinel2
 from ml.preprocessing.errors import DatasetNotFoundError, InvalidMetadataError
 from ml.preprocessing.grid import build_target_grid, serialize_grid
@@ -29,6 +29,7 @@ from ml.preprocessing.raster import (
     process_local_dataset,
     read_json,
 )
+from ml.ingestion.expansion import preview_expansion_candidates
 from ml.validation.dataset_quality import (
     STATUS_VALID,
     evaluate_dataset_quality,
@@ -136,6 +137,7 @@ def download_dataset(
     dry_run: bool = False,
     raw_root: Path | None = None,
     refresh: bool = False,
+    scene_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     config = load_dataset_config(config_path)
     paths = dataset_paths(config["dataset_id"], raw_root=raw_root)
@@ -149,13 +151,16 @@ def download_dataset(
         if not paths["raw_manifest"].is_file():
             search_dataset(config_path)
     manifest = read_manifest(paths["raw_manifest"])
-    if limit is None:
-        limit = int(config["downloads"]["max_scenes_per_run"])
-    selected = select_stratified_scenes(
-        records,
-        limit=limit,
-        scenes_per_year=int(config["downloads"]["scenes_per_year"]),
-    )
+    if scene_ids:
+        selected = select_requested_scenes(records, scene_ids)
+    else:
+        if limit is None:
+            limit = int(config["downloads"]["max_scenes_per_run"])
+        selected = select_stratified_scenes(
+            records,
+            limit=limit,
+            scenes_per_year=int(config["downloads"]["scenes_per_year"]),
+        )
     return download_scenes(
         selected,
         paths["raw"],
@@ -376,6 +381,51 @@ def validate_dataset(
     return payload
 
 
+def preview_dataset_candidates(
+    config_path: Path,
+    *,
+    refresh_stac: bool = False,
+    limit: int = 12,
+    raw_root: Path | None = None,
+    processed_root: Path | None = None,
+) -> dict[str, Any]:
+    """Local dry-run candidate list. STAC refresh and downloads stay opt-in."""
+    config = load_dataset_config(config_path)
+    if refresh_stac:
+        search_dataset(config_path)
+    paths = dataset_paths(
+        config["dataset_id"],
+        raw_root=raw_root,
+        processed_root=processed_root,
+    )
+    if not paths["raw_manifest"].is_file():
+        raise DatasetNotFoundError(
+            f"Unknown satellite dataset: {config['dataset_id']}"
+        )
+    payload = evaluate_dataset_quality(
+        config["dataset_id"],
+        raw_root=paths["raw"].parent,
+        processed_root=paths["processed"].parent,
+        quality=config["quality"],
+        config=config,
+    )
+    catalog_records = scene_records(read_manifest(paths["raw_manifest"]))
+    catalog_known = paths["discovered"].is_file() or any(
+        item.get("status") == "discovered" for item in catalog_records
+    )
+    preview = preview_expansion_candidates(
+        config=config,
+        catalog_records=catalog_records if catalog_known else None,
+        catalog_known=catalog_known,
+        quality_scenes=payload.get("scenes") or [],
+        coverage=payload.get("coverage") or {},
+        limit=limit,
+        refresh_stac=refresh_stac,
+    )
+    write_json_atomic(paths["quality"] / "expansion_preview.json", preview)
+    return preview
+
+
 def generate_dataset_report(
     config_path: Path,
     *,
@@ -410,6 +460,9 @@ def generate_dataset_report(
             "quality_json": "dataset_quality.json",
             "quality_csv": "dataset_quality.csv",
             "training_readiness": "training_readiness.json",
+            "coverage": "coverage.json",
+            "calibration_audit": "calibration_audit.json",
+            "task_readiness": "task_readiness.json",
             "timeseries_dir": str(paths["timeseries"].name),
         },
     }

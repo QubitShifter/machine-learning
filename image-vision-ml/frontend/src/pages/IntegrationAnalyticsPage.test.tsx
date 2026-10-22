@@ -297,7 +297,10 @@ function mockApi(options?: { fail?: boolean; empty?: boolean; records?: Integrat
 }
 
 describe("UI Phase 1.2 Combined Analytics", () => {
-  beforeEach(() => mockApi());
+  beforeEach(() => {
+    sessionStorage.clear();
+    mockApi();
+  });
   afterEach(() => vi.unstubAllGlobals());
 
   it("renders the integration route from the sidebar", async () => {

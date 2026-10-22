@@ -13,6 +13,7 @@ def test_legacy_timeseries_config_still_valid():
     assert config["discovery"]["max_scene_cloud_cover"] == 20.0
     assert config["quality"]["calibration_policy"] == "verified_only"
     assert config["downloads"]["selection_strategy"] == "stratified_seasonal"
+    assert config["readiness"]["vegetation_forecast_max_gap_days"] == 90
 
 
 def test_multiyear_config_file():

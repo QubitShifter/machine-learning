@@ -1,3 +1,5 @@
+import type { TaskReadinessReport } from "./api";
+
 export interface IntegrationDatasetSummary {
   dataset_id: string;
   satellite_dataset_id: string | null;
@@ -122,6 +124,8 @@ export interface IntegrationQuality {
   window_30d_complete_count: number | null;
   weather_integration_readiness: string | null;
   satellite_training_readiness: Record<string, unknown> | null;
+  task_readiness?: TaskReadinessReport | null;
+  suitable_for_modeling_meaning?: string | null;
   weather_spatial: Record<string, unknown> | null;
   issues: Array<Record<string, unknown>>;
   sources_changed: boolean | null;

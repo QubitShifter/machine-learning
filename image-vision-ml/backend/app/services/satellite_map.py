@@ -12,6 +12,7 @@ from typing import Any
 from backend.app.schemas.satellite import (
     MapNdviSampleResponse,
     MapOverlayMetadataResponse,
+    MapPixelInspectResponse,
 )
 from backend.app.services import satellite_service
 from ml.preprocessing.errors import (
@@ -35,6 +36,9 @@ from ml.visualization.map_overlay import (
     plan_destination_grid,
     render_overlay_png,
     sample_ndvi,
+    sample_pixel,
+    scl_legend_definition,
+    scl_provenance_payload,
 )
 
 
@@ -59,6 +63,8 @@ def get_map_metadata(dataset_id: str, scene_id: str) -> MapOverlayMetadataRespon
             render_version=RENDER_VERSION,
             valid_mask_policy=VALID_MASK_POLICY,
             ndvi_color_scale=ndvi_color_scale_definition(),
+            scl_legend=scl_legend_definition(),
+            scl_provenance=scl_provenance_payload(),
             quality_limitations=_quality_limitations(sources),
         )
 
@@ -67,8 +73,8 @@ def get_map_metadata(dataset_id: str, scene_id: str) -> MapOverlayMetadataRespon
 
 
 def get_map_overlay_path(dataset_id: str, scene_id: str, mode: str) -> Path:
-    if mode not in {"rgb", "ndvi"}:
-        raise MissingProcessedOutputError("Overlay mode must be rgb or ndvi.")
+    if mode not in {"rgb", "ndvi", "scl"}:
+        raise MissingProcessedOutputError("Overlay mode must be rgb, ndvi, or scl.")
     dataset_id, scene_id, processed_dir, raw_dir = _resolve_scene(dataset_id, scene_id)
     sources = inspect_overlay_sources(processed_dir, raw_dir)
     if mode not in sources["supported_modes"]:
@@ -105,7 +111,7 @@ def get_ndvi_sample(
         raise MissingProcessedOutputError(
             "Processed NDVI raster is not available for sampling."
         )
-    result = sample_ndvi(processed_dir, longitude, latitude)
+    result = sample_ndvi(processed_dir, longitude, latitude, raw_dir)
     return MapNdviSampleResponse(
         scene_id=scene_id,
         longitude=float(longitude),
@@ -113,6 +119,22 @@ def get_ndvi_sample(
         crs=GEOGRAPHIC_CRS,
         **result,
     )
+
+
+def get_pixel_sample(
+    dataset_id: str,
+    scene_id: str,
+    longitude: float,
+    latitude: float,
+) -> MapPixelInspectResponse:
+    dataset_id, scene_id, processed_dir, raw_dir = _resolve_scene(dataset_id, scene_id)
+    sources = inspect_overlay_sources(processed_dir, raw_dir)
+    if "ndvi" not in sources["supported_modes"]:
+        raise MissingProcessedOutputError(
+            "Processed NDVI raster is not available for sampling."
+        )
+    result = sample_pixel(processed_dir, longitude, latitude, raw_dir)
+    return MapPixelInspectResponse(scene_id=scene_id, **result)
 
 
 def overlay_ready(dataset_id: str, scene_id: str) -> bool:
@@ -202,6 +224,8 @@ def _ensure_metadata_artifact(
             "render_version": RENDER_VERSION,
             "cache_id": cache_id,
             "ndvi_color_scale": ndvi_color_scale_definition(),
+            "scl_legend": scl_legend_definition(),
+            "scl_provenance": scl_provenance_payload(),
             "quality_limitations": _quality_limitations(sources),
         }
         _atomic_write_text(metadata_path, json.dumps(payload, indent=2))
@@ -217,6 +241,7 @@ def _fingerprint(
     for path in (
         sources.get("ndvi_path"),
         sources.get("mask_path"),
+        sources.get("scl_path"),
         *list((sources.get("rgb_bands") or {}).values()),
         processed_dir / "processing_metadata.json",
     ):
@@ -251,6 +276,8 @@ def _quality_limitations(sources: dict[str, Any]) -> list[str]:
         notes.append("RGB overlay requires processed mask plus raw B02/B03/B04 rasters.")
     if "ndvi" not in sources["supported_modes"]:
         notes.append("NDVI overlay requires processed ndvi.tif and valid_mask.tif.")
+    if "scl" not in sources["supported_modes"]:
+        notes.append("SCL overlay requires processed NDVI/mask plus the native SCL raster.")
     return notes
 
 

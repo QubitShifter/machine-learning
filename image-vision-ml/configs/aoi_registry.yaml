@@ -1,0 +1,18 @@
+version: "3.5.0"
+note: >
+  Operational study areas already backed by existing datasets.
+  This file is a registry, not a download trigger.
+
+areas:
+  - aoi_id: plovdiv_test
+    name: Plovdiv study AOI
+    status: operational
+    crs: EPSG:4326
+    bbox: [24.65, 42.05, 24.68, 42.08]
+    satellite_dataset_id: plovdiv_2023_2025
+    weather_dataset_id: plovdiv_weather_2023_2025
+    soil_dataset_id: plovdiv_soil_2023_2025
+    notes: >
+      Current Image Vision ML agricultural study window. Do not modify this
+      dataset identity or automatically create additional weather or soil
+      archives when drafting other areas.

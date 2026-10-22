@@ -425,6 +425,11 @@ def integrate_weather_dataset(
         "sources_changed": sources_changed,
         "created_at": created_at,
         "updated_at": now_iso(),
+        "task_readiness": _task_readiness(satellite_quality, quality, weather_quality),
+        "suitable_for_modeling_meaning": (
+            "suitable_for_modeling is supervised soil-forecasting eligibility, "
+            "not exploratory NDVI or vegetation forecasting."
+        ),
     })
     metadata = {
         "satellite_dataset_id": satellite_dataset_id,
@@ -469,6 +474,30 @@ def integrate_weather_dataset(
             "issue_count": len(quality.get("issues") or []),
         },
     }
+
+
+def _task_readiness(
+    satellite_quality: dict[str, Any],
+    integration_quality: dict[str, Any],
+    weather_quality: dict[str, Any],
+) -> dict[str, Any]:
+    from ml.validation.modeling_readiness import assess_task_readiness
+
+    training = satellite_quality.get("training_readiness") or {}
+    return assess_task_readiness(
+        quality={
+            **training,
+            "coverage": satellite_quality.get("coverage") or {},
+            "ground_truth_soil_moisture_available": False,
+        },
+        integration_metrics={
+            "complete_window_count": int(
+                integration_quality.get("weather_feature_window_complete_count") or 0
+            ),
+            "observation_count": int(integration_quality.get("observation_count") or 0),
+            "weather_integration_readiness": weather_quality.get("integration_readiness"),
+        },
+    )
 
 
 def _read_json_if_present(path: Path) -> dict[str, Any]:

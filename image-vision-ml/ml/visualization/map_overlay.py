@@ -1,8 +1,9 @@
-"""Georeferenced RGB/NDVI overlay rendering for MapLibre.
+"""Georeferenced RGB/NDVI/SCL overlay rendering for MapLibre.
 
 This module creates display-only RGBA PNGs. It does not modify scientific
 source rasters or recalculate NDVI. RGB uses the same reflectance stretch
-documented in ``ml.preprocessing.features.create_rgb``.
+documented in ``ml.preprocessing.features.create_rgb``. SCL is colorized as
+categorical classes and reprojected with nearest neighbor only.
 """
 
 from __future__ import annotations
@@ -40,11 +41,18 @@ from ml.preprocessing.raster import (
     OUTPUT_VALID_MASK,
     read_json,
     read_raster_metadata,
+    reproject_categorical,
     reproject_continuous,
+)
+from ml.analysis.scene_histograms import SCL_DISPLAY_NAMES
+from ml.validation.pixel_exclusion import (
+    REASON_VALID,
+    SCL_CLASS_NAMES,
+    classify_pixel_exclusions,
 )
 
 
-RENDER_VERSION = "map-overlay-v1"
+RENDER_VERSION = "map-overlay-v2"
 RENDERED_CRS = "EPSG:3857"
 GEOGRAPHIC_CRS = "EPSG:4326"
 MAX_RENDER_PIXELS = 4_000_000
@@ -63,11 +71,36 @@ NDVI_COLOR_STOPS: tuple[tuple[float, tuple[int, int, int]], ...] = (
 )
 
 VALID_MASK_POLICY = (
-    "alpha=0 where processed valid_mask is 0 or NDVI is non-finite. "
-    "The valid mask is SCL classes 4 and 5 plus finite reflectance "
+    "NDVI/RGB overlay alpha=0 where processed valid_mask is 0 or NDVI is "
+    "non-finite. The valid mask is SCL classes 4 and 5 plus finite reflectance "
     "(vegetation and bare soil). Cloud, shadow, water, cirrus, nodata, "
-    "and other SCL classes are transparent. Valid dark land pixels stay opaque."
+    "and other SCL classes are transparent on NDVI/RGB. Valid dark land "
+    "pixels stay opaque. SCL overlay does not apply the land mask."
 )
+
+SCL_OVERLAY_POLICY = (
+    "SCL overlay colorizes nearest-neighbor classes on the 10 m AOI target "
+    "grid. Class 0 (no data) is transparent. Cloud, snow, water, vegetation, "
+    "and bare soil are all shown. MapLibre reprojection uses nearest neighbor, "
+    "never bilinear. Native 20 m class counts are not mixed with 10 m counts."
+)
+
+# ESA-like categorical palette for Sentinel-2 SCL codes 0–11.
+SCL_DISPLAY_COLORS: dict[int, tuple[int, int, int]] = {
+    0: (0, 0, 0),
+    1: (255, 0, 0),
+    2: (64, 64, 64),
+    3: (129, 69, 19),
+    4: (0, 160, 0),
+    5: (255, 230, 90),
+    6: (0, 0, 220),
+    7: (128, 128, 128),
+    8: (192, 192, 192),
+    9: (245, 245, 245),
+    10: (100, 200, 255),
+    11: (255, 120, 255),
+}
+UNKNOWN_SCL_COLOR = (160, 32, 240)
 
 
 @dataclass(frozen=True)
@@ -85,6 +118,48 @@ def ndvi_color_scale_definition() -> list[dict[str, Any]]:
         {"value": value, "color_rgb": list(color)}
         for value, color in NDVI_COLOR_STOPS
     ]
+
+
+def scl_legend_definition() -> list[dict[str, Any]]:
+    legend = []
+    for code in range(12):
+        legend.append({
+            "code": code,
+            "name": SCL_DISPLAY_NAMES.get(code, SCL_CLASS_NAMES.get(code, f"class_{code}")),
+            "color_rgb": list(SCL_DISPLAY_COLORS[code]),
+            "transparent": code == 0,
+        })
+    return legend
+
+
+def scl_provenance_payload() -> dict[str, Any]:
+    return {
+        "source": "Sentinel-2 L2A Scene Classification Layer",
+        "native_resolution_m": 20,
+        "target_grid_resolution_m": 10,
+        "alignment": "nearest_neighbor",
+        "resampling_forbidden": "bilinear",
+        "native_20m_mixed_with_10m_counts": False,
+        "overlay_policy": SCL_OVERLAY_POLICY,
+    }
+
+
+def colorize_scl(classes: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Map integer SCL codes to categorical RGB. Class 0 is transparent."""
+    array = np.asarray(classes)
+    rgb = np.zeros(array.shape + (3,), dtype=np.uint8)
+    alpha = np.zeros(array.shape, dtype=np.uint8)
+    known = np.zeros(array.shape, dtype=bool)
+    for code, color in SCL_DISPLAY_COLORS.items():
+        mask = array == code
+        rgb[mask] = color
+        if code != 0:
+            alpha[mask] = 255
+        known |= mask
+    unknown = ~known
+    rgb[unknown] = UNKNOWN_SCL_COLOR
+    alpha[unknown] = 255
+    return rgb, alpha
 
 
 def colorize_ndvi(values: np.ndarray) -> np.ndarray:
@@ -114,11 +189,18 @@ def inspect_overlay_sources(
     ndvi_path = find_source_raster(processed_dir, NDVI_SOURCE_CANDIDATES)
     mask_path = find_source_raster(processed_dir, MASK_SOURCE_CANDIDATES)
     rgb_bands = _rgb_band_paths(raw_dir) if raw_dir is not None else {}
+    scl_path = None
+    if raw_dir is not None:
+        candidate = Path(raw_dir) / BAND_FILES["SCL"]
+        if candidate.is_file():
+            scl_path = candidate
     modes: list[str] = []
     if ndvi_path is not None and mask_path is not None:
         modes.append("ndvi")
         if len(rgb_bands) == 3:
             modes.append("rgb")
+        if scl_path is not None:
+            modes.append("scl")
     reason = None
     if not modes:
         if ndvi_path is None or mask_path is None:
@@ -132,6 +214,7 @@ def inspect_overlay_sources(
         "ndvi_path": ndvi_path,
         "mask_path": mask_path,
         "rgb_bands": rgb_bands,
+        "scl_path": scl_path,
     }
 
 
@@ -242,17 +325,42 @@ def sample_ndvi(
     processed_dir: Path,
     longitude: float,
     latitude: float,
+    raw_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Nearest-neighbor sample of the processed NDVI raster."""
-    import rasterio
+    result = sample_pixel(processed_dir, longitude, latitude, raw_dir)
+    message = result["message"]
+    if result["inside_raster"] and not result["valid"] and message is None:
+        message = "Pixel is nodata or excluded by the valid-land mask."
+    return {
+        "inside_raster": result["inside_raster"],
+        "valid": result["valid"],
+        "ndvi": result["ndvi"],
+        "sampling": "nearest",
+        "message": message,
+    }
 
-    sources = inspect_overlay_sources(processed_dir)
+
+def sample_pixel(
+    processed_dir: Path,
+    longitude: float,
+    latitude: float,
+    raw_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Read one AOI pixel from processed rasters. Missing values are null."""
+    import rasterio
+    from rasterio.windows import Window
+
+    sources = inspect_overlay_sources(processed_dir, raw_dir)
     ndvi_path = sources["ndvi_path"]
     mask_path = sources["mask_path"]
     if ndvi_path is None or mask_path is None:
         raise MissingProcessedOutputError(
             "Processed NDVI raster is not available for sampling."
         )
+    quality = _scene_quality(processed_dir)
+    calibration_doc = _calibration_document(processed_dir, sources.get("rgb_bands") or {})
+    empty = _empty_pixel_payload(longitude, latitude, quality)
     with rasterio.open(ndvi_path) as dataset:
         xs, ys = warp_xy(
             GEOGRAPHIC_CRS,
@@ -263,30 +371,94 @@ def sample_ndvi(
         row, col = dataset.index(xs[0], ys[0])
         inside = 0 <= row < dataset.height and 0 <= col < dataset.width
         if not inside:
-            return {
-                "inside_raster": False,
-                "valid": False,
-                "ndvi": None,
-                "sampling": "nearest",
-                "message": "Clicked location is outside the processed raster grid.",
-            }
-        value = float(dataset.read(1)[row, col])
+            empty["coverage_state"] = "out_of_coverage"
+            empty["inside_raster"] = False
+            empty["message"] = "Clicked location is outside the processed raster footprint."
+            empty["missing_reasons"]["coverage"] = "out_of_coverage"
+            return empty
+        center_x, center_y = dataset.xy(row, col)
+        ndvi_raw = dataset.read(1, window=Window(col, row, 1, 1))[0, 0]
+        native_crs = dataset.crs
     with rasterio.open(mask_path) as mask_ds:
-        valid = bool(mask_ds.read(1)[row, col])
-    if not valid or not np.isfinite(value):
-        return {
-            "inside_raster": True,
-            "valid": False,
-            "ndvi": None,
-            "sampling": "nearest",
-            "message": "Pixel is nodata or excluded by the valid-land mask.",
-        }
+        mask_value = mask_ds.read(1, window=Window(col, row, 1, 1))[0, 0]
+    valid = bool(mask_value)
+    ndvi_value, ndvi_reason = _finite_or_none(ndvi_raw)
+    if not valid:
+        ndvi_value = None
+        ndvi_reason = ndvi_reason or "excluded_by_valid_mask"
+    elif ndvi_reason:
+        ndvi_value = None
+
+    missing: dict[str, str] = {}
+    if ndvi_reason:
+        missing["ndvi"] = ndvi_reason
+    bands = {
+        "red_b04": _sample_reflectance_band(
+            raw_dir, "B04", center_x, center_y, native_crs, calibration_doc
+        ),
+        "green_b03": _sample_reflectance_band(
+            raw_dir, "B03", center_x, center_y, native_crs, calibration_doc
+        ),
+        "blue_b02": _sample_reflectance_band(
+            raw_dir, "B02", center_x, center_y, native_crs, calibration_doc
+        ),
+        "nir_b08": _sample_reflectance_band(
+            raw_dir, "B08", center_x, center_y, native_crs, calibration_doc
+        ),
+    }
+    values = {}
+    for key, (value, reason) in bands.items():
+        values[key] = value
+        if reason:
+            missing[key] = reason
+    scl_code, scl_reason = _sample_scl_class(
+        raw_dir, center_x, center_y, native_crs
+    )
+    if scl_reason:
+        missing["scl"] = scl_reason
+    scl_name = None
+    if scl_code is not None:
+        scl_name = SCL_DISPLAY_NAMES.get(
+            int(scl_code),
+            SCL_CLASS_NAMES.get(int(scl_code), f"class_{int(scl_code)}"),
+        )
+    exclusion = _exclusion_reason(
+        scl_code,
+        values["red_b04"],
+        values["nir_b08"],
+        values["blue_b02"],
+        values["green_b03"],
+        valid,
+    )
+    message = None
+    if not valid:
+        message = exclusion or ndvi_reason or "Pixel is excluded by the valid-land mask."
     return {
+        "coverage_state": "inside",
         "inside_raster": True,
-        "valid": True,
-        "ndvi": value,
-        "sampling": "nearest",
-        "message": None,
+        "valid": valid,
+        "row": int(row),
+        "col": int(col),
+        "sampling": "nearest_10m_target_grid",
+        "red_b04": values["red_b04"],
+        "green_b03": values["green_b03"],
+        "blue_b02": values["blue_b02"],
+        "nir_b08": values["nir_b08"],
+        "ndvi": ndvi_value,
+        "scl_class": None if scl_code is None else int(scl_code),
+        "scl_class_name": scl_name,
+        "valid_mask": valid,
+        "exclusion_reason": exclusion,
+        "calibration_status": quality.get("calibration_status"),
+        "scene_quality_status": quality.get("scene_quality_status"),
+        "acquisition_date": quality.get("acquisition_date"),
+        "missing_reasons": missing,
+        "message": message,
+        "source": "processed_rasters",
+        "estimated_from_display_rgb": False,
+        "crs": GEOGRAPHIC_CRS,
+        "longitude": float(longitude),
+        "latitude": float(latitude),
     }
 
 
@@ -324,11 +496,20 @@ def _source_display_arrays(
             ndvi = dataset.read(1).astype(np.float32)
         rgb = colorize_ndvi(np.nan_to_num(ndvi, nan=0.0))
         alpha = (mask & np.isfinite(ndvi)).astype(np.uint8) * 255
+        resampling = Resampling.bilinear
     elif mode == "rgb":
         rgb_float = _aligned_display_rgb(sources["rgb_bands"], source_grid, processed_dir)
         rgb = np.clip(np.round(rgb_float * 255.0), 0, 255).astype(np.uint8)
         rgb[~mask] = 0
         alpha = mask.astype(np.uint8) * 255
+        resampling = Resampling.bilinear
+    elif mode == "scl":
+        scl_path = sources.get("scl_path")
+        if scl_path is None:
+            raise MissingProcessedOutputError("SCL raster is not available for overlay.")
+        scl, _grid = reproject_categorical(scl_path, source_grid)
+        rgb, alpha = colorize_scl(scl)
+        resampling = Resampling.nearest
     else:
         raise MissingProcessedOutputError(
             f"Unsupported overlay mode: {mode}"
@@ -337,6 +518,7 @@ def _source_display_arrays(
         "source_grid": source_grid,
         "rgb": rgb,
         "alpha": alpha,
+        "resampling": resampling,
     }
 
 
@@ -378,6 +560,7 @@ def _reproject_display_arrays(
     src_crs = CRS.from_user_input(source_grid["crs"])
     rgb = np.asarray(arrays["rgb"])
     alpha = np.asarray(arrays["alpha"])
+    rgb_resampling = arrays.get("resampling", Resampling.bilinear)
     dest_rgb = np.zeros((destination.height, destination.width, 3), dtype=np.uint8)
     dest_alpha = np.zeros((destination.height, destination.width), dtype=np.uint8)
     for channel in range(3):
@@ -388,7 +571,7 @@ def _reproject_display_arrays(
             src_crs=src_crs,
             dst_transform=destination.transform,
             dst_crs=destination.crs,
-            resampling=Resampling.bilinear,
+            resampling=rgb_resampling,
         )
     reproject(
         source=alpha,
@@ -424,6 +607,8 @@ def _calibration_document(
         calibration = payload.get("calibration")
         if isinstance(calibration, dict):
             return calibration
+    if not band_paths:
+        return {}
     raw_dir = next(iter(band_paths.values())).parent
     calibration_path = raw_dir / "calibration.json"
     if calibration_path.is_file():
@@ -443,6 +628,162 @@ def _source_bounds(source_grid: dict[str, Any]) -> tuple[float, float, float, fl
         int(source_grid["width"]),
         source_grid["transform"],
     )
+
+
+def _empty_pixel_payload(
+    longitude: float,
+    latitude: float,
+    quality: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "coverage_state": "out_of_coverage",
+        "inside_raster": False,
+        "valid": False,
+        "row": None,
+        "col": None,
+        "sampling": "nearest_10m_target_grid",
+        "red_b04": None,
+        "green_b03": None,
+        "blue_b02": None,
+        "nir_b08": None,
+        "ndvi": None,
+        "scl_class": None,
+        "scl_class_name": None,
+        "valid_mask": None,
+        "exclusion_reason": None,
+        "calibration_status": quality.get("calibration_status"),
+        "scene_quality_status": quality.get("scene_quality_status"),
+        "acquisition_date": quality.get("acquisition_date"),
+        "missing_reasons": {},
+        "message": None,
+        "source": "processed_rasters",
+        "estimated_from_display_rgb": False,
+        "crs": GEOGRAPHIC_CRS,
+        "longitude": float(longitude),
+        "latitude": float(latitude),
+    }
+
+
+def _finite_or_none(value: Any) -> tuple[float | None, str | None]:
+    if value is None:
+        return None, "unavailable"
+    number = float(value)
+    if not np.isfinite(number):
+        return None, "nonfinite"
+    return number, None
+
+
+def _sample_reflectance_band(
+    raw_dir: Path | None,
+    band: str,
+    x: float,
+    y: float,
+    src_crs: Any,
+    calibration_doc: dict[str, Any],
+) -> tuple[float | None, str | None]:
+    import rasterio
+    from rasterio.windows import Window
+
+    if raw_dir is None:
+        return None, "source_raster_missing"
+    path = Path(raw_dir) / BAND_FILES[band]
+    if not path.is_file():
+        return None, "source_raster_missing"
+    documented = calibration_doc.get(band) or {}
+    scale = float(documented.get("scale", 0.0001))
+    offset = float(documented.get("offset", 0.0))
+    with rasterio.open(path) as dataset:
+        xs, ys = warp_xy(src_crs, dataset.crs, [x], [y])
+        row, col = dataset.index(xs[0], ys[0])
+        if not (0 <= row < dataset.height and 0 <= col < dataset.width):
+            return None, "outside_source_raster"
+        dn = dataset.read(1, window=Window(col, row, 1, 1))[0, 0]
+        nodata = documented.get("nodata", dataset.nodata)
+        if nodata is None:
+            nodata = 0
+    reflectance = to_reflectance(np.array([[dn]]), scale, offset, nodata)[0, 0]
+    if not np.isfinite(reflectance):
+        return None, "nodata"
+    return float(reflectance), None
+
+
+def _sample_scl_class(
+    raw_dir: Path | None,
+    x: float,
+    y: float,
+    src_crs: Any,
+) -> tuple[int | None, str | None]:
+    import rasterio
+    from rasterio.windows import Window
+
+    if raw_dir is None:
+        return None, "source_raster_missing"
+    path = Path(raw_dir) / BAND_FILES["SCL"]
+    if not path.is_file():
+        return None, "source_raster_missing"
+    with rasterio.open(path) as dataset:
+        xs, ys = warp_xy(src_crs, dataset.crs, [x], [y])
+        row, col = dataset.index(xs[0], ys[0])
+        if not (0 <= row < dataset.height and 0 <= col < dataset.width):
+            return None, "outside_source_raster"
+        value = dataset.read(1, window=Window(col, row, 1, 1))[0, 0]
+    if not np.isfinite(value):
+        return None, "nonfinite"
+    return int(value), None
+
+
+def _exclusion_reason(
+    scl_code: int | None,
+    red: float | None,
+    nir: float | None,
+    blue: float | None,
+    green: float | None,
+    valid_mask: bool,
+) -> str | None:
+    if valid_mask:
+        return None
+    if scl_code is None:
+        return "excluded_by_valid_mask"
+    scl = np.array([[int(scl_code)]], dtype=np.int16)
+    kwargs: dict[str, Any] = {"scl": scl}
+    if red is not None and nir is not None:
+        kwargs["red"] = np.array([[red]], dtype=np.float32)
+        kwargs["nir"] = np.array([[nir]], dtype=np.float32)
+        if blue is not None:
+            kwargs["blue"] = np.array([[blue]], dtype=np.float32)
+        if green is not None:
+            kwargs["green"] = np.array([[green]], dtype=np.float32)
+    classified = classify_pixel_exclusions(**kwargs)
+    reasons = classified.get("disjoint_by_reason") or {}
+    for key, count in reasons.items():
+        if count and key != REASON_VALID:
+            return str(key)
+    return "excluded_by_valid_mask"
+
+
+def _scene_quality(processed_dir: Path) -> dict[str, Any]:
+    quality = _read_optional_json(processed_dir / "quality_report.json")
+    meta = _read_optional_json(processed_dir / OUTPUT_METADATA)
+    calibration = quality.get("calibration") or meta.get("calibration") or {}
+    status = quality.get("calibration_status")
+    if status is None and isinstance(calibration, dict):
+        status = calibration.get("validation_status")
+    return {
+        "acquisition_date": quality.get("acquisition_date") or meta.get("acquisition_date"),
+        "scene_quality_status": quality.get("scene_quality_status")
+        or quality.get("quality_status"),
+        "calibration_status": status,
+    }
+
+
+def _read_optional_json(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = read_json(path)
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _png_bytes(image: Image.Image) -> bytes:

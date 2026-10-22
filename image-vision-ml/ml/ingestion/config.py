@@ -29,6 +29,17 @@ DEFAULT_DOWNLOADS = {
     "scenes_per_year": 3,
 }
 
+# Operational project thresholds, not universal scientific standards.
+DEFAULT_READINESS = {
+    "exploratory_ndvi_min_observations": 3,
+    "weather_ndvi_min_complete_pairs": 6,
+    "vegetation_limited_min_observations": 6,
+    "vegetation_limited_min_years": 2,
+    "vegetation_forecast_min_observations": 12,
+    "vegetation_forecast_min_years": 3,
+    "vegetation_forecast_max_gap_days": 90,
+}
+
 
 def load_dataset_config(path: Path) -> dict[str, Any]:
     config_path = Path(path)
@@ -74,6 +85,7 @@ def validate_dataset_config(payload: dict[str, Any]) -> dict[str, Any]:
     processing = payload.get("processing") or {}
     quality = payload.get("quality") or {}
     downloads = payload.get("downloads") or {}
+    readiness = payload.get("readiness") or {}
     bands = processing.get("bands") or ["blue", "green", "red", "nir", "scl"]
 
     max_cloud = discovery.get(
@@ -182,5 +194,9 @@ def validate_dataset_config(payload: dict[str, Any]) -> dict[str, Any]:
                     DEFAULT_DOWNLOADS["scenes_per_year"],
                 )
             ),
+        },
+        "readiness": {
+            key: int(readiness.get(key, default))
+            for key, default in DEFAULT_READINESS.items()
         },
     }

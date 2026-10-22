@@ -1,10 +1,12 @@
 import type {
   MapOverlayMetadata,
   NdviSample,
+  PixelInspect,
   SatelliteDatasetDetail,
   SatelliteDatasetSummary,
   SatelliteQuality,
   SatelliteSceneRecord,
+  SceneHistograms,
   SceneQuality,
   TimeseriesObservation,
 } from "@/types/api";
@@ -65,6 +67,18 @@ export async function getSceneMapMetadata(
   );
 }
 
+export async function getSceneHistograms(
+  datasetId: string,
+  sceneId: string,
+  bins = 45,
+): Promise<SceneHistograms> {
+  const query = new URLSearchParams({ bins: String(bins) });
+  return getJson(
+    `/api/v1/satellite/datasets/${encodeURIComponent(datasetId)}/scenes/${encodeURIComponent(sceneId)}/histograms?${query}`,
+  );
+}
+
+
 export async function getNdviSample(
   datasetId: string,
   sceneId: string,
@@ -77,5 +91,20 @@ export async function getNdviSample(
   });
   return getJson(
     `/api/v1/satellite/datasets/${encodeURIComponent(datasetId)}/scenes/${encodeURIComponent(sceneId)}/map/ndvi/sample?${query}`,
+  );
+}
+
+export async function getPixelInspect(
+  datasetId: string,
+  sceneId: string,
+  longitude: number,
+  latitude: number,
+): Promise<PixelInspect> {
+  const query = new URLSearchParams({
+    longitude: String(longitude),
+    latitude: String(latitude),
+  });
+  return getJson(
+    `/api/v1/satellite/datasets/${encodeURIComponent(datasetId)}/scenes/${encodeURIComponent(sceneId)}/map/pixel?${query}`,
   );
 }

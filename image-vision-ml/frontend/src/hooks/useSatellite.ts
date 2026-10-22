@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getNdviSample,
+  getPixelInspect,
   getSatelliteDataset,
   getSatelliteQuality,
   getSatelliteTimeseries,
+  getSceneHistograms,
   getSceneMapMetadata,
   getSceneQuality,
   listSatelliteDatasets,
@@ -20,6 +22,8 @@ export const satelliteKeys = {
     ["satellite", "scene-quality", datasetId, sceneId] as const,
   mapMetadata: (datasetId: string, sceneId: string) =>
     ["satellite", "map-metadata", datasetId, sceneId] as const,
+  histograms: (datasetId: string, sceneId: string, bins: number) =>
+    ["satellite", "histograms", datasetId, sceneId, bins] as const,
 };
 
 export function useSatelliteDatasets() {
@@ -83,6 +87,18 @@ export function useSceneMapMetadata(
   });
 }
 
+export function useSceneHistograms(
+  datasetId: string | undefined,
+  sceneId: string | undefined,
+  bins = 45,
+) {
+  return useQuery({
+    queryKey: satelliteKeys.histograms(datasetId ?? "", sceneId ?? "", bins),
+    queryFn: () => getSceneHistograms(datasetId!, sceneId!, bins),
+    enabled: Boolean(datasetId && sceneId),
+  });
+}
+
 export function sampleNdviAt(
   datasetId: string,
   sceneId: string,
@@ -90,4 +106,13 @@ export function sampleNdviAt(
   latitude: number,
 ) {
   return getNdviSample(datasetId, sceneId, longitude, latitude);
+}
+
+export function inspectPixelAt(
+  datasetId: string,
+  sceneId: string,
+  longitude: number,
+  latitude: number,
+) {
+  return getPixelInspect(datasetId, sceneId, longitude, latitude);
 }

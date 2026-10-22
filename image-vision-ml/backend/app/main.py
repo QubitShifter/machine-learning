@@ -1,8 +1,10 @@
 
 from fastapi import FastAPI
 
+from backend.app.api.aoi import router as aoi_router
 from backend.app.api.integration import router as integration_router
 from backend.app.api.satellite import router as satellite_router
+from backend.app.api.soil import router as soil_router
 from backend.app.api.weather import router as weather_router
 
 app = FastAPI(
@@ -31,6 +33,16 @@ app.include_router(
     integration_router,
     prefix="/api/v1/integration",
     tags=["integration"],
+)
+app.include_router(
+    soil_router,
+    prefix="/api/v1/soil",
+    tags=["soil"],
+)
+app.include_router(
+    aoi_router,
+    prefix="/api/v1/aoi",
+    tags=["aoi"],
 )
 
 

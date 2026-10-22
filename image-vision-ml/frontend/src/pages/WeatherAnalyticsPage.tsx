@@ -4,8 +4,10 @@ import { Card } from "@/components/common/Card";
 import { Metric } from "@/components/common/Metric";
 import { QueryState } from "@/components/common/QueryState";
 import { SeriesChart } from "@/components/charts/SeriesChart";
+import { ProvenanceFooter } from "@/components/analysis/ProvenanceFooter";
+import { useWetness } from "@/hooks/useSoil";
 import { useWeatherDaily, useWeatherDataset, useWeatherMonthly, useWeatherSummary } from "@/hooks/useWeather";
-import { formatNumber, formatPercent, latestValidMonth } from "@/utils/format";
+import { formatNumber, formatPercent, lastUtcDayOfMonth, latestValidMonth } from "@/utils/format";
 
 interface Outlet {
   weatherId?: string;
@@ -27,8 +29,9 @@ export function WeatherAnalyticsPage() {
   const monthFilter = requestedMonth && requestedMonth.length === 7 ? requestedMonth : "";
   const [view, setView] = useState<"daily" | "monthly">("daily");
   const start = monthFilter ? `${monthFilter}-01` : `${year}-01-01`;
-  const end = monthFilter ? `${monthFilter}-${lastDay(monthFilter)}` : `${year}-12-31`;
+  const end = monthFilter ? `${monthFilter}-${lastUtcDayOfMonth(monthFilter)}` : `${year}-12-31`;
   const daily = useWeatherDaily(weatherId, start, end);
+  const wetness = useWetness(weatherId, start, end);
   const summary = useWeatherSummary(weatherId, start, end);
   const spatial = dataset.data?.spatial;
   const yearMonths = (monthly.data ?? []).filter((item) => item.month.startsWith(year));
@@ -199,6 +202,83 @@ export function WeatherAnalyticsPage() {
         </div>
       </QueryState>
 
+      <Card title="Rainfall history and wetness proxies">
+        <QueryState
+          isLoading={wetness.isLoading}
+          error={wetness.error}
+          onRetry={() => void wetness.refetch()}
+          empty={!wetness.data?.length}
+          emptyMessage="Wetness indicators have not been generated for this weather dataset."
+        >
+          <p className="mb-3 text-xs text-slate-400">
+            Daily series below are completed ERA5-Land reanalysis days, not future forecasts.
+            API and rolling rainfall are weather-derived wetness proxies, not volumetric soil moisture.
+            Missing precipitation stays null and is never drawn as 0 mm.
+          </p>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <Card title="Rolling rainfall 7 / 14 / 30 d">
+              <SeriesChart
+                color="#60a5fa"
+                unit="mm"
+                connectNulls={false}
+                data={(wetness.data ?? []).map((item) => ({
+                  date: item.date_utc ?? "",
+                  value: item.precip_trailing_7d_end_of_day_mm,
+                  extra: "end-of-day 7 d sum including D",
+                }))}
+              />
+              <p className="mt-1 text-[11px] text-slate-500">Shown: trailing 7-day end-of-day sum. 14/30 d columns exist in the same CSV.</p>
+            </Card>
+            <Card title="API k=0.85 / 0.90 / 0.95">
+              <SeriesChart
+                color="#93c5fd"
+                unit="mm"
+                connectNulls={false}
+                data={(wetness.data ?? []).map((item) => ({
+                  date: item.date_utc ?? "",
+                  value: item.api_k090_mm,
+                  extra: `k=0.90; k=0.85 ${item.api_k085_mm ?? "—"} · k=0.95 ${item.api_k095_mm ?? "—"}`,
+                }))}
+              />
+            </Card>
+            <Card title="Consecutive dry days">
+              <SeriesChart
+                kind="bar"
+                color="#e4d2a8"
+                unit="days"
+                connectNulls={false}
+                data={(wetness.data ?? []).map((item) => ({
+                  date: item.date_utc ?? "",
+                  value: item.consecutive_dry_days,
+                }))}
+              />
+            </Card>
+            <Card title="Rainfall minus evaporation (7 d)">
+              <SeriesChart
+                color="#e08a5a"
+                unit="mm"
+                connectNulls={false}
+                data={(wetness.data ?? []).map((item) => ({
+                  date: item.date_utc ?? "",
+                  value: item.precip_minus_evap_7d_mm,
+                  extra: "weather-derived proxy, not a water-balance closure",
+                }))}
+              />
+            </Card>
+          </div>
+          <ProvenanceFooter
+            items={[
+              { label: "Source", value: "ERA5-Land daily weather + wetness indicators" },
+              { label: "Dataset", value: weatherId },
+              { label: "Range", value: `${start} to ${end} UTC` },
+              { label: "API formula", value: "API_t = P_t + k API_{t-1}" },
+              { label: "Kind", value: "rainfall_history_indicator / weather_derived_wetness_proxy" },
+            ]}
+            note="Satellite-aligned precip_prev_N excludes date D and is not rewritten here."
+          />
+        </QueryState>
+      </Card>
+
       <Card title="ERA5-Land metadata">
         <dl className="grid gap-2 text-sm sm:grid-cols-2">
           <div><dt className="text-slate-400">Source</dt><dd>Copernicus ERA5-Land hourly reanalysis</dd></div>
@@ -224,7 +304,3 @@ export function WeatherAnalyticsPage() {
   );
 }
 
-function lastDay(month: string): string {
-  const [year, mon] = month.split("-").map(Number);
-  return String(new Date(Date.UTC(year, mon, 0)).getUTCDate()).padStart(2, "0");
-}

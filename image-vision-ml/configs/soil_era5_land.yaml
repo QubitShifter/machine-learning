@@ -1,0 +1,60 @@
+dataset_id: plovdiv_soil_2023_2025
+
+source:
+  provider: cds
+  dataset: reanalysis-era5-land
+  product_kind: reanalysis_soil_water
+  data_format: netcdf
+  download_format: unarchived
+  units: m3 m-3
+  observation_kind: modeled_volumetric_soil_moisture
+
+area:
+  name: plovdiv_test
+  bbox:
+    - 24.65
+    - 42.05
+    - 24.68
+    - 42.08
+  crs: EPSG:4326
+
+period:
+  start: "2023-01-01"
+  end: "2025-12-31"
+
+time:
+  timezone: UTC
+  daily_aggregation: true
+  aggregation: hourly_instantaneous_mean
+
+variables:
+  - volumetric_soil_water_layer_1
+  - volumetric_soil_water_layer_2
+  - volumetric_soil_water_layer_3
+  - volumetric_soil_water_layer_4
+
+spatial:
+  method: nearest_grid_cell
+  native_resolution_deg: 0.1
+  reference_weather_dataset_id: plovdiv_weather_2023_2025
+  # CDS area order: north, west, south, east. Same box as weather_era5_land.yaml.
+  retrieval_area:
+    - 42.20
+    - 24.50
+    - 41.90
+    - 24.90
+
+downloads:
+  partition: monthly
+  retries: 3
+  timeout_seconds: 120
+  # Instantaneous soil water must not use the precipitation D+1 00:00 boundary.
+  include_next_day_boundary: false
+
+quality:
+  require_complete_days: true
+  preserve_missing_values: true
+  theta_min: 0.0
+  theta_max: 1.0
+  field_capacity: null
+  wilting_point: null

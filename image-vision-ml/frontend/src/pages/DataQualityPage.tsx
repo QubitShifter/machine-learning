@@ -1,12 +1,14 @@
-import { useOutletContext, useNavigate } from "react-router-dom";
+import { Link, useOutletContext, useNavigate } from "react-router-dom";
 import { Card } from "@/components/common/Card";
 import { Metric } from "@/components/common/Metric";
 import { QueryState } from "@/components/common/QueryState";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { CoverageMatrix } from "@/components/quality/CoverageMatrix";
+import { TaskReadiness } from "@/components/quality/TaskReadiness";
 import { useSatelliteQuality } from "@/hooks/useSatellite";
+import { useSoilDatasets, useSoilQuality } from "@/hooks/useSoil";
 import { useWeatherQuality } from "@/hooks/useWeather";
-import { formatNumber, formatPercent, formatStatus } from "@/utils/format";
+import { formatNumber, formatPercent, formatStatus, preferredSoilDataset } from "@/utils/format";
 
 interface Outlet {
   satelliteId?: string;
@@ -17,11 +19,18 @@ export function DataQualityPage() {
   const { satelliteId, weatherId } = useOutletContext<Outlet>();
   const weather = useWeatherQuality(weatherId);
   const satellite = useSatelliteQuality(satelliteId);
+  const soilList = useSoilDatasets();
+  const soilId = preferredSoilDataset(soilList.data ?? []);
+  const soil = useSoilQuality(soilId);
   const navigate = useNavigate();
   const hourly = weather.data?.hourly ?? {};
   const daily = weather.data?.daily ?? {};
   const accumulation = weather.data?.accumulation ?? hourly.accumulation ?? {};
   const coverage = weather.data?.coverage;
+  const satelliteMonths = Object.fromEntries(
+    (satellite.data?.coverage?.months ?? []).map((row) => [row.month, row.coverage_status]),
+  );
+  const unresolved = satellite.data?.calibration_audit?.unresolved_scene_ids ?? [];
 
   return (
     <div className="space-y-4">
@@ -60,11 +69,73 @@ export function DataQualityPage() {
         </QueryState>
       </Card>
 
-      <Card title="Monthly coverage matrix">
+      <Card title="Weather monthly coverage">
         <CoverageMatrix
           availability={coverage?.month_availability}
           onSelect={(month) => navigate(`/weather?year=${month.slice(0, 4)}&month=${month}`)}
         />
+      </Card>
+
+      <Card title="Satellite monthly coverage">
+        <QueryState
+          isLoading={satellite.isLoading}
+          error={satellite.error}
+          onRetry={() => void satellite.refetch()}
+        >
+          {Object.keys(satelliteMonths).length ? (
+            <CoverageMatrix
+              satelliteStatuses={satelliteMonths}
+              onSelect={(month) => navigate(`/satellite?month=${month}`)}
+            />
+          ) : (
+            <p className="text-sm text-slate-400">
+              Satellite monthly coverage is written by validate. Unknown discovery evidence is not shown as zero.
+            </p>
+          )}
+          {unresolved.length ? (
+            <p className="mt-2 text-xs text-sand-200">
+              Calibration review: {unresolved.join(", ")}
+            </p>
+          ) : null}
+        </QueryState>
+      </Card>
+
+      <Card
+        title="Modeled soil moisture"
+        actions={(
+          <Link className="text-xs text-moss-300 hover:underline" to="/soil">
+            Soil analysis
+          </Link>
+        )}
+      >
+        {!soilId ? (
+          <p className="text-sm text-slate-400">
+            ERA5-Land volumetric soil water has not been processed. When present it is a modeled
+            regional state, not an in-situ ground measurement, and does not set suitable_for_modeling.
+          </p>
+        ) : (
+          <QueryState
+            isLoading={soil.isLoading}
+            error={soil.error}
+            onRetry={() => void soil.refetch()}
+          >
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Metric label="Dataset" value={soilId} />
+              <Metric label="Complete days" value={formatNumber(soil.data?.daily.complete_days, 0)} />
+              <Metric label="Kind" value={soil.data?.observation_kind ?? "modeled"} />
+              <Metric label="Ground truth" value={soil.data?.is_ground_truth ? "yes" : "no"} />
+            </div>
+            <p className="mt-3 text-sm text-sand-300">
+              Quality {formatStatus(soil.data?.status)}. Modeled readiness{" "}
+              {formatStatus(soil.data?.modeled_soil_readiness)}. suitable_for_modeling remains false
+              for ERA5-Land soil water.
+            </p>
+          </QueryState>
+        )}
+      </Card>
+
+      <Card title="Modeling readiness by task">
+        <TaskReadiness report={satellite.data?.task_readiness} />
       </Card>
 
       <Card title="Validation details">
@@ -97,7 +168,9 @@ export function DataQualityPage() {
           <ul className="list-disc space-y-1 pl-5 text-sm text-slate-300">
             <li>Weather integration readiness: {formatStatus(weather.data?.integration_readiness)}.</li>
             <li>Satellite soil-forecasting readiness: {formatStatus(satellite.data?.training_readiness?.supervised_soil_forecasting)}.</li>
-            <li>Soil-moisture predictions are not implemented.</li>
+            <li>Observation-level suitable_for_modeling uses that soil-forecasting gate, not exploratory NDVI.</li>
+            <li>ERA5-Land soil water is modeled, not independently measured field moisture.</li>
+            <li>Soil-moisture production forecasts are not trained in this phase.</li>
           </ul>
         </Card>
       </div>

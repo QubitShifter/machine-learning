@@ -44,3 +44,8 @@ export function sceneMapNdviUrl(datasetId: string, sceneId: string, cacheId?: st
   const base = `/api/v1/satellite/datasets/${encodeURIComponent(datasetId)}/scenes/${encodeURIComponent(sceneId)}/map/ndvi`;
   return cacheId ? `${base}?v=${encodeURIComponent(cacheId)}` : base;
 }
+
+export function sceneMapSclUrl(datasetId: string, sceneId: string, cacheId?: string | null): string {
+  const base = `/api/v1/satellite/datasets/${encodeURIComponent(datasetId)}/scenes/${encodeURIComponent(sceneId)}/map/scl`;
+  return cacheId ? `${base}?v=${encodeURIComponent(cacheId)}` : base;
+}

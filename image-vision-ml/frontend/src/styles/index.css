@@ -29,3 +29,83 @@ input:focus-visible {
 .maplibregl-ctrl-attrib {
   font-size: 10px;
 }
+
+:root {
+  --workspace-header-offset: 4rem;
+  --workspace-chrome: 14.5rem;
+}
+
+.satellite-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(17.5rem, 21.25rem);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.satellite-workspace.is-inspector-collapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.satellite-map-panel {
+  min-width: 0;
+}
+
+.satellite-map-viewport {
+  height: clamp(22.5rem, calc(100dvh - var(--workspace-chrome)), 47.5rem);
+  min-width: 0;
+}
+
+.satellite-inspector-panel {
+  max-height: clamp(22.5rem, calc(100dvh - var(--workspace-chrome)), 47.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  min-width: 0;
+}
+
+@media (max-width: 1279px) and (min-width: 1024px) {
+  .satellite-workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(16.5rem, 18.75rem);
+  }
+}
+
+@media (max-width: 1023px) {
+  .satellite-workspace,
+  .satellite-workspace.is-inspector-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .satellite-map-viewport {
+    height: clamp(17.5rem, 48dvh, 30rem);
+  }
+
+  .satellite-inspector-panel {
+    max-height: clamp(13.75rem, 38dvh, 26.25rem);
+  }
+}
+
+.soil-control-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.soil-year-toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.soil-comparison-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .soil-comparison-stats {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}

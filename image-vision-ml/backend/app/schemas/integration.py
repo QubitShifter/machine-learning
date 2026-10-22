@@ -135,6 +135,8 @@ class IntegrationQualityResponse(BaseModel):
     window_30d_complete_count: int | None = None
     weather_integration_readiness: str | None = None
     satellite_training_readiness: dict[str, Any] | None = None
+    task_readiness: dict[str, Any] | None = None
+    suitable_for_modeling_meaning: str | None = None
     weather_spatial: dict[str, Any] | None = None
     issues: list[dict[str, Any]] = Field(default_factory=list)
     sources_changed: bool | None = None

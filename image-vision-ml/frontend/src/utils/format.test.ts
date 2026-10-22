@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatNumber, formatUtcTimestamp, isCompleteDay, latestValidMonth } from "./format";
+import { formatNumber, formatUtcTimestamp, isCompleteDay, lastUtcDayOfMonth, latestValidMonth } from "./format";
 
 describe("format helpers", () => {
   it("does not invent numbers for missing values", () => {
@@ -20,6 +20,11 @@ describe("format helpers", () => {
       { month: "2025-04", availability: "downloaded", complete_days: 30 },
     ]);
     expect(month?.month).toBe("2025-04");
+  });
+
+  it("returns the UTC last day of a month", () => {
+    expect(lastUtcDayOfMonth("2023-01")).toBe("31");
+    expect(lastUtcDayOfMonth("2024-02")).toBe("29");
   });
 
   it("requires 24 hours and the next-day boundary for a complete day", () => {

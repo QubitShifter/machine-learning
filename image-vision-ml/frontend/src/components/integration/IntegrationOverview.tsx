@@ -42,7 +42,7 @@ export function IntegrationOverview({ detail, quality, onRefresh, isRefreshing }
         <Metric
           label="Modeling-ready observations"
           value={formatNumber(modeling, 0)}
-          hint="Zero is expected until soil-moisture labels exist"
+          hint="Supervised soil-forecasting eligibility only"
         />
         <Metric
           label="Integration version"
@@ -58,6 +58,8 @@ export function IntegrationOverview({ detail, quality, onRefresh, isRefreshing }
         <span>Generated {formatUtcTimestamp(detail?.updated_at ?? quality?.updated_at)}</span>
       </div>
       <p className="mt-2 text-xs text-slate-500">
+        Modeling-ready observations count supervised soil-forecasting eligibility
+        (`suitable_for_modeling`), not exploratory NDVI or vegetation forecasting.
         Soil-moisture ground-truth labels are not available. A modeling-ready count of zero is a scientific
         limitation, not an application failure. New ERA5-Land months appear here only after the integration
         command is rerun.

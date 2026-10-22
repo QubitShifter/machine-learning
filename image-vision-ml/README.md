@@ -55,8 +55,10 @@ python -m scripts.satellite_dataset process --config configs/satellite_timeserie
 python -m scripts.satellite_dataset timeseries --config configs/satellite_timeseries.yaml
 python -m scripts.satellite_dataset search --config configs/satellite_multiyear.yaml
 python -m scripts.satellite_dataset download --config configs/satellite_multiyear.yaml --limit 9 --dry-run
+python -m scripts.satellite_dataset download --config configs/satellite_multiyear.yaml --scene-id S2B_35TLG_20230609_0_L2A --dry-run
 python -m scripts.satellite_dataset validate --config configs/satellite_multiyear.yaml
 python -m scripts.satellite_dataset report --config configs/satellite_multiyear.yaml
+python -m scripts.satellite_dataset candidates --config configs/satellite_multiyear.yaml
 ```
 
 Search does not download rasters. Keep `--limit` small unless you intend a larger archive.

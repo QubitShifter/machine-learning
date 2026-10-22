@@ -13,6 +13,7 @@
 - [x] Discover historical Sentinel-2 scenes from Earth Search STAC
 - [x] Download a limited multi-date AOI archive
 - [x] Build a validated multi-year Sentinel-2 dataset with quality gates
+- [x] Expand the 2023–2025 Sentinel-2 archive with a controlled seasonal batch
 - [x] Retrieve historical weather data
 - [ ] Retrieve soil data
 - [x] Store geospatial metadata and dataset manifests
@@ -27,6 +28,8 @@
 - [x] Build a descriptive NDVI time series
 - [x] Monthly, yearly, and interannual NDVI summaries
 - [x] Join satellite NDVI with leakage-safe historical weather features
+- [x] Historical coverage diagnostics, calibration audit, and task-specific readiness
+- [x] Disjoint 10 m pixel-exclusion accounting and permanent feature/bug documentation
 - [ ] Generate training features
 
 ## Phase 4 - Model Development

@@ -56,6 +56,10 @@ export function SelectedObservation({ row }: Props) {
         <Flag ok={row.integrated_observation_complete} label="Integrated complete" />
         <Flag ok={row.suitable_for_modeling} label="Suitable for modeling" />
       </div>
+      <p className="mt-1 text-xs text-slate-500">
+        Suitable for modeling means this observation may enter supervised soil forecasting.
+        Complete weather windows are not enough while soil-moisture labels are missing.
+      </p>
       <p className="mt-2 text-xs text-slate-500">
         Weather grid {formatNumber(row.weather_grid_latitude, 2)}°N, {formatNumber(row.weather_grid_longitude, 2)}°E
         {" · "}

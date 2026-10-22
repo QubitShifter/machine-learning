@@ -140,18 +140,21 @@ def partition_months(start: str, end: str) -> list[str]:
 
 
 def detect_file_format(path: Path) -> str:
-    header = path.read_bytes()[:8]
+    header = path.read_bytes()[:64].lstrip()
+    if header.startswith(b"{") or header.startswith(b"["):
+        return "json"
     if header.startswith(b"GRIB"):
         return "grib"
     if header.startswith(b"CDF") or header.startswith(b"\x89HDF"):
         return "netcdf"
     raise WeatherDownloadError(
-        f"Downloaded file {path.name} is not a recognised GRIB or NetCDF payload."
+        f"Downloaded file {path.name} is not a recognised GRIB, NetCDF, or JSON payload."
     )
 
 
 def target_filename(month: str, fmt: str, *, boundary: bool = False) -> str:
-    suffix = "grib" if fmt == "grib" else "nc"
+    suffixes = {"grib": "grib", "json": "json", "netcdf": "nc"}
+    suffix = suffixes.get(fmt, "nc")
     extra = ".boundary" if boundary else ""
     return f"{month}{extra}.{suffix}"
 
@@ -181,6 +184,14 @@ VARIABLE_ALIASES = {
     "u10": ("u10", "10m_u_component_of_wind", "u_component_of_wind_10m"),
     "v10": ("v10", "10m_v_component_of_wind", "v_component_of_wind_10m"),
     "e": ("e", "total_evaporation"),
+    "swvl1": ("swvl1", "volumetric_soil_water_layer_1"),
+    "swvl2": ("swvl2", "volumetric_soil_water_layer_2"),
+    "swvl3": ("swvl3", "volumetric_soil_water_layer_3"),
+    "swvl4": ("swvl4", "volumetric_soil_water_layer_4"),
+    "stl1": ("stl1", "soil_temperature_level_1"),
+    "stl2": ("stl2", "soil_temperature_level_2"),
+    "stl3": ("stl3", "soil_temperature_level_3"),
+    "stl4": ("stl4", "soil_temperature_level_4"),
 }
 
 
@@ -199,6 +210,8 @@ def extract_hourly_records(
     if path.suffix.lower() == ".json":
         return _extract_json(path, bbox)
     fmt = detect_file_format(path)
+    if fmt == "json":
+        return _extract_json(path, bbox)
     if fmt == "grib":
         return _extract_xarray(path, bbox, engine="cfgrib")
     return _extract_xarray(path, bbox, engine=None)
@@ -287,15 +300,10 @@ def _records_from_dataset(dataset, bbox: tuple[float, float, float, float]):
         if parsed is None:
             continue
         point = subset.isel({time_name: index})
-        record = {
-            "timestamp_utc": parsed.isoformat().replace("+00:00", "Z"),
-            "t2m": _scalar(point, VARIABLE_ALIASES["t2m"]),
-            "d2m": _scalar(point, VARIABLE_ALIASES["d2m"]),
-            "tp": _scalar(point, VARIABLE_ALIASES["tp"]),
-            "u10": _scalar(point, VARIABLE_ALIASES["u10"]),
-            "v10": _scalar(point, VARIABLE_ALIASES["v10"]),
-            "e": _scalar(point, VARIABLE_ALIASES["e"]),
-        }
+        record = {"timestamp_utc": parsed.isoformat().replace("+00:00", "Z")}
+        for key, names in VARIABLE_ALIASES.items():
+            if any(name in point for name in names):
+                record[key] = _scalar(point, names)
         records.append(record)
     spatial["source_format"] = "xarray"
     return records, spatial

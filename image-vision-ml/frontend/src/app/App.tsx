@@ -17,6 +17,12 @@ const WeatherAnalyticsPage = lazy(() =>
 const DataQualityPage = lazy(() =>
   import("@/pages/DataQualityPage").then((module) => ({ default: module.DataQualityPage })),
 );
+const SoilAnalysisPage = lazy(() =>
+  import("@/pages/SoilAnalysisPage").then((module) => ({ default: module.SoilAnalysisPage })),
+);
+const AoiPage = lazy(() =>
+  import("@/pages/AoiPage").then((module) => ({ default: module.AoiPage })),
+);
 
 export function App() {
   return (
@@ -27,7 +33,9 @@ export function App() {
           <Route path="/satellite" element={<SatelliteExplorerPage />} />
           <Route path="/integration" element={<IntegrationAnalyticsPage />} />
           <Route path="/weather" element={<WeatherAnalyticsPage />} />
+          <Route path="/soil" element={<SoilAnalysisPage />} />
           <Route path="/quality" element={<DataQualityPage />} />
+          <Route path="/aoi" element={<AoiPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

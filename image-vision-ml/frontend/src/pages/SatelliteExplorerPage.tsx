@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/common/Card";
 import { QueryState } from "@/components/common/QueryState";
@@ -6,19 +6,26 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { SeriesChart } from "@/components/charts/SeriesChart";
 import { SatelliteMap } from "@/components/maps/SatelliteMap";
 import { NdviLegend } from "@/components/satellite/NdviLegend";
+import { InspectorSection } from "@/components/satellite/InspectorSection";
+import { PixelInspector } from "@/components/satellite/PixelInspector";
+import { SceneScientificPanels } from "@/components/satellite/SceneScientificPanels";
+import { SclLegend } from "@/components/satellite/SclLegend";
+import { usePersistedBoolean } from "@/hooks/usePersistedBoolean";
+import { PlannedModules } from "@/components/analysis/PlannedModules";
 import {
   useSatelliteDataset,
   useSatelliteDatasets,
   useSatelliteScenes,
   useSatelliteTimeseries,
+  inspectPixelAt,
   useSceneMapMetadata,
   useSceneQuality,
-  sampleNdviAt,
 } from "@/hooks/useSatellite";
+import { useAoiRegistry } from "@/hooks/useAoi";
 import { useIntegrationDatasets, useIntegrationObservations } from "@/hooks/useIntegration";
 import { preferredIntegrationDataset } from "@/utils/format";
-import { sceneMapNdviUrl, sceneMapRgbUrl } from "@/services/api";
-import type { NdviSample, SatelliteSceneRecord } from "@/types/api";
+import { sceneMapNdviUrl, sceneMapRgbUrl, sceneMapSclUrl } from "@/services/api";
+import type { PixelInspect, SatelliteSceneRecord } from "@/types/api";
 import { formatNumber, formatPercent } from "@/utils/format";
 
 interface Outlet {
@@ -36,11 +43,20 @@ export function SatelliteExplorerPage() {
   const series = useSatelliteTimeseries(activeId);
   const catalog = params.get("catalog") === "1";
   const requestedScene = params.get("scene") ?? undefined;
-  const requestedMode = params.get("mode") === "rgb" ? "rgb" : "ndvi";
+  const requestedMode = parseMode(params.get("mode"));
   const [query, setQuery] = useState("");
   const [opacity, setOpacity] = useState(0.85);
   const [showAoi, setShowAoi] = useState(true);
-  const [sample, setSample] = useState<NdviSample | null>(null);
+  const [sample, setSample] = useState<PixelInspect | null>(null);
+  const [pendingClick, setPendingClick] = useState<{ longitude: number; latitude: number } | null>(null);
+  const [inspecting, setInspecting] = useState(false);
+  const [inspectorCollapsed, setInspectorCollapsed] = usePersistedBoolean("explorer.inspectorCollapsed", false);
+  const [sceneInfoOpen, setSceneInfoOpen] = usePersistedBoolean("explorer.sceneInfoOpen", false);
+  const [legendOpen, setLegendOpen] = usePersistedBoolean("explorer.legendOpen", true);
+  const [pixelOpen, setPixelOpen] = usePersistedBoolean("explorer.pixelOpen", true);
+  const inspectorRef = useRef<HTMLElement | null>(null);
+  const inspectRequest = useRef(0);
+  const aoiRegistry = useAoiRegistry();
 
   const processed = useMemo(
     () => (scenes.data ?? []).filter((item) => item.status === "processed" || item.overlay_ready),
@@ -77,22 +93,69 @@ export function SatelliteExplorerPage() {
   );
   const mode = overlay.data?.supported_modes.includes(requestedMode)
     ? requestedMode
-    : overlay.data?.supported_modes[0] === "rgb" ? "rgb" : "ndvi";
+    : overlayFallback(overlay.data?.supported_modes);
   const overlayUrl = activeId && activeSceneId && overlay.data?.overlay_available
-    ? mode === "rgb"
-      ? sceneMapRgbUrl(activeId, activeSceneId, overlay.data.cache_id)
-      : sceneMapNdviUrl(activeId, activeSceneId, overlay.data.cache_id)
+    ? overlayImageUrl(mode, activeId, activeSceneId, overlay.data.cache_id)
     : null;
 
   useEffect(() => {
     setSample(null);
-  }, [activeSceneId, mode]);
+    setPendingClick(null);
+    setInspecting(false);
+  }, [activeSceneId]);
+
+  const inspectLocation = async (longitude: number, latitude: number) => {
+    if (!activeId || !activeSceneId) return;
+    const requestId = inspectRequest.current + 1;
+    inspectRequest.current = requestId;
+    setPendingClick({ longitude, latitude });
+    setInspecting(true);
+    setPixelOpen(true);
+    scrollInspectorToTop(inspectorRef.current);
+    try {
+      const result = await inspectPixelAt(activeId, activeSceneId, longitude, latitude);
+      if (inspectRequest.current !== requestId) return;
+      setSample(result);
+    } catch (error) {
+      if (inspectRequest.current !== requestId) return;
+      setSample({
+        scene_id: activeSceneId,
+        acquisition_date: scene?.acquisition_date ?? null,
+        longitude,
+        latitude,
+        crs: "EPSG:4326",
+        coverage_state: "out_of_coverage",
+        inside_raster: false,
+        valid: false,
+        row: null,
+        col: null,
+        sampling: "nearest_10m_target_grid",
+        red_b04: null,
+        green_b03: null,
+        blue_b02: null,
+        nir_b08: null,
+        ndvi: null,
+        scl_class: null,
+        scl_class_name: null,
+        valid_mask: null,
+        exclusion_reason: null,
+        calibration_status: quality.data?.calibration_status ?? null,
+        scene_quality_status: quality.data?.scene_quality_status ?? quality.data?.quality_status ?? null,
+        missing_reasons: { coverage: "request_failed" },
+        message: error instanceof Error ? error.message : "Pixel inspect failed",
+        source: "processed_rasters",
+        estimated_from_display_rgb: false,
+      });
+    } finally {
+      if (inspectRequest.current === requestId) setInspecting(false);
+    }
+  };
 
   const setScene = (sceneId: string) => {
     params.set("scene", sceneId);
     setParams(params, { replace: true });
   };
-  const setMode = (next: "rgb" | "ndvi") => {
+  const setMode = (next: "rgb" | "ndvi" | "scl") => {
     params.set("mode", next);
     setParams(params, { replace: true });
   };
@@ -176,13 +239,16 @@ export function SatelliteExplorerPage() {
         </QueryState>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <Card
-          title="Georeferenced scene map"
-          actions={(
+      <div
+        data-testid="satellite-workspace"
+        className={`satellite-workspace ${inspectorCollapsed ? "is-inspector-collapsed" : ""}`}
+      >
+        <section className="satellite-map-panel flex min-h-0 flex-col rounded-xl border border-ink-600/70 bg-ink-900/80 p-3">
+          <header className="mb-3 flex flex-wrap items-start justify-between gap-2">
+            <h2 className="text-sm font-semibold tracking-wide text-slate-200">Georeferenced scene map</h2>
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex gap-1" role="tablist" aria-label="Visualization mode">
-                {(["ndvi", "rgb"] as const).map((item) => (
+                {(["ndvi", "rgb", "scl"] as const).map((item) => (
                   <button
                     key={item}
                     type="button"
@@ -214,126 +280,201 @@ export function SatelliteExplorerPage() {
                 <input type="checkbox" checked={showAoi} onChange={(event) => setShowAoi(event.target.checked)} />
                 AOI outline
               </label>
+              <button
+                type="button"
+                className="rounded border border-ink-600 px-2 py-1 text-xs"
+                aria-expanded={!inspectorCollapsed}
+                aria-controls="satellite-inspector"
+                onClick={() => setInspectorCollapsed((current) => !current)}
+              >
+                {inspectorCollapsed ? "Show inspector" : "Hide inspector"}
+              </button>
             </div>
-          )}
-        >
-          <SatelliteMap
-            bbox={dataset.data?.bbox}
-            metadata={overlay.data}
-            overlayUrl={overlayUrl}
-            mode={mode}
-            opacity={opacity}
-            showAoi={showAoi}
-            overlayAvailable={Boolean(overlay.data?.overlay_available)}
-            overlayError={overlay.error?.message}
-            isLoading={overlay.isLoading}
-            onInspect={async (longitude, latitude) => {
-              if (!activeId || !activeSceneId || mode !== "ndvi") return;
-              try {
-                setSample(await sampleNdviAt(activeId, activeSceneId, longitude, latitude));
-              } catch (error) {
-                setSample({
-                  scene_id: activeSceneId,
-                  longitude,
-                  latitude,
-                  crs: "EPSG:4326",
-                  inside_raster: false,
-                  valid: false,
-                  ndvi: null,
-                  sampling: "nearest",
-                  message: error instanceof Error ? error.message : "Sample failed",
-                });
-              }
-            }}
-          />
-        </Card>
+          </header>
+          <div className="satellite-map-viewport">
+            <SatelliteMap
+              bbox={dataset.data?.bbox}
+              metadata={overlay.data}
+              overlayUrl={overlayUrl}
+              mode={mode}
+              opacity={opacity}
+              showAoi={showAoi}
+              overlayAvailable={Boolean(overlay.data?.overlay_available)}
+              overlayError={overlay.error?.message}
+              isLoading={overlay.isLoading}
+              fillParent
+              selectedPoint={sample ?? pendingClick}
+              onInspect={(longitude, latitude) => {
+                void inspectLocation(longitude, latitude);
+              }}
+            />
+          </div>
+        </section>
 
-        <div className="space-y-4">
-          <Card title="Scene information">
-            <QueryState
-              isLoading={quality.isLoading}
-              error={quality.error}
-              onRetry={() => void quality.refetch()}
-              empty={!quality.data && !scene}
+        {inspectorCollapsed ? null : (
+          <aside
+            id="satellite-inspector"
+            ref={inspectorRef}
+            data-testid="satellite-inspector"
+            className="satellite-inspector-panel space-y-3"
+          >
+            <div className="rounded-lg border border-ink-600/70 bg-ink-900/80 px-3 py-2">
+              {hasWeatherContext && activeSceneId ? (
+                <Link
+                  className="inline-flex rounded border border-moss-600/40 px-2 py-1 text-xs text-moss-300 hover:bg-ink-700"
+                  to={`/integration?scene=${encodeURIComponent(activeSceneId)}`}
+                >
+                  View weather context
+                </Link>
+              ) : (
+                <p className="text-xs text-slate-500" role="status">
+                  Weather context unavailable for this scene.
+                </p>
+              )}
+            </div>
+            <InspectorSection
+              id="pixel-inspector-panel"
+              title="Pixel inspector"
+              open={pixelOpen}
+              onToggle={() => setPixelOpen((current) => !current)}
+              summary={sample
+                ? `${sample.longitude.toFixed(4)}°E, ${sample.latitude.toFixed(4)}°N · ${sample.valid ? "valid" : sample.coverage_state}`
+                : "Click the map to sample a raster pixel"}
             >
-              <MetadataGroup title="Acquisition">
-                <Row label="Date" value={quality.data?.acquisition_date ?? scene?.acquisition_date} />
-                <Row label="Platform" value={quality.data?.satellite_platform ?? scene?.platform} />
-                <CopyRow label="Scene ID" value={activeSceneId} />
-                <Row label="Collection" value={dataset.data?.collection} />
-                <div className="pt-2">
-                  {hasWeatherContext && activeSceneId ? (
-                    <Link
-                      className="inline-flex rounded border border-moss-600/40 px-2 py-1 text-xs text-moss-300 hover:bg-ink-700"
-                      to={`/integration?scene=${encodeURIComponent(activeSceneId)}`}
-                    >
-                      View weather context
-                    </Link>
-                  ) : (
-                    <p className="text-xs text-slate-500" role="status">
-                      Weather context unavailable for this scene.
+              <PixelInspector sample={sample} loading={inspecting} pending={pendingClick} />
+            </InspectorSection>
+
+            <InspectorSection
+              id="scene-information-panel"
+              title="Scene information"
+              open={sceneInfoOpen}
+              onToggle={() => setSceneInfoOpen((current) => !current)}
+              summary={(
+                <>
+                  {[
+                    quality.data?.acquisition_date ?? scene?.acquisition_date,
+                    activeSceneId,
+                    quality.data?.scene_quality_status ?? quality.data?.quality_status ?? scene?.status,
+                    `cal ${quality.data?.calibration_status
+                      ?? (quality.data?.calibration?.validation_status as string | undefined)
+                      ?? "unknown"}`,
+                  ].filter(Boolean).join(" · ")}
+                  {quality.data?.scene_quality_status === "rejected"
+                    || quality.data?.quality_status === "rejected"
+                    || quality.data?.scene_quality_status === "requires_review" ? (
+                    <span className="mt-1 block text-sand-300">Not validated science — quality status is visible while collapsed.</span>
+                  ) : null}
+                </>
+              )}
+            >
+              <QueryState
+                isLoading={quality.isLoading}
+                error={quality.error}
+                onRetry={() => void quality.refetch()}
+                empty={!quality.data && !scene}
+              >
+                <MetadataGroup title="Acquisition">
+                  <Row label="Date" value={quality.data?.acquisition_date ?? scene?.acquisition_date} />
+                  <Row label="Platform" value={quality.data?.satellite_platform ?? scene?.platform} />
+                  <CopyRow label="Scene ID" value={activeSceneId} />
+                  <Row label="Collection" value={dataset.data?.collection} />
+                </MetadataGroup>
+                <MetadataGroup title="Vegetation">
+                  <Row label="NDVI min" value={formatNumber(quality.data?.ndvi_minimum)} />
+                  <Row label="NDVI mean" value={formatNumber(quality.data?.ndvi_mean)} />
+                  <Row label="NDVI max" value={formatNumber(quality.data?.ndvi_maximum)} />
+                </MetadataGroup>
+                <MetadataGroup title="Quality">
+                  <Row label="Valid pixels" value={formatPercent(quality.data?.valid_ndvi_pct ?? scene?.valid_percentage)} />
+                  <Row label="AOI coverage" value={formatPercent(quality.data?.actual_aoi_coverage_pct ?? scene?.aoi_coverage)} />
+                  <Row label="Cloud / shadow" value={formatPercent(quality.data?.cloud_shadow_fraction_pct ?? scene?.cloud_cover)} />
+                  <Row
+                    label="Scene quality"
+                    value={quality.data?.scene_quality_status ?? quality.data?.quality_status ?? scene?.status}
+                  />
+                  <Row
+                    label="Calibration"
+                    value={quality.data?.calibration_status
+                      ?? (quality.data?.calibration?.validation_status as string | undefined)
+                      ?? "—"}
+                  />
+                  {quality.data?.scene_quality_reasons?.length || quality.data?.reasons?.length ? (
+                    <p className="text-xs text-slate-400">
+                      {(quality.data.scene_quality_reasons?.length
+                        ? quality.data.scene_quality_reasons
+                        : quality.data.reasons).join(", ")}
                     </p>
-                  )}
-                </div>
-              </MetadataGroup>
-              <MetadataGroup title="Vegetation">
-                <Row label="NDVI min" value={formatNumber(quality.data?.ndvi_minimum)} />
-                <Row label="NDVI mean" value={formatNumber(quality.data?.ndvi_mean)} />
-                <Row label="NDVI max" value={formatNumber(quality.data?.ndvi_maximum)} />
-              </MetadataGroup>
-              <MetadataGroup title="Quality">
-                <Row label="Valid pixels" value={formatPercent(quality.data?.valid_ndvi_pct ?? scene?.valid_percentage)} />
-                <Row label="AOI coverage" value={formatPercent(quality.data?.actual_aoi_coverage_pct ?? scene?.aoi_coverage)} />
-                <Row label="Cloud / shadow" value={formatPercent(quality.data?.cloud_shadow_fraction_pct ?? scene?.cloud_cover)} />
-                <Row label="Status" value={quality.data?.quality_status ?? scene?.status} />
-                {quality.data?.reasons?.length ? (
-                  <p className="text-xs text-slate-400">{quality.data.reasons.join(", ")}</p>
-                ) : null}
-              </MetadataGroup>
-              <MetadataGroup title="Geometry">
-                <Row label="Native CRS" value={overlay.data?.native_crs ?? dataset.data?.target_grid?.crs} />
-                <Row
-                  label="Pixel size"
-                  value={overlay.data?.native_pixel_size_m
-                    ? `${overlay.data.native_pixel_size_m.join(" × ")} m`
-                    : dataset.data?.target_grid?.resolution
-                      ? `${dataset.data.target_grid.resolution.join(" × ")} m`
+                  ) : null}
+                </MetadataGroup>
+                <MetadataGroup title="Geometry">
+                  <Row label="Native CRS" value={overlay.data?.native_crs ?? dataset.data?.target_grid?.crs} />
+                  <Row
+                    label="Pixel size"
+                    value={overlay.data?.native_pixel_size_m
+                      ? `${overlay.data.native_pixel_size_m.join(" × ")} m`
+                      : dataset.data?.target_grid?.resolution
+                        ? `${dataset.data.target_grid.resolution.join(" × ")} m`
+                        : "—"}
+                  />
+                  <Row
+                    label="Raster size"
+                    value={overlay.data?.native_width
+                      ? `${overlay.data.native_width} × ${overlay.data.native_height} px`
                       : "—"}
-                />
-                <Row
-                  label="Raster size"
-                  value={overlay.data?.native_width
-                    ? `${overlay.data.native_width} × ${overlay.data.native_height} px`
-                    : "—"}
-                />
-                <Row
-                  label="Footprint WGS84"
-                  value={overlay.data?.geographic_extent
-                    ? `${overlay.data.geographic_extent.west?.toFixed(5)}, ${overlay.data.geographic_extent.south?.toFixed(5)}, ${overlay.data.geographic_extent.east?.toFixed(5)}, ${overlay.data.geographic_extent.north?.toFixed(5)}`
-                    : "—"}
-                />
-                <Row
-                  label="Overlay render"
-                  value={overlay.data?.rendered_width
-                    ? `${overlay.data.rendered_width} × ${overlay.data.rendered_height} ${overlay.data.rendered_crs}`
-                    : "—"}
-                />
-              </MetadataGroup>
-            </QueryState>
-          </Card>
-          {mode === "ndvi" ? <NdviLegend scale={overlay.data?.ndvi_color_scale ?? []} /> : null}
-          {sample ? (
-            <Card title="Pixel sample">
-              <p className="font-mono text-xs">
-                {sample.longitude.toFixed(5)}°E, {sample.latitude.toFixed(5)}°N
+                  />
+                  <Row
+                    label="Footprint WGS84"
+                    value={overlay.data?.geographic_extent
+                      ? `${overlay.data.geographic_extent.west?.toFixed(5)}, ${overlay.data.geographic_extent.south?.toFixed(5)}, ${overlay.data.geographic_extent.east?.toFixed(5)}, ${overlay.data.geographic_extent.north?.toFixed(5)}`
+                      : "—"}
+                  />
+                  <Row
+                    label="Overlay render"
+                    value={overlay.data?.rendered_width
+                      ? `${overlay.data.rendered_width} × ${overlay.data.rendered_height} ${overlay.data.rendered_crs}`
+                      : "—"}
+                  />
+                </MetadataGroup>
+              </QueryState>
+            </InspectorSection>
+
+            <InspectorSection
+              id="classification-legend-panel"
+              title={mode === "scl" ? "SCL classes" : mode === "ndvi" ? "NDVI color scale" : "Classification"}
+              open={legendOpen}
+              onToggle={() => setLegendOpen((current) => !current)}
+              summary={`${mode.toUpperCase()} overlay · ${mode === "scl" ? "categorical 10 m nearest-neighbor classes" : mode === "ndvi" ? "fixed −1 to 1 display scale" : "RGB is surface reflectance, not SCL"}`}
+            >
+              {mode === "ndvi" ? <NdviLegend scale={overlay.data?.ndvi_color_scale ?? []} /> : null}
+              {mode === "scl" ? (
+                <SclLegend legend={overlay.data?.scl_legend} provenance={overlay.data?.scl_provenance} />
+              ) : null}
+              {mode === "rgb" ? (
+                <p className="text-xs text-slate-400">
+                  RGB overlay is calibrated B04/B03/B02 reflectance for display. Switch to SCL for class colors.
+                </p>
+              ) : null}
+            </InspectorSection>
+
+            <section className="rounded-lg border border-ink-600/70 bg-ink-900/80 p-3">
+              <h2 className="text-sm font-semibold tracking-wide text-slate-200">Study areas</h2>
+              <p className="mt-1 text-xs text-slate-400">
+                Operational datasets stay linked to existing imagery. Draft geometries are proposals only.
               </p>
-              <p className="mt-1 text-sm">
-                {sample.valid ? `NDVI ${formatNumber(sample.ndvi)}` : sample.message ?? "Invalid or outside raster"}
-              </p>
-              <p className="mt-1 text-[11px] text-slate-500">Nearest processed NDVI pixel. Not inferred from the PNG color.</p>
-            </Card>
-          ) : null}
-        </div>
+              <ul className="mt-2 space-y-1 text-xs">
+                {(aoiRegistry.data?.areas ?? []).map((item) => (
+                  <li key={item.aoi_id} className="flex justify-between gap-2">
+                    <span>{item.name}</span>
+                    <span className="font-mono text-slate-500">{item.status}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link className="mt-2 inline-flex text-xs text-moss-300 underline" to="/aoi">
+                Propose another study area
+              </Link>
+            </section>
+          </aside>
+        )}
       </div>
 
       <Card title="Historical NDVI">
@@ -362,8 +503,47 @@ export function SatelliteExplorerPage() {
           </p>
         </QueryState>
       </Card>
+
+      <SceneScientificPanels
+        datasetId={activeId}
+        sceneId={activeSceneId}
+        overlayReady={Boolean(scene?.overlay_ready)}
+      />
+      <PlannedModules />
     </div>
   );
+}
+
+function scrollInspectorToTop(node: HTMLElement | null) {
+  if (!node) return;
+  if (typeof node.scrollTo === "function") {
+    node.scrollTo({ top: 0 });
+    return;
+  }
+  node.scrollTop = 0;
+}
+
+function parseMode(value: string | null): "rgb" | "ndvi" | "scl" {
+  if (value === "rgb" || value === "scl") return value;
+  return "ndvi";
+}
+
+function overlayFallback(modes?: string[]): "rgb" | "ndvi" | "scl" {
+  if (modes?.includes("ndvi")) return "ndvi";
+  if (modes?.includes("rgb")) return "rgb";
+  if (modes?.includes("scl")) return "scl";
+  return "ndvi";
+}
+
+function overlayImageUrl(
+  mode: "rgb" | "ndvi" | "scl",
+  datasetId: string,
+  sceneId: string,
+  cacheId?: string | null,
+): string {
+  if (mode === "rgb") return sceneMapRgbUrl(datasetId, sceneId, cacheId);
+  if (mode === "scl") return sceneMapSclUrl(datasetId, sceneId, cacheId);
+  return sceneMapNdviUrl(datasetId, sceneId, cacheId);
 }
 
 function sceneLabel(scene: SatelliteSceneRecord): string {

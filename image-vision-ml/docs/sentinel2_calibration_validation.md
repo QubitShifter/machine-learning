@@ -81,3 +81,16 @@ After the correction, `first_image` NDVI is min −0.2333, max 0.9990, mean 0.56
 Earth Search metadata is not always trustworthy. Scene `S2C_35TLG_20250305_0_L2A` advertised `earthsearch:boa_offset_applied=false` and `offset=-0.1`, but its red DNs have mean 814. Applying `-0.1` made 76% of red reflectance negative. Phase 2.4 no longer silently switches the offset to 0. That discrepancy is stored as `validation_status=conflicting` and `requires_review=true`. Under `calibration_policy=verified_only`, the scene is excluded from the validated dataset until the source encoding is confirmed. This is the same class of catalog error documented in [Earth Search issue #66](https://github.com/Element84/earth-search/issues/66).
 
 Negative surface-reflectance estimates can occur after atmospheric correction. They are not, by themselves, proof that the coefficients are wrong.
+
+## Phase 3.3 calibration audit
+
+`ml/validation/calibration_audit.py` writes `calibration_audit.json` during `validate`. It classifies stored evidence only. It does not invent `s2:processing_baseline`, does not infer encoding from the scene ID, and does not promote a scene to `valid` because NDVI looks plausible.
+
+The two unresolved archive scenes are the same Earth Search offset-conflict class documented above and in [issue #66](https://github.com/Element84/earth-search/issues/66):
+
+- `S2B_34TGM_20250208_0_L2A` (2025-02-08): `earthsearch:boa_offset_applied=false` with advertised optical offset −0.1; sample fractions after that offset were majority-negative; stored NDVI min/max fall far outside [−1, 1]. Status remains `requires_review`.
+- `S2C_35TLG_20250308_0_L2A` (2025-03-08): native 35TLG tile with the same advertised-offset vs sample conflict and physically implausible NDVI. Status remains `requires_review`.
+
+The defects are not assumed identical beyond the shared catalog-encoding class. Missing authoritative metadata keeps `requires_review`. Reprocessing may refresh evidence; it must not silently rewrite coefficients.
+
+`calibration_status` / audit `current_status` describe radiometric coefficients. `scene_quality_status` describes overall usability (coverage, valid NDVI, grid, missing assets). A winter scene may be `scene_quality_status=rejected` while `calibration_status=verified`. See [`feature_registry.md`](feature_registry.md) and [`bugs/BUG-0006.md`](bugs/BUG-0006.md), [`bugs/BUG-0007.md`](bugs/BUG-0007.md).

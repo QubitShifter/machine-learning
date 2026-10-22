@@ -1,8 +1,9 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { ChartNoAxesCombined, CloudSun, LayoutDashboard, Satellite, ShieldCheck, Sparkles } from "lucide-react";
+import { ChartNoAxesCombined, CloudSun, LayoutDashboard, Layers, MapPinned, Satellite, ShieldCheck, Sparkles } from "lucide-react";
 import { useSatelliteDatasets } from "@/hooks/useSatellite";
+import { useSoilDatasets } from "@/hooks/useSoil";
 import { useWeatherDatasets, useWeatherQuality } from "@/hooks/useWeather";
-import { preferredSatelliteDataset, preferredWeatherDataset, formatStatus } from "@/utils/format";
+import { preferredSatelliteDataset, preferredSoilDataset, preferredWeatherDataset, formatStatus } from "@/utils/format";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useState } from "react";
 
@@ -11,7 +12,9 @@ const NAV = [
   { to: "/satellite", label: "Satellite Explorer", icon: Satellite },
   { to: "/integration", label: "Combined Analytics", icon: ChartNoAxesCombined },
   { to: "/weather", label: "Weather Analytics", icon: CloudSun },
+  { to: "/soil", label: "Soil Analysis", icon: Layers },
   { to: "/quality", label: "Data Quality", icon: ShieldCheck },
+  { to: "/aoi", label: "Study Areas", icon: MapPinned },
 ];
 
 const TITLES: Record<string, string> = {
@@ -19,7 +22,9 @@ const TITLES: Record<string, string> = {
   "/satellite": "Satellite Explorer",
   "/integration": "Combined Analytics",
   "/weather": "Weather Analytics",
+  "/soil": "Soil Analysis",
   "/quality": "Data Quality",
+  "/aoi": "Study Areas",
 };
 
 export function AppShell() {
@@ -27,8 +32,10 @@ export function AppShell() {
   const [open, setOpen] = useState(false);
   const satellite = useSatelliteDatasets();
   const weather = useWeatherDatasets();
+  const soil = useSoilDatasets();
   const satelliteId = preferredSatelliteDataset(satellite.data ?? []);
   const weatherId = preferredWeatherDataset(weather.data ?? []);
+  const soilId = preferredSoilDataset(soil.data ?? []);
   const quality = useWeatherQuality(weatherId);
 
   return (
@@ -92,7 +99,7 @@ export function AppShell() {
             <div className="min-w-0">
               <h1 className="truncate text-base font-semibold">{TITLES[location.pathname] ?? "Image Vision ML"}</h1>
               <p className="truncate text-xs text-slate-400">
-                {satelliteId ?? "No satellite dataset"} · {weatherId ?? "No weather dataset"} · UTC
+                {satelliteId ?? "No satellite dataset"} · {weatherId ?? "No weather dataset"} · {soilId ?? "No soil dataset"} · UTC
               </p>
             </div>
           </div>
@@ -120,7 +127,7 @@ export function AppShell() {
               </button>
             </div>
           ) : null}
-          <Outlet context={{ satelliteId, weatherId }} />
+          <Outlet context={{ satelliteId, weatherId, soilId }} />
         </main>
       </div>
     </div>

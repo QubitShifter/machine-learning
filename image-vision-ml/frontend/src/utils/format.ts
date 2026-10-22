@@ -60,6 +60,13 @@ export function preferredWeatherDataset(
   return (preferred ?? datasets[0])?.dataset_id;
 }
 
+export function preferredSoilDataset(
+  datasets: Array<{ dataset_id: string }>,
+): string | undefined {
+  const preferred = datasets.find((item) => item.dataset_id === "plovdiv_soil_2023_2025");
+  return (preferred ?? datasets[0])?.dataset_id;
+}
+
 export function preferredIntegrationDataset(
   datasets: Array<{ dataset_id: string; satellite_dataset_id?: string | null }>,
   satelliteId?: string,
@@ -93,4 +100,9 @@ export function formatMeasured(
     return "Unavailable";
   }
   return `${formatNumber(value, digits)} ${unit}`;
+}
+
+export function lastUtcDayOfMonth(month: string): string {
+  const [year, mon] = month.split("-").map(Number);
+  return String(new Date(Date.UTC(year, mon, 0)).getUTCDate()).padStart(2, "0");
 }

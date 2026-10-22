@@ -59,12 +59,20 @@ class WeatherConfigError(DatasetConfigError):
     """A weather dataset configuration file is invalid."""
 
 
+class SoilConfigError(DatasetConfigError):
+    """A soil-moisture dataset configuration file is invalid."""
+
+
 class CdsAuthenticationError(SatelliteProcessingError):
     """CDS API credentials are missing or incomplete."""
 
 
 class WeatherDownloadError(DownloadError):
     """A weather asset download failed or was incomplete."""
+
+
+class SoilDownloadError(WeatherDownloadError):
+    """A soil-moisture asset download failed or was incomplete."""
 
 
 class PermanentCdsRequestError(WeatherDownloadError):

@@ -359,6 +359,42 @@ def test_resume_skips_complete_and_downloads_pending(monkeypatch, tmp_path: Path
     assert ("2025", "04") not in {(year, month) for year, month, _ in calls[2:]}
 
 
+def test_empty_files_are_replaceable_but_complete_files_are_not(monkeypatch, tmp_path: Path):
+    from ml.ingestion import weather_download
+    from ml.ingestion.weather_download import _commit_downloaded_file, month_integrity
+
+    monkeypatch.setattr(weather_download, "require_cds_auth", lambda: {"configured": True})
+    hourly_dir = tmp_path / "hourly"
+    hourly_dir.mkdir()
+    empty = hourly_dir / "2024-07.boundary.nc"
+    empty.write_bytes(b"")
+    integrity = month_integrity(
+        hourly_dir,
+        {"filename": "2024-07.nc", "boundary_filename": "2024-07.boundary.nc"},
+        require_boundary=True,
+    )
+    assert "empty_boundary_file" in integrity["reasons"] or "missing_hourly_file" in integrity["reasons"]
+    replacement = hourly_dir / "2024-07.boundary.download"
+    _write_netcdf_header(replacement)
+    _commit_downloaded_file(replacement, empty)
+    assert empty.stat().st_size > 0
+
+    complete = hourly_dir / "2024-07.nc"
+    _write_netcdf_header(complete)
+    incoming = hourly_dir / "2024-07.download"
+    _write_netcdf_header(incoming)
+    with pytest.raises(WeatherDownloadError, match="Refusing to overwrite"):
+        _commit_downloaded_file(incoming, complete)
+
+    empty_hourly = hourly_dir / "2024-08.nc"
+    empty_hourly.write_bytes(b"")
+    record = {"filename": "2024-08.nc", "status": "downloaded", "checksum": "abc"}
+    empty_integrity = month_integrity(hourly_dir, record, require_boundary=False)
+    assert empty_integrity["complete"] is False
+    assert "empty_hourly_file" in empty_integrity["reasons"]
+    assert "invalid_format" not in empty_integrity["reasons"]
+
+
 def test_checksum_mismatch_is_not_overwritten(monkeypatch, tmp_path: Path):
     from ml.ingestion import weather_download
 

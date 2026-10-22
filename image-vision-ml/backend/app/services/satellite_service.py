@@ -25,11 +25,13 @@ from backend.app.schemas.satellite import (
     NdviSummary,
     ProcessRequest,
     ProcessResponse,
+    SceneHistogramResponse,
     SceneQualityResponse,
     TimeseriesObservation,
     YearlyNdviResponse,
     YearlyNdviRow,
 )
+from ml.analysis.scene_histograms import DEFAULT_BINS, build_scene_histograms
 from ml.ingestion.config import load_dataset_config
 from ml.ingestion.manifest import read_manifest, scene_records, validate_safe_id
 from ml.ingestion.pipeline import (
@@ -216,6 +218,28 @@ def get_rgb_preview_path(image_id: str) -> Path:
 
 def get_ndvi_preview_path(image_id: str) -> Path:
     return _require_output(image_id, OUTPUT_NDVI_PNG, "NDVI preview")
+
+
+def get_scene_histograms(
+    dataset_id: str,
+    scene_id: str,
+    *,
+    bins: int = DEFAULT_BINS,
+) -> SceneHistogramResponse:
+    dataset_id = validate_image_id(dataset_id)
+    scene_id = validate_image_id(scene_id)
+    _require_dataset_manifest(dataset_id)
+    try:
+        payload = build_scene_histograms(
+            dataset_id,
+            scene_id,
+            bins=bins,
+            processed_root=_processed_root(),
+            raw_root=_raw_root(),
+        )
+    except ValueError as exc:
+        raise InvalidMetadataError(str(exc)) from exc
+    return SceneHistogramResponse.model_validate(payload)
 
 
 def get_dataset_scene_preview_path(
@@ -469,6 +493,9 @@ def get_dataset_quality(dataset_id: str) -> DatasetQualityResponse:
         dataset_id=dataset_id,
         dataset=payload.get("dataset") or {},
         training_readiness=payload.get("training_readiness"),
+        coverage=payload.get("coverage"),
+        calibration_audit=payload.get("calibration_audit"),
+        task_readiness=payload.get("task_readiness"),
         scene_count=len(payload.get("scenes") or []),
     )
 

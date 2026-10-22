@@ -1,4 +1,10 @@
-from ml.ingestion.selection import season_name, select_stratified_scenes
+import pytest
+
+from ml.ingestion.selection import (
+    season_name,
+    select_requested_scenes,
+    select_stratified_scenes,
+)
 
 
 def _record(scene_id, date, cloud=1.0):
@@ -38,3 +44,21 @@ def test_stratified_selection_spans_years_and_seasons():
 
 def test_selection_limit_zero():
     assert select_stratified_scenes([_record("a", "2023-01-01")], limit=0) == []
+
+
+def test_requested_scene_ids_preserve_order_and_skip_duplicates():
+    records = [
+        _record("later", "2024-09-01"),
+        _record("first", "2023-06-09"),
+        _record("second", "2023-09-12"),
+    ]
+    selected = select_requested_scenes(
+        records,
+        ["first", "second", "first", "later"],
+    )
+    assert [item["scene_id"] for item in selected] == ["first", "second", "later"]
+
+
+def test_unknown_requested_scene_id_is_an_error():
+    with pytest.raises(ValueError, match="not in the catalog"):
+        select_requested_scenes([_record("known", "2023-06-09")], ["missing"])

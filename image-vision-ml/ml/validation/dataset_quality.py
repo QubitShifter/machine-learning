@@ -11,12 +11,16 @@ from typing import Any
 
 import numpy as np
 
-from ml.ingestion.config import DEFAULT_QUALITY
+from ml.ingestion.config import DEFAULT_QUALITY, DEFAULT_READINESS
 from ml.ingestion.manifest import (
     read_manifest,
     scene_records,
     write_json_atomic,
 )
+from ml.validation.calibration_audit import audit_dataset_calibration
+from ml.validation.coverage import build_monthly_coverage
+from ml.validation.modeling_readiness import assess_task_readiness
+from ml.validation.pixel_exclusion import exclusion_report_for_scene
 from ml.preprocessing.calibration import (
     STATUS_CONFLICTING,
     STATUS_MISSING,
@@ -126,12 +130,16 @@ def evaluate_scene_quality(
         )
         cloud_shadow = round(100.0 * cloudy / total, 2) if total else 0.0
 
+    calibration_status = calibration_summary.get("validation_status")
     report = {
         "scene_id": scene.get("scene_id"),
         "acquisition_date": scene.get("acquisition_date"),
         "satellite_platform": scene.get("platform") or (scene.get("properties") or {}).get("platform"),
         "mgrs_tile": scene.get("mgrs_tile") or (scene.get("properties") or {}).get("mgrs"),
         "quality_status": status,
+        "scene_quality_status": status,
+        "scene_quality_reasons": list(reasons),
+        "calibration_status": calibration_status,
         "reasons": reasons,
         "geometric_footprint_overlap_pct": footprint,
         "bbox_overlap_pct": _as_float(scene.get("bbox_overlap_pct")),
@@ -209,9 +217,18 @@ def evaluate_dataset_quality(
         calibration = _read_optional_json(raw_dir / "calibration.json")
         calibration = _merge_process_calibration(calibration, processing_meta)
         missing = _missing_raw_assets(raw_dir)
-        scl_distribution = _scl_distribution(raw_dir)
+        native_scl = _scl_distribution(raw_dir)
+        exclusion = exclusion_report_for_scene(
+            raw_dir,
+            processed_dir,
+            stats=stats,
+            processing_meta=processing_meta,
+            native_scl_distribution=native_scl,
+        )
+        scl_distribution = (
+            exclusion.get("scl_class_distribution_target_grid") or native_scl
+        )
         reflectance_ranges = _reflectance_ranges(processing_meta)
-        exclusion = _exclusion_counts(stats, processing_meta, scl_distribution)
         merged_processed = dict(processed_record)
         if stats:
             merged_processed.setdefault("valid_pixels", stats.get("valid_pixels"))
@@ -309,11 +326,39 @@ def evaluate_dataset_quality(
         ),
     }
     readiness = assess_training_readiness(summary, scene_reports, config=config)
+    catalog_records = scene_records(raw_manifest)
+    catalog_known = (raw / "discovered.json").is_file() or any(
+        item.get("status") == "discovered" for item in catalog_records
+    )
+    coverage = build_monthly_coverage(
+        period=period,
+        catalog_records=catalog_records if catalog_known else None,
+        quality_scenes=scene_reports,
+        catalog_known=catalog_known,
+    )
+    calibration_audit = audit_dataset_calibration(
+        dataset_id,
+        raw_dir=raw,
+        processed_dir=processed,
+    )
+    integration_metrics = _integration_metrics(dataset_id, processed.parent)
+    task_readiness = assess_task_readiness(
+        quality={
+            **readiness,
+            "coverage": coverage,
+            "ground_truth_soil_moisture_available": False,
+        },
+        integration_metrics=integration_metrics,
+        thresholds=(config or {}).get("readiness") or DEFAULT_READINESS,
+    )
     payload = {
         "dataset_id": dataset_id,
         "scenes": scene_reports,
         "dataset": summary,
         "training_readiness": readiness,
+        "coverage": coverage,
+        "calibration_audit": calibration_audit,
+        "task_readiness": task_readiness,
     }
     return payload
 
@@ -329,10 +374,24 @@ def write_quality_outputs(
     write_json_atomic(json_path, payload)
     write_json_atomic(readiness_path, payload["training_readiness"])
     _write_scene_csv(csv_path, payload["scenes"])
+    extras = {}
+    if payload.get("coverage") is not None:
+        coverage_path = output_dir / "coverage.json"
+        write_json_atomic(coverage_path, payload["coverage"])
+        extras["coverage"] = coverage_path.name
+    if payload.get("calibration_audit") is not None:
+        audit_path = output_dir / "calibration_audit.json"
+        write_json_atomic(audit_path, payload["calibration_audit"])
+        extras["calibration_audit"] = audit_path.name
+    if payload.get("task_readiness") is not None:
+        tasks_path = output_dir / "task_readiness.json"
+        write_json_atomic(tasks_path, payload["task_readiness"])
+        extras["task_readiness"] = tasks_path.name
     return {
         "json": json_path.name,
         "csv": csv_path.name,
         "training_readiness": readiness_path.name,
+        **extras,
     }
 
 
@@ -508,7 +567,10 @@ def _exclusion_counts(
     stats: dict[str, Any] | None,
     processing_meta: dict[str, Any] | None,
     scl_distribution: dict[str, int],
-) -> dict[str, int]:
+) -> dict[str, Any]:
+    """Deprecated residual helper; prefer exclusion_report_for_scene."""
+    from ml.validation.pixel_exclusion import residual_exclusion_counts
+
     total = 0
     valid = 0
     if stats:
@@ -517,22 +579,11 @@ def _exclusion_counts(
     elif processing_meta:
         total = int(processing_meta.get("total_pixels") or 0)
         valid = int(processing_meta.get("valid_pixels") or 0)
-    scl_rejected = 0
-    for key, count in scl_distribution.items():
-        try:
-            code = int(key)
-        except ValueError:
-            continue
-        if code not in {4, 5}:
-            scl_rejected += int(count)
-    excluded = max(total - valid, 0)
-    return {
-        "total_pixels": total,
-        "valid_pixels": valid,
-        "excluded_pixels": excluded,
-        "scl_rejected_or_non_land": scl_rejected,
-        "other_or_unclassified": max(excluded - scl_rejected, 0),
-    }
+    return residual_exclusion_counts(
+        total=total,
+        valid=valid,
+        scl_distribution=scl_distribution,
+    )
 
 
 def _scene_grid_status(scene_id: str, grid_report: dict[str, Any]) -> dict[str, Any]:
@@ -625,12 +676,14 @@ def _write_scene_csv(path: Path, scenes: list[dict[str, Any]]) -> None:
         "scene_id",
         "acquisition_date",
         "quality_status",
+        "scene_quality_status",
         "geometric_footprint_overlap_pct",
         "actual_aoi_coverage_pct",
         "valid_ndvi_pct",
         "ndvi_mean",
         "grid_aligned",
         "calibration_status",
+        "scene_quality_reasons",
     ]
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -640,13 +693,32 @@ def _write_scene_csv(path: Path, scenes: list[dict[str, Any]]) -> None:
                 "scene_id": item.get("scene_id"),
                 "acquisition_date": item.get("acquisition_date"),
                 "quality_status": item.get("quality_status"),
+                "scene_quality_status": item.get("scene_quality_status")
+                or item.get("quality_status"),
                 "geometric_footprint_overlap_pct": item.get("geometric_footprint_overlap_pct"),
                 "actual_aoi_coverage_pct": item.get("actual_aoi_coverage_pct"),
                 "valid_ndvi_pct": item.get("valid_ndvi_pct"),
                 "ndvi_mean": item.get("ndvi_mean"),
                 "grid_aligned": item.get("grid_aligned"),
-                "calibration_status": (item.get("calibration") or {}).get("validation_status"),
+                "calibration_status": item.get("calibration_status")
+                or (item.get("calibration") or {}).get("validation_status"),
+                "scene_quality_reasons": ";".join(item.get("scene_quality_reasons") or item.get("reasons") or []),
             })
+
+
+def _integration_metrics(dataset_id: str, processed_root: Path) -> dict[str, Any] | None:
+    # processed_root is data/processed/satellite; integration lives beside it.
+    path = processed_root.parent / "integration" / dataset_id / "integration_quality.json"
+    payload = _read_optional_json(path)
+    if not payload:
+        return None
+    return {
+        "complete_window_count": int(
+            payload.get("weather_feature_window_complete_count") or 0
+        ),
+        "observation_count": int(payload.get("observation_count") or 0),
+        "weather_integration_readiness": payload.get("weather_integration_readiness"),
+    }
 
 
 def _read_optional_json(path: Path) -> dict[str, Any] | None:

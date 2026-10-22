@@ -119,13 +119,15 @@ def month_integrity(
         return {"complete": False, "status": "incomplete", "reasons": ["missing_hourly_file"]}
     if path.stat().st_size == 0:
         reasons.append("empty_hourly_file")
-    try:
-        fmt = detect_file_format(path)
-    except WeatherDownloadError:
-        return {"complete": False, "status": "requires_review", "reasons": ["invalid_format"]}
+        fmt = None
+    else:
+        try:
+            fmt = detect_file_format(path)
+        except WeatherDownloadError:
+            return {"complete": False, "status": "requires_review", "reasons": ["invalid_format"]}
     checksum = _sha256(path)
     stored = record.get("checksum")
-    if stored and stored != checksum:
+    if stored and stored != checksum and path.stat().st_size > 0:
         return {
             "complete": False,
             "status": "requires_review",
@@ -165,6 +167,28 @@ def month_integrity(
         "filename": filename,
         "boundary_filename": boundary_name,
     }
+
+
+def _commit_downloaded_file(temporary: Path, destination: Path) -> None:
+    """Move a completed download into place without replacing valid files.
+
+    A zero-byte destination is not a successful archive. It may be replaced
+    by a newly retrieved file. Non-empty destinations are never overwritten.
+    """
+    if temporary.resolve() == destination.resolve():
+        return
+    if destination.exists():
+        if destination.stat().st_size == 0:
+            logger.warning(
+                "Replacing empty file %s with a completed download.",
+                destination.name,
+            )
+            destination.unlink()
+        else:
+            raise WeatherDownloadError(
+                f"Refusing to overwrite {destination.name}."
+            )
+    temporary.replace(destination)
 
 
 def plan_weather_downloads(
@@ -405,10 +429,7 @@ def download_weather_month(
         )
         fmt = detect_file_format(hourly_path)
         final_hourly = paths["hourly"] / target_filename(month, fmt)
-        if hourly_path != final_hourly:
-            if final_hourly.exists():
-                raise WeatherDownloadError(f"Refusing to overwrite {final_hourly.name}.")
-            hourly_path.replace(final_hourly)
+        _commit_downloaded_file(hourly_path, final_hourly)
         boundary_name = None
         boundary_checksum = None
         if boundary is not None:
@@ -422,10 +443,7 @@ def download_weather_month(
             )
             boundary_fmt = detect_file_format(boundary_path)
             final_boundary = paths["hourly"] / target_filename(month, boundary_fmt, boundary=True)
-            if boundary_path != final_boundary:
-                if final_boundary.exists():
-                    raise WeatherDownloadError(f"Refusing to overwrite {final_boundary.name}.")
-                boundary_path.replace(final_boundary)
+            _commit_downloaded_file(boundary_path, final_boundary)
             boundary_name = final_boundary.name
             boundary_checksum = _sha256(final_boundary)
         _set_month(

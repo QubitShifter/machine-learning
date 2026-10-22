@@ -1,0 +1,270 @@
+title: Agricultural data-source registry
+verified_at_utc: "2026-10-22T08:49:05Z"
+notes: >
+  Integration status distinguishes implemented/operational pipelines from
+  planned products. A listed URL is not a successful download.
+
+sources:
+  - source_id: era5_land_weather
+    provider: ECMWF / Copernicus CDS
+    product: reanalysis-era5-land
+    version: operational CDS catalogue 2026
+    data_category: historical_reanalysis_atmosphere
+    available_variables:
+      - 2m_temperature
+      - 2m_dewpoint_temperature
+      - total_precipitation
+      - 10m_u_component_of_wind
+      - 10m_v_component_of_wind
+      - total_evaporation
+    units: mixed SI; precipitation and evaporation converted to millimetres
+    spatial_resolution: approximately 0.1 degree (~9 km native; nearest cell used)
+    temporal_resolution: hourly, aggregated to UTC days
+    geographic_coverage: global land
+    historical_coverage: 1950-present with CDS latency
+    update_frequency: near-real-time with delay
+    api_download_access: CDS API dataset reanalysis-era5-land
+    authentication_requirements: CDS API key and accepted ERA5-Land licence
+    license: Copernicus licence / ECMWF
+    known_limitations:
+      - Study AOI is smaller than one grid cell; nearest cell is ~4.85 km from AOI centre
+      - Precipitation uses next-day 00:00 UTC accumulation, not soil-water rules
+    uncertainty_provenance: reanalysis model, not in-situ weather station
+    applicable_agricultural_tasks:
+      - weather_ndvi_relationship_analysis
+      - rainfall_derived_wetness_analysis
+    integration_status: operational
+    official_source_url: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land
+    verification_date: "2026-10-22"
+    dataset_id: plovdiv_weather_2023_2025
+    implemented_config: configs/weather_era5_land.yaml
+
+  - source_id: era5_land_soil_water
+    provider: ECMWF / Copernicus CDS
+    product: reanalysis-era5-land
+    version: operational CDS catalogue 2026
+    data_category: modeled_volumetric_soil_moisture
+    available_variables:
+      - volumetric_soil_water_layer_1
+      - volumetric_soil_water_layer_2
+      - volumetric_soil_water_layer_3
+      - volumetric_soil_water_layer_4
+    units: m3 m-3
+    spatial_resolution: approximately 0.1 degree; not 10 m field scale
+    temporal_resolution: hourly instantaneous states; daily mean of 24 hours
+    geographic_coverage: global land
+    historical_coverage: 1950-present with CDS latency
+    update_frequency: near-real-time with delay
+    api_download_access: CDS API dataset reanalysis-era5-land
+    authentication_requirements: CDS API key and accepted ERA5-Land licence
+    license: Copernicus licence / ECMWF
+    known_limitations:
+      - Instantaneous modeled water content, not a probe measurement
+      - Must not use precipitation deaccumulation
+      - Hourly timeseries product request schema is not assumed identical
+    uncertainty_provenance: TESSEL/HTESSEL land-surface model
+    applicable_agricultural_tasks:
+      - soil_moisture_historical_analysis
+      - modeled_soil_moisture_forecasting_research
+    integration_status: implemented
+    official_source_url: https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land
+    verification_date: "2026-10-22"
+    dataset_id: plovdiv_soil_2023_2025
+    implemented_config: configs/soil_era5_land.yaml
+    live_download_executed: false
+
+  - source_id: nasa_smap_l4
+    provider: NASA / NSIDC
+    product: SPL4SMGP
+    version: 8
+    data_category: modeled_assimilated_soil_moisture
+    available_variables:
+      - surface_soil_moisture
+      - root_zone_soil_moisture
+    units: m3 m-3
+    spatial_resolution: 9 km
+    temporal_resolution: 3-hourly
+    geographic_coverage: global
+    historical_coverage: 2015-present
+    update_frequency: ongoing
+    api_download_access: NSIDC / Earthdata
+    authentication_requirements: Earthdata login
+    license: NASA Earthdata
+    known_limitations:
+      - Assimilated model product, not an independent in-situ label
+      - Not ingested in Phase 3.4
+    uncertainty_provenance: SMAP L4 land-surface assimilation
+    applicable_agricultural_tasks:
+      - modeled_soil_moisture_forecasting_research
+    integration_status: planned
+    official_source_url: https://nsidc.org/data/spl4smgp/versions/8
+    verification_date: "2026-10-22"
+
+  - source_id: nasa_gpm_imerg
+    provider: NASA GPM
+    product: IMERG
+    version: not selected
+    data_category: satellite_precipitation_estimate
+    available_variables:
+      - precipitation
+    units: mm h-1 or mm
+    spatial_resolution: 0.1 degree
+    temporal_resolution: 30 minutes (final/late/early runs differ)
+    geographic_coverage: 60S-60N
+    historical_coverage: 2000-present depending on run
+    update_frequency: late and early runs with latency
+    api_download_access: GES DISC / Giovanni
+    authentication_requirements: Earthdata login
+    license: NASA
+    known_limitations:
+      - Satellite estimate, not rain-gauge truth
+      - Must not replace ERA5-Land historical precipitation silently
+    uncertainty_provenance: satellite retrieval plus gauge adjustment depending on run
+    applicable_agricultural_tasks:
+      - rainfall_derived_wetness_analysis
+    integration_status: planned
+    official_source_url: https://gpm.nasa.gov/data/imerg
+    verification_date: "2026-10-22"
+
+  - source_id: sentinel_1
+    provider: ESA / Copernicus
+    product: Sentinel-1 GRD / SLC
+    version: mission archive
+    data_category: radar_backscatter
+    available_variables:
+      - sigma0_vv
+      - sigma0_vh
+    units: dB after calibration
+    spatial_resolution: 10-40 m depending on mode
+    temporal_resolution: 6-12 day revisit typical
+    geographic_coverage: global
+    historical_coverage: 2014-present
+    update_frequency: ongoing
+    api_download_access: Copernicus Data Space
+    authentication_requirements: Copernicus Data Space account
+    license: Copernicus
+    known_limitations:
+      - Backscatter is not volumetric soil moisture
+      - Vegetation and roughness confound wetness interpretation
+    uncertainty_provenance: SAR observation
+    applicable_agricultural_tasks:
+      - rainfall_derived_wetness_analysis
+      - agricultural_land_condition
+    integration_status: planned
+    official_source_url: https://dataspace.copernicus.eu/data-collections/copernicus-sentinel-missions/sentinel-1
+    verification_date: "2026-10-22"
+
+  - source_id: isric_soilgrids
+    provider: ISRIC
+    product: SoilGrids
+    version: 2.0
+    data_category: static_soil_properties
+    available_variables:
+      - sand
+      - clay
+      - silt
+      - bdod
+      - soc
+      - cfvo
+      - phh2o
+    units: mixed (g/kg, cg/cm3, pH)
+    spatial_resolution: 250 m
+    temporal_resolution: static map
+    geographic_coverage: global
+    historical_coverage: not time series
+    update_frequency: periodic map updates
+    api_download_access: REST paused; WMS/WCS/WebDAV or official downloads
+    authentication_requirements: none for public maps; service-dependent
+    license: ISRIC / CC-BY depending on product
+    known_limitations:
+      - REST API v2.0 is paused
+      - Global maps are not laboratory measurements for the Plovdiv AOI
+      - Field capacity and wilting point are not direct SoilGrids layers
+    uncertainty_provenance: machine-learning soil maps with uncertainty layers
+    applicable_agricultural_tasks:
+      - soil_moisture_historical_analysis
+    integration_status: paused
+    official_source_url: https://isric.org/explore/soilgrids/
+    verification_date: "2026-10-22"
+
+  - source_id: copernicus_dem
+    provider: ESA / Copernicus
+    product: COP-DEM
+    version: GLO-30 / GLO-90
+    data_category: elevation
+    available_variables:
+      - elevation
+      - slope_derived
+    units: metres
+    spatial_resolution: 30 m or 90 m
+    temporal_resolution: static
+    geographic_coverage: global
+    historical_coverage: static
+    update_frequency: infrequent
+    api_download_access: Copernicus Data Space
+    authentication_requirements: Copernicus Data Space account
+    license: Copernicus
+    known_limitations:
+      - Slope must be derived; not ingested in Phase 3.4
+    uncertainty_provenance: photogrammetric DEM
+    applicable_agricultural_tasks:
+      - agricultural_land_condition
+    integration_status: planned
+    official_source_url: https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM
+    verification_date: "2026-10-22"
+
+  - source_id: ecmwf_open_data
+    provider: ECMWF
+    product: Open Data forecasts
+    version: rolling public cycles
+    data_category: live_weather_forecast
+    available_variables:
+      - temperature
+      - precipitation
+      - wind
+    units: mixed SI
+    spatial_resolution: 0.25 degree typical for open data
+    temporal_resolution: forecast steps from issued cycle
+    geographic_coverage: global
+    historical_coverage: short rolling retention; not a 2023-2025 archive
+    update_frequency: twice-daily cycles typical
+    api_download_access: https://www.ecmwf.int/en/forecasts/datasets/open-data
+    authentication_requirements: none for open data subset
+    license: ECMWF open data licence
+    known_limitations:
+      - Rolling retention; do not assume a complete historical forecast archive
+      - Contracts exist; live download is not implemented in Phase 3.4
+    uncertainty_provenance: NWP forecast
+    applicable_agricultural_tasks:
+      - modeled_soil_moisture_forecasting_research
+    integration_status: planned
+    official_source_url: https://www.ecmwf.int/en/forecasts/datasets/open-data
+    verification_date: "2026-10-22"
+
+  - source_id: copernicus_agricultural_land_cover
+    provider: Copernicus / EEA
+    product: Corine Land Cover / High Resolution Layers / crop maps
+    version: not selected
+    data_category: land_cover
+    available_variables:
+      - land_cover_class
+      - crop_type_where_available
+    units: categorical
+    spatial_resolution: 10-100 m depending on product
+    temporal_resolution: multi-year updates, not annual for every product
+    geographic_coverage: Europe
+    historical_coverage: not every year of 2023-2025
+    update_frequency: product-specific
+    api_download_access: Copernicus Land Monitoring Service
+    authentication_requirements: service-dependent
+    license: Copernicus
+    known_limitations:
+      - Field-level crop identity is not guaranteed
+      - Not every year of the study period is available
+    uncertainty_provenance: classified remote-sensing maps
+    applicable_agricultural_tasks:
+      - agricultural_land_condition
+      - vegetation_forecasting
+    integration_status: planned
+    official_source_url: https://land.copernicus.eu/
+    verification_date: "2026-10-22"

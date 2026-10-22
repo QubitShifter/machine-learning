@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ImageSummary(BaseModel):
@@ -134,7 +134,11 @@ class SceneQualityResponse(BaseModel):
     acquisition_date: str | None = None
     satellite_platform: str | None = None
     quality_status: str | None = None
+    scene_quality_status: str | None = None
+    calibration_status: str | None = None
+    scene_quality_reasons: list[str] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
+    exclusion_counts: dict | None = None
     geometric_footprint_overlap_pct: float | None = None
     actual_aoi_coverage_pct: float | None = None
     valid_ndvi_pct: float | None = None
@@ -154,6 +158,9 @@ class DatasetQualityResponse(BaseModel):
     dataset_id: str
     dataset: dict
     training_readiness: dict | None = None
+    coverage: dict | None = None
+    calibration_audit: dict | None = None
+    task_readiness: dict | None = None
     scene_count: int = 0
 
 
@@ -217,6 +224,8 @@ class MapOverlayMetadataResponse(BaseModel):
     render_version: str | None = None
     cache_id: str | None = None
     ndvi_color_scale: list[dict] = Field(default_factory=list)
+    scl_legend: list[dict] = Field(default_factory=list)
+    scl_provenance: dict | None = None
     quality_limitations: list[str] = Field(default_factory=list)
 
 
@@ -230,3 +239,51 @@ class MapNdviSampleResponse(BaseModel):
     ndvi: float | None = None
     sampling: str = "nearest"
     message: str | None = None
+
+
+class MapPixelInspectResponse(BaseModel):
+    scene_id: str
+    acquisition_date: str | None = None
+    longitude: float
+    latitude: float
+    crs: str = "EPSG:4326"
+    coverage_state: str
+    inside_raster: bool
+    valid: bool
+    row: int | None = None
+    col: int | None = None
+    sampling: str = "nearest_10m_target_grid"
+    red_b04: float | None = None
+    green_b03: float | None = None
+    blue_b02: float | None = None
+    nir_b08: float | None = None
+    ndvi: float | None = None
+    scl_class: int | None = None
+    scl_class_name: str | None = None
+    valid_mask: bool | None = None
+    exclusion_reason: str | None = None
+    calibration_status: str | None = None
+    scene_quality_status: str | None = None
+    missing_reasons: dict[str, str] = Field(default_factory=dict)
+    message: str | None = None
+    source: str = "processed_rasters"
+    estimated_from_display_rgb: bool = False
+
+
+class SceneHistogramResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    dataset_id: str | None = None
+    scene_id: str | None = None
+    histogram_version: str | None = None
+    pixel_exclusion_version: str | None = None
+    processing_version: str | None = None
+    acquisition_date: str | None = None
+    scene_quality_status: str | None = None
+    calibration_status: str | None = None
+    scientific_use: str | None = None
+    warnings: list[str] = Field(default_factory=list)
+    ndvi: dict = Field(default_factory=dict)
+    reflectance: dict = Field(default_factory=dict)
+    scl: dict | None = None
+    source: dict | None = None
+    cached: bool | None = None

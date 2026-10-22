@@ -24,6 +24,8 @@ def test_quality_statuses_and_thresholds():
         grid_status={"aligned": True},
     )
     assert valid["quality_status"] == "valid"
+    assert valid["scene_quality_status"] == "valid"
+    assert valid["calibration_status"] == "verified"
 
     warning = evaluate_scene_quality(
         {"scene_id": "warn", "acquisition_date": "2024-06-01", "footprint_overlap_pct": 100.0},
@@ -39,6 +41,8 @@ def test_quality_statuses_and_thresholds():
         calibration={"validation_status": "verified", "requires_review": False, "bands": {}},
     )
     assert rejected["quality_status"] == "rejected"
+    assert rejected["scene_quality_status"] == "rejected"
+    assert rejected["calibration_status"] == "verified"
     assert "geometric_coverage_below_threshold" in rejected["reasons"]
 
     review = evaluate_scene_quality(
@@ -129,10 +133,16 @@ def test_dataset_quality_and_reports(tmp_path: Path):
     )
     assert payload["dataset"]["validated_scenes"] == 2
     assert "2023-01" in payload["dataset"]["missing_months"]
+    assert payload["coverage"]["catalog_known"] is False
+    assert payload["coverage"]["months"][0]["discovered_candidate_scenes"] is None
+    assert payload["task_readiness"]["by_task"]["supervised_soil_forecasting"]["status"] == "not_ready"
     files = write_quality_outputs(payload, processed / "quality")
     assert (processed / "quality" / files["json"]).is_file()
     assert (processed / "quality" / files["csv"]).is_file()
     assert (processed / "quality" / files["training_readiness"]).is_file()
+    assert (processed / "quality" / files["coverage"]).is_file()
+    assert (processed / "quality" / files["calibration_audit"]).is_file()
+    assert (processed / "quality" / files["task_readiness"]).is_file()
     assert payload["training_readiness"]["supervised_soil_forecasting"] == "not_ready"
 
 

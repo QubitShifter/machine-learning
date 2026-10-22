@@ -25,6 +25,10 @@ Reusable modules:
 - `ml/preprocessing/calibration.py` — documented reflectance policy
 - `ml/preprocessing/grid.py` — canonical target grid
 - `ml/validation/dataset_quality.py` — scene and dataset quality gates
+- `ml/validation/coverage.py` — monthly discovery vs validation coverage
+- `ml/validation/calibration_audit.py` — scene calibration evidence without rewriting coefficients
+- `ml/validation/modeling_readiness.py` — task-specific readiness and exclusion reasons
+- `ml/ingestion/expansion.py` — local dry-run expansion preview
 - `ml/analysis/timeseries.py` — chronological, monthly, yearly, and interannual NDVI
 - `scripts/satellite_dataset.py` — CLI
 - `backend/app/api/satellite.py` — read/process status API
@@ -153,13 +157,17 @@ Acquisition remains a CLI operation.
 python -m scripts.satellite_dataset search --config configs/satellite_multiyear.yaml
 python -m scripts.satellite_dataset download --config configs/satellite_multiyear.yaml --limit 9 --dry-run
 python -m scripts.satellite_dataset download --config configs/satellite_multiyear.yaml --limit 9
+python -m scripts.satellite_dataset download --config configs/satellite_multiyear.yaml \
+  --scene-id S2B_35TLG_20230609_0_L2A --dry-run
 python -m scripts.satellite_dataset process --config configs/satellite_multiyear.yaml
 python -m scripts.satellite_dataset validate --config configs/satellite_multiyear.yaml
 python -m scripts.satellite_dataset timeseries --config configs/satellite_multiyear.yaml
 python -m scripts.satellite_dataset report --config configs/satellite_multiyear.yaml
+python -m scripts.satellite_dataset candidates --config configs/satellite_multiyear.yaml
+python -m scripts.satellite_dataset candidates --config configs/satellite_multiyear.yaml --refresh-stac
 ```
 
-`search` does not download imagery. `validate` and `report` work offline against local datasets.
+`search` does not download imagery. `validate` and `report` work offline against local datasets. Repeatable `--scene-id` selects exact catalog records and skips stratified `--limit` ranking. Already downloaded checksum-verified scenes are skipped. Process without `--force` reuses unchanged NDVI outputs.
 
 ## Testing strategy
 
@@ -181,6 +189,105 @@ These are measured results from a nine-scene stratified sample, not the full 202
 - Training readiness: historical analysis `suitable_for_exploratory_analysis`; vegetation research `limited`; supervised soil forecasting `not_ready`
 
 Some MGRS `34TGM` items have a true polygon overlap with this AOI and produced valid pixels. The Phase 2.3 failure (`S2C_34TGM_20250203_0_L2A`) remains the bbox-only false-positive case covered by tests.
+
+## Phase 2.5 controlled expansion (2026-10-21)
+
+A second batch added eight catalog 35TLG scenes chosen for missing seasons, not for lowest cloud cover. Stratified `--limit` ranking would have re-selected the original nine scenes, so download now accepts repeatable `--scene-id`.
+
+- Candidates requested: **8**; downloaded: **8**; failed downloads: **0**
+- Processed onto the existing EPSG:32635 10 m grid: **8 new + 9 reused**
+- Newly validated: **7**
+- Newly requires review: **1** (`S2C_35TLG_20250308_0_L2A` — conflicting BOA offset; coefficients were not rewritten)
+- Dataset totals: catalog **645**, downloaded/processed **17**, validated **15**, requires review **2**, rejected **0**
+- Previous NDVI GeoTIFF hashes for the original nine scenes were unchanged
+- Longest validated gap: 285 days → 210 days
+- Validated coverage by year: 2023 **5**, 2024 **6**, 2025 **4**
+- SON is now represented in 2023, 2024 and 2025
+- Phase 3.2 integration: **8 → 15** rows; complete weather windows **4 → 7**; modeling-ready still **0**
+- Incomplete precipitation totals remain null, including 2024-06, 2024-09, 2025-06 and 2025-09
+
+Refresh integration after validation with:
+
+```bash
+python -m scripts.weather_dataset integrate --config configs/weather_era5_land.yaml --satellite-dataset plovdiv_2023_2025
+```
+
+Do not run that command from the UI. Additional ERA5-Land months appear in the integrated table only after they are downloaded, processed, and this command is rerun.
+
+## Phase 3.3 coverage, calibration, and task readiness (2026-10-22)
+
+Phase 3.3 adds diagnostics. It does not regenerate the archive, train models, or download a new historical batch.
+
+### Historical coverage methodology
+
+Monthly coverage is computed from observed acquisition dates. It does not interpolate missing months. For each YYYY-MM in 2023-01 through 2025-12 the report stores:
+
+- discovered candidate scenes, or `null` when discovery evidence is missing
+- ingested / validated / requires-review / rejected counts
+- available acquisition dates
+- AOI cloud/shadow summary when a processed SCL mask exists
+- a coverage status that distinguishes: no scene discovered; discovered but not downloaded; downloaded but not processed; processed but rejected; requires calibration review; validated observation; unknown discovery evidence
+
+Unknown discovery is never written as zero. Dataset-quality JSON now includes `coverage`, and `data/processed/plovdiv_2023_2025/quality/coverage.json` is written by `validate`.
+
+### Calibration consistency
+
+`verified_only` is unchanged. A plausible or even finite NDVI value does not promote a scene to `valid`. Authoritative STAC scale/offset and `earthsearch:boa_offset_applied` remain the calibration source. Pixel statistics never rewrite coefficients.
+
+The two unresolved scenes after Phase 2.5 remain `requires_review` unless new source metadata is added:
+
+| Scene | Date | Evidence |
+|---|---|---|
+| `S2B_34TGM_20250208_0_L2A` | 2025-02-08 | Advertised BOA offset with majority-negative optical reflectance; stored NDVI range is physically implausible |
+| `S2C_35TLG_20250308_0_L2A` | 2025-03-08 | Same class of Earth Search offset conflict on the native 35TLG tile |
+
+Audit output: `quality/calibration_audit.json`. Processing baselines are copied from stored metadata and are not inferred from scene IDs.
+
+### Candidate selection and safe expansion
+
+`python -m scripts.satellite_dataset candidates` is a local dry-run. Default behaviour does not contact STAC and does not download COGs.
+
+Selection order:
+
+1. Months without a validated observation
+2. Months in the longest observation gaps
+3. Under-represented seasons
+4. Native MGRS `35TLG` when catalog evidence exists
+5. Skip already ingested `scene_id`s
+
+Scene-level `eo:cloud_cover` is recorded but is not treated as AOI clear-pixel fraction. Missing months are allowed to have no scientifically acceptable candidate. `--refresh-stac` is the opt-in live catalog refresh. Actual ingestion still requires an explicit `download --scene-id` command.
+
+### Exploratory analysis vs forecasting readiness
+
+Task assessments live in `task_readiness` and are separate from observation-level `suitable_for_modeling`.
+
+| Task | Meaning |
+|---|---|
+| `exploratory_ndvi_analysis` | Small valid NDVI sample on a consistent grid |
+| `weather_ndvi_relationship_analysis` | Leakage-safe complete satellite–weather pairs |
+| `vegetation_forecasting` | `limited` until density, years, gap, and calibration meet the project forecast gates; `ready` only for a validated forecasting dataset |
+| `supervised_soil_forecasting` | Requires measured soil-moisture labels. NDVI is not a substitute |
+
+Operational thresholds are in `readiness` config defaults (`ml/ingestion/config.py`). They are project gates, not universal remote-sensing standards.
+
+`suitable_for_modeling` still means supervised soil-forecasting eligibility:
+
+```text
+integrated_complete
+and weather integration_readiness is ready
+and satellite supervised_soil_forecasting is ready
+```
+
+Inspect exclusion reasons at:
+
+- `GET /api/v1/satellite/datasets/{id}/quality` → `task_readiness.by_task`
+- `GET /api/v1/integration/datasets/{id}/quality` → `task_readiness` after `weather_dataset integrate`
+
+### 2023–2025 baseline vs this phase
+
+The observational baseline after ingesting `S2B_35TLG_20250119_0_L2A` is 18 processed scenes, 15 validated, two calibration-review scenes (`S2B_34TGM_20250208_0_L2A`, `S2C_35TLG_20250308_0_L2A`), and one rejected January 2025 scene. The January rejection is a valid-NDVI threshold decision (`BUG-0005`), not a reason to lower gates. Pixel exclusions are accounted on the 10 m target grid (`BUG-0004`). Soil-forecasting remains `not_ready`. This archive does not claim 100% monthly coverage and does not add fabricated observations.
+
+Equations, implementation paths, and tests: [`feature_registry.md`](feature_registry.md).
 
 ## Known limitations
 

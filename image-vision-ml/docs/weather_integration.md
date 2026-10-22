@@ -56,7 +56,9 @@ Current CDS request keys used by this project (`data_format`, `download_format`,
 
 The first live test should request only `2025-04`. Do not retrieve the full 2023–2025 archive until that month has been inspected.
 
-A queued CDS job is not a successful download. Failed or interrupted months are recorded as `failed` and can be resumed. Successfully downloaded files are never overwritten.
+A queued CDS job is not a successful download. Failed or interrupted months are recorded as `failed` and can be resumed. Non-empty successfully downloaded files are never overwritten. Zero-byte files are incomplete (`empty_hourly_file` / `empty_boundary_file`) and may be replaced by a later retrieve; see [`bugs/BUG-0001.md`](bugs/BUG-0001.md) and [`bugs/BUG-0002.md`](bugs/BUG-0002.md).
+
+Canonical weather equations and tests: [`feature_registry.md`](feature_registry.md).
 
 ## 5. Spatial resolution limitations
 
@@ -235,7 +237,7 @@ These flags are independent and must not be collapsed into one `valid` field:
 - `weather_observation_valid` (native grid-cell provenance)
 - `weather_feature_window_complete` (all 7/14/30 windows complete)
 - `integrated_observation_complete`
-- `suitable_for_modeling` — additionally requires weather `integration_readiness = ready` and satellite `supervised_soil_forecasting` readiness ready/suitable
+- `suitable_for_modeling` — additionally requires weather `integration_readiness = ready` and satellite `supervised_soil_forecasting` readiness ready/suitable. This flag is supervised soil-forecasting eligibility, not exploratory NDVI or vegetation forecasting. Phase 3.3 task assessments live in `task_readiness` and do not change this observation-level gate.
 
 A satellite scene remains in the table when its weather months have not been downloaded. Weather features are null and completeness flags are false.
 
@@ -297,3 +299,5 @@ Weather tests are offline. They use temporary directories, synthetic hourly fixt
 ## 18. Requirements for future forecasting models
 
 The weather table is a historical covariate source. Training features must continue to use only information available before the prediction time. Do not train a soil-moisture or NDVI forecast against same-day or future ERA5-Land fields. Do not treat ERA5-Land as an operational forecast service. `suitable_for_modeling` stays false while the weather archive is incomplete or satellite supervised-soil-forecasting readiness is not ready, even if some scenes have complete 30-day windows.
+
+Phase 3.3 `task_readiness` on `integration_quality.json` explains why a dataset can support exploratory NDVI or weather–NDVI comparison while remaining ineligible for supervised soil forecasting. Rerun `weather_dataset integrate` after satellite `validate` to refresh those reasons. The D−N…D−1 exclusive-of-D leakage windows are unchanged.

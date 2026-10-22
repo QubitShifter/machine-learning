@@ -10,6 +10,7 @@ import { ObservationSelector } from "@/components/integration/ObservationSelecto
 import { PrecipitationWindows } from "@/components/integration/PrecipitationWindows";
 import { SelectedObservation } from "@/components/integration/SelectedObservation";
 import { WindowCoverage } from "@/components/integration/WindowCoverage";
+import { TaskReadiness } from "@/components/quality/TaskReadiness";
 import {
   useIntegrationDataset,
   useIntegrationDatasets,
@@ -69,6 +70,11 @@ export function IntegrationAnalyticsPage() {
           Exploratory observational analysis. This page does not predict soil moisture or forecast vegetation.
         </p>
       </header>
+
+      <TaskReadiness
+        report={quality.data?.task_readiness}
+        meaning={quality.data?.suitable_for_modeling_meaning}
+      />
 
       <QueryState
         isLoading={loading && !observations.data}
