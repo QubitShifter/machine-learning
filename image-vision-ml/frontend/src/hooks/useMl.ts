@@ -8,7 +8,12 @@ import {
   getExperimentPredictions,
   getExperimentProvenance,
   getExperimentTraining,
+  getTrainingRun,
+  getTrainingRunArtifacts,
+  getTrainingRunEvents,
+  getTrainingRunMetrics,
   listExperiments,
+  listTrainingRuns,
 } from "@/services/ml";
 
 export const mlKeys = {
@@ -26,6 +31,12 @@ export const mlKeys = {
     horizon: number,
     featureSet: string,
   ) => ["ml", "experiment", id, "predictions", partition, horizon, featureSet] as const,
+  runs: (id: string, model?: string, horizon?: number, featureSet?: string, status?: string) =>
+    ["ml", "experiment", id, "runs", model ?? "", horizon ?? "", featureSet ?? "", status ?? ""] as const,
+  run: (id: string, runId: string) => ["ml", "experiment", id, "run", runId] as const,
+  runEvents: (id: string, runId: string) => ["ml", "experiment", id, "run", runId, "events"] as const,
+  runMetrics: (id: string, runId: string) => ["ml", "experiment", id, "run", runId, "metrics"] as const,
+  runArtifacts: (id: string, runId: string) => ["ml", "experiment", id, "run", runId, "artifacts"] as const,
 };
 
 export function useAgriculturalMlSummary() {
@@ -91,6 +102,56 @@ export function useExperimentMetrics(
     queryKey: mlKeys.metrics(experimentId ?? "", partition),
     queryFn: () => getExperimentMetrics(experimentId!, partition),
     enabled: Boolean(experimentId) && enabled,
+  });
+}
+
+export function useTrainingRuns(
+  experimentId: string | undefined,
+  filters: { model?: string; horizonDays?: number; featureSet?: string; status?: string } = {},
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: mlKeys.runs(experimentId ?? "", filters.model, filters.horizonDays, filters.featureSet, filters.status),
+    queryFn: () => listTrainingRuns(experimentId!, {
+      model: filters.model,
+      horizonDays: filters.horizonDays,
+      featureSet: filters.featureSet,
+      status: filters.status,
+      limit: 200,
+    }),
+    enabled: Boolean(experimentId) && enabled,
+  });
+}
+
+export function useTrainingRun(experimentId: string | undefined, runId: string | undefined) {
+  return useQuery({
+    queryKey: mlKeys.run(experimentId ?? "", runId ?? ""),
+    queryFn: () => getTrainingRun(experimentId!, runId!),
+    enabled: Boolean(experimentId && runId),
+  });
+}
+
+export function useTrainingRunEvents(experimentId: string | undefined, runId: string | undefined) {
+  return useQuery({
+    queryKey: mlKeys.runEvents(experimentId ?? "", runId ?? ""),
+    queryFn: () => getTrainingRunEvents(experimentId!, runId!, { limit: 2000 }),
+    enabled: Boolean(experimentId && runId),
+  });
+}
+
+export function useTrainingRunMetrics(experimentId: string | undefined, runId: string | undefined) {
+  return useQuery({
+    queryKey: mlKeys.runMetrics(experimentId ?? "", runId ?? ""),
+    queryFn: () => getTrainingRunMetrics(experimentId!, runId!),
+    enabled: Boolean(experimentId && runId),
+  });
+}
+
+export function useTrainingRunArtifacts(experimentId: string | undefined, runId: string | undefined) {
+  return useQuery({
+    queryKey: mlKeys.runArtifacts(experimentId ?? "", runId ?? ""),
+    queryFn: () => getTrainingRunArtifacts(experimentId!, runId!),
+    enabled: Boolean(experimentId && runId),
   });
 }
 

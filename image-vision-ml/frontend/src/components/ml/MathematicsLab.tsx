@@ -31,6 +31,7 @@ export function MathematicsLab() {
         data-testid="educational-simulation-banner"
       >
         {DEMO_BANNER} Synthetic points use a fixed seed. They are not ERA5-Land observations.
+        Real Ridge coefficients, boosting iteration counts, and validation MAE belong on the Training Runs tab.
       </p>
       <LinearRegressionDemo />
       <GradientDescentDemo />

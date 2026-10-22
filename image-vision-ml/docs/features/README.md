@@ -8,6 +8,7 @@ This directory holds one Markdown file per significant Image Vision ML capabilit
 - Layout: `satellite/`, `weather/`, `soil/`, `integration/`, `forecasting/`, `sources/`, `aoi/`, `ui/`, `ml/`
 - Mathematics: [`../ml/agricultural_forecasting_mathematics.md`](../ml/agricultural_forecasting_mathematics.md), [`../ml/soil_forecasting_model_baselines.md`](../ml/soil_forecasting_model_baselines.md)
 - Training laboratory UI: [`../ml/ml_training_laboratory.md`](../ml/ml_training_laboratory.md)
+- Training telemetry: [`../ml/training_telemetry.md`](../ml/training_telemetry.md)
 
 Validate with:
 

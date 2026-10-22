@@ -160,6 +160,121 @@ class ExperimentProvenanceResponse(BaseModel):
     label: str = "Research experiment on ERA5-Land modeled soil moisture. Not operational."
 
 
+class TrainingRunListItem(BaseModel):
+    run_id: str
+    experiment_id: str
+    algorithm: str | None = None
+    horizon_days: int | None = None
+    feature_set: str | None = None
+    status: str
+    inferred_status: str | None = None
+    created_at_utc: str | None = None
+    start_at_utc: str | None = None
+    finish_at_utc: str | None = None
+    duration_ms: int | None = None
+    training_duration_ms: int | None = None
+    training_sample_count: int | None = None
+    validation_sample_count: int | None = None
+    selected_feature_count: int | None = None
+    validation_mae: float | None = None
+    validation_rmse: float | None = None
+    validation_skill_mae: float | None = None
+    provenance_label: str | None = None
+    execution_mode: str | None = None
+    is_frozen_phase_4_1_model: bool = False
+    test_targets_accessed: bool = False
+    suitable_for_modeling: bool = False
+    research_mode: str = "research_reanalysis"
+
+
+class TrainingRunListResponse(BaseModel):
+    experiment_id: str
+    total: int
+    limit: int
+    runs: list[TrainingRunListItem] = Field(default_factory=list)
+    live_training: bool = False
+    note: str = "Read-only training-run index. GET does not train models."
+
+
+class TrainingRunDetailResponse(BaseModel):
+    experiment_id: str
+    run_id: str
+    available: bool = True
+    live_training: bool = False
+    status: str
+    inferred_status: str | None = None
+    algorithm: str | None = None
+    horizon_days: int | None = None
+    feature_set: str | None = None
+    target_variable: str | None = None
+    created_at_utc: str | None = None
+    start_at_utc: str | None = None
+    finish_at_utc: str | None = None
+    duration_ms: int | None = None
+    timings_ms: dict = Field(default_factory=dict)
+    hyperparameters: dict = Field(default_factory=dict)
+    diagnostics: dict = Field(default_factory=dict)
+    dataset_summary: dict = Field(default_factory=dict)
+    training_summary: dict = Field(default_factory=dict)
+    metrics: dict = Field(default_factory=dict)
+    artifacts: dict = Field(default_factory=dict)
+    git_commit: str | None = None
+    git_dirty: bool | None = None
+    python_version: str | None = None
+    provenance_label: str | None = None
+    execution_mode: str | None = None
+    research_mode: str = "research_reanalysis"
+    is_frozen_phase_4_1_model: bool = False
+    test_targets_accessed: bool = False
+    operational_forecast: bool = False
+    operational_availability_verified: bool = False
+    is_ground_truth: bool = False
+    is_measured_soil_moisture: bool = False
+    suitable_for_modeling: bool = False
+    telemetry_validation_ok: bool | None = None
+    event_count: int | None = None
+    note: str = "Read-only telemetry run. GET does not train or deserialize model binaries."
+
+
+class TrainingRunEventsResponse(BaseModel):
+    experiment_id: str
+    run_id: str
+    total: int
+    returned: int
+    sequence_after: int = 0
+    limit: int
+    truncated_final_line: bool = False
+    events: list[dict] = Field(default_factory=list)
+    live_training: bool = False
+    note: str = "Historical recorded events. This is not live monitoring."
+
+
+class TrainingRunMetricsResponse(BaseModel):
+    experiment_id: str
+    run_id: str
+    records: list[dict] = Field(default_factory=list)
+    history: list[dict] = Field(default_factory=list)
+    training: dict = Field(default_factory=dict)
+    validation: dict = Field(default_factory=dict)
+    live_training: bool = False
+    note: str = "Evaluation metrics and recorded history. Training loss is not implied by MAE."
+
+
+class TrainingRunArtifactItem(BaseModel):
+    name: str
+    kind: str
+    size_bytes: int | None = None
+    deserializable: bool = False
+
+
+class TrainingRunArtifactsResponse(BaseModel):
+    experiment_id: str
+    run_id: str
+    artifacts: list[TrainingRunArtifactItem] = Field(default_factory=list)
+    live_training: bool = False
+    note: str = "Artifact names only. Joblib/pickle files are not deserialized by GET handlers."
+
+
 class AgriculturalMlSummaryResponse(BaseModel):
     available: bool
     label: str = "Research dataset — no trained model yet."

@@ -178,11 +178,138 @@ export interface ExperimentProvenance {
   label: string;
 }
 
+export interface TrainingRunListItem {
+  run_id: string;
+  experiment_id: string;
+  algorithm: string | null;
+  horizon_days: number | null;
+  feature_set: string | null;
+  status: string;
+  inferred_status: string | null;
+  created_at_utc: string | null;
+  start_at_utc: string | null;
+  finish_at_utc: string | null;
+  duration_ms: number | null;
+  training_duration_ms: number | null;
+  training_sample_count: number | null;
+  validation_sample_count: number | null;
+  selected_feature_count: number | null;
+  validation_mae: number | null;
+  validation_rmse: number | null;
+  validation_skill_mae: number | null;
+  provenance_label: string | null;
+  execution_mode: string | null;
+  is_frozen_phase_4_1_model: boolean;
+  test_targets_accessed: boolean;
+  suitable_for_modeling: boolean;
+  research_mode: string;
+}
+
+export interface TrainingRunList {
+  experiment_id: string;
+  total: number;
+  limit: number;
+  runs: TrainingRunListItem[];
+  live_training: boolean;
+  note: string;
+}
+
+export interface TrainingEvent {
+  schema_version?: string;
+  run_id?: string;
+  sequence: number;
+  timestamp_utc: string;
+  elapsed_ms: number;
+  event_type: string;
+  phase: string;
+  model?: string | null;
+  horizon_days?: number | null;
+  iteration?: number | null;
+  metric_name?: string | null;
+  metric_value?: number | null;
+  metric_unit?: string | null;
+  dataset_partition?: string | null;
+  details?: Record<string, unknown>;
+}
+
+export interface TrainingRunDetail {
+  experiment_id: string;
+  run_id: string;
+  available: boolean;
+  live_training: boolean;
+  status: string;
+  inferred_status: string | null;
+  algorithm: string | null;
+  horizon_days: number | null;
+  feature_set: string | null;
+  target_variable: string | null;
+  created_at_utc: string | null;
+  start_at_utc: string | null;
+  finish_at_utc: string | null;
+  duration_ms: number | null;
+  timings_ms: Record<string, unknown>;
+  hyperparameters: Record<string, unknown>;
+  diagnostics: Record<string, unknown>;
+  dataset_summary: Record<string, unknown>;
+  training_summary: Record<string, unknown>;
+  metrics: Record<string, unknown>;
+  artifacts: Record<string, unknown>;
+  git_commit: string | null;
+  git_dirty: boolean | null;
+  python_version: string | null;
+  provenance_label: string | null;
+  execution_mode: string | null;
+  research_mode: string;
+  is_frozen_phase_4_1_model: boolean;
+  test_targets_accessed: boolean;
+  operational_forecast: boolean;
+  operational_availability_verified: boolean;
+  is_ground_truth: boolean;
+  is_measured_soil_moisture: boolean;
+  suitable_for_modeling: boolean;
+  telemetry_validation_ok: boolean | null;
+  event_count: number | null;
+  note: string;
+}
+
+export interface TrainingRunEvents {
+  experiment_id: string;
+  run_id: string;
+  total: number;
+  returned: number;
+  sequence_after: number;
+  limit: number;
+  truncated_final_line: boolean;
+  events: TrainingEvent[];
+  live_training: boolean;
+  note: string;
+}
+
+export interface TrainingRunMetrics {
+  experiment_id: string;
+  run_id: string;
+  records: Record<string, unknown>[];
+  history: TrainingEvent[];
+  training: Record<string, unknown>;
+  validation: Record<string, unknown>;
+  live_training: boolean;
+  note: string;
+}
+
+export interface TrainingRunArtifacts {
+  experiment_id: string;
+  run_id: string;
+  artifacts: { name: string; kind: string; size_bytes: number | null; deserializable: boolean }[];
+  live_training: boolean;
+  note: string;
+}
+
 export type LabTab =
   | "overview"
   | "dataset"
   | "algorithms"
   | "training"
+  | "runs"
   | "evaluation"
   | "mathematics"
   | "provenance";

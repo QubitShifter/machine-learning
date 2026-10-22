@@ -16,6 +16,7 @@ source_code:
 - frontend/src/components/ml/ModelEvaluation.tsx
 - frontend/src/components/ml/MathematicsLab.tsx
 - frontend/src/components/ml/ExperimentProvenancePanel.tsx
+- frontend/src/components/ml/TrainingRunsPanel.tsx
 - frontend/src/utils/mlLab.ts
 - frontend/src/utils/mlDemos.ts
 - backend/app/api/ml.py
@@ -29,6 +30,7 @@ outputs:
 - GET /api/v1/ml/experiments/{id}/features
 - GET /api/v1/ml/experiments/{id}/training
 - GET /api/v1/ml/experiments/{id}/provenance
+- GET /api/v1/ml/experiments/{id}/runs
 tests:
 - frontend/src/pages/MLTrainingPage.test.tsx
 - frontend/src/utils/mlLab.test.ts
@@ -36,7 +38,7 @@ tests:
 - frontend/src/app/App.test.tsx
 - backend/tests/test_ml_api.py
 documentation: docs/features/ui/ml_training_laboratory.md
-last_verified: '2026-10-22T19:26:01Z'
+last_verified: '2026-10-22T20:30:33Z'
 related_bugs: []
 ---
 
@@ -46,7 +48,7 @@ related_bugs: []
 
 ## 2. Status and version
 
-Status: `implemented`. Experiment pipeline remains `4.1.0`. Frontend display of frozen artifacts; no new fitted models.
+Status: `implemented`. Experiment pipeline remains `4.1.0`. Frozen-artifact display plus a Training Runs tab for separately recorded telemetry. Visiting the page still does not train models.
 
 ## 3. Purpose
 
@@ -142,6 +144,8 @@ Research reanalysis only. No operational forecast. No field ground truth. No liv
 - [`ml.ridge_soil_moisture_forecast`](../ml/ridge_soil_moisture_forecast.md)
 - [`ml.gradient_boosting_soil_forecast`](../ml/gradient_boosting_soil_forecast.md)
 - [`ml.final_holdout_evaluation`](../ml/final_holdout_evaluation.md)
+- [`ui.training_run_laboratory`](training_run_laboratory.md)
+- [`ml.training_run_api`](../ml/training_run_api.md)
 
 ## 20. Related bug/fix IDs
 
@@ -149,4 +153,4 @@ None opened for this UI. Fingerprint repair remains [`BUG-0012`](../../bugs/BUG-
 
 ## 21. Last reviewed timestamp in UTC
 
-`2026-10-22T19:26:01Z`
+`2026-10-22T20:30:33Z`

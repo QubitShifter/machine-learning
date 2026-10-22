@@ -20,11 +20,20 @@ from backend.app.schemas.ml import (
     ExperimentProvenanceResponse,
     ExperimentTrainingResponse,
     TrainingLifecycleStage,
+    TrainingRunArtifactItem,
+    TrainingRunArtifactsResponse,
+    TrainingRunDetailResponse,
+    TrainingRunEventsResponse,
+    TrainingRunListItem,
+    TrainingRunListResponse,
+    TrainingRunMetricsResponse,
 )
 from ml.agricultural_ml.config import load_ml_config, output_directory
 from ml.ingestion.manifest import validate_safe_id
-from ml.preprocessing.errors import DatasetNotFoundError, MissingProcessedOutputError
+from ml.preprocessing.errors import DatasetNotFoundError, MissingProcessedOutputError, SoilForecastingError
 from ml.preprocessing.raster import project_root, read_json
+from ml.soil_forecasting.run_registry import inferred_status, list_run_dirs, validate_run_id
+from ml.soil_forecasting.telemetry import read_jsonl_events
 
 DEFAULT_CONFIG = project_root() / "configs" / "agricultural_ml_dataset.yaml"
 EXPERIMENTS_ROOT = project_root() / "data" / "processed" / "ml" / "experiments"
@@ -522,3 +531,248 @@ def _sanitize(value):
     if isinstance(value, list):
         return [_sanitize(item) for item in value]
     return value
+
+
+def _run_dir(experiment_id: str, run_id: str) -> Path:
+    experiment = _experiment_dir(experiment_id)
+    try:
+        safe = validate_run_id(run_id)
+    except (SoilForecastingError, ValueError) as exc:
+        raise DatasetNotFoundError(run_id) from exc
+    runs_root = (experiment / "runs").resolve()
+    candidate = runs_root / safe
+    if candidate.is_symlink():
+        raise DatasetNotFoundError(run_id)
+    path = candidate.resolve()
+    if runs_root not in path.parents:
+        raise DatasetNotFoundError(run_id)
+    if not path.is_dir():
+        raise DatasetNotFoundError(run_id)
+    return path
+
+
+def _optional_json(path: Path) -> dict:
+    if not path.is_file():
+        return {}
+    payload = read_json(path)
+    return payload if isinstance(payload, dict) else {}
+
+
+def _run_list_item(experiment_id: str, run_dir: Path) -> TrainingRunListItem | None:
+    manifest_path = run_dir / "run_manifest.json"
+    if not manifest_path.is_file():
+        return None
+    manifest = _optional_json(manifest_path)
+    timings = manifest.get("timings_ms") or {}
+    duration = timings.get("total_run") if isinstance(timings, dict) else None
+    training_duration = timings.get("model_fitting") if isinstance(timings, dict) else None
+    status = str(manifest.get("status") or "created")
+    return TrainingRunListItem(
+        run_id=str(manifest.get("run_id") or run_dir.name),
+        experiment_id=experiment_id,
+        algorithm=manifest.get("algorithm") or manifest.get("model_id"),
+        horizon_days=_as_int(manifest.get("forecast_horizon_days")),
+        feature_set=manifest.get("feature_set"),
+        status=status,
+        inferred_status=inferred_status(manifest, run_dir),
+        created_at_utc=manifest.get("created_at_utc"),
+        start_at_utc=manifest.get("start_at_utc"),
+        finish_at_utc=manifest.get("finish_at_utc"),
+        duration_ms=_as_int(duration),
+        training_duration_ms=_as_int(training_duration),
+        training_sample_count=_as_int(manifest.get("training_sample_count")),
+        validation_sample_count=_as_int(manifest.get("validation_sample_count")),
+        selected_feature_count=_as_int(manifest.get("selected_feature_count")),
+        validation_mae=_as_float(manifest.get("validation_mae")),
+        validation_rmse=_as_float(manifest.get("validation_rmse")),
+        validation_skill_mae=_as_float(manifest.get("validation_skill_mae")),
+        provenance_label=manifest.get("provenance_label"),
+        execution_mode=manifest.get("execution_mode"),
+        is_frozen_phase_4_1_model=False,
+        test_targets_accessed=bool(manifest.get("test_targets_accessed")),
+        suitable_for_modeling=False,
+        research_mode=str(manifest.get("research_mode") or "research_reanalysis"),
+    )
+
+
+def list_training_runs(
+    experiment_id: str,
+    *,
+    model: str | None = None,
+    horizon_days: int | None = None,
+    feature_set: str | None = None,
+    status: str | None = None,
+    start_date: str | None = None,
+    limit: int = 100,
+) -> TrainingRunListResponse:
+    path = _experiment_dir(experiment_id)
+    items: list[TrainingRunListItem] = []
+    for run_dir in list_run_dirs(path):
+        item = _run_list_item(experiment_id, run_dir)
+        if item is None:
+            continue
+        if model and str(item.algorithm) != model:
+            continue
+        if horizon_days is not None and item.horizon_days != int(horizon_days):
+            continue
+        if feature_set and item.feature_set != feature_set:
+            continue
+        if status and item.status != status and item.inferred_status != status:
+            continue
+        if start_date and str(item.created_at_utc or "") < start_date:
+            continue
+        items.append(item)
+    items.sort(key=lambda row: (str(row.created_at_utc or ""), row.run_id), reverse=True)
+    limit = max(1, min(int(limit), 500))
+    return TrainingRunListResponse(
+        experiment_id=experiment_id,
+        total=len(items),
+        limit=limit,
+        runs=items[:limit],
+        live_training=False,
+    )
+
+
+def training_run_detail(experiment_id: str, run_id: str) -> TrainingRunDetailResponse:
+    run_dir = _run_dir(experiment_id, run_id)
+    manifest = _optional_json(run_dir / "run_manifest.json")
+    if not manifest:
+        raise DatasetNotFoundError(run_id)
+    dataset = _optional_json(run_dir / "dataset_summary.json")
+    training = _optional_json(run_dir / "training_summary.json")
+    metrics = _optional_json(run_dir / "metrics.json")
+    validation_report = _optional_json(run_dir / "telemetry_validation.json")
+    diagnostics = training.get("diagnostics") or manifest.get("diagnostics") or {}
+    timings = training.get("timings_ms") or manifest.get("timings_ms") or {}
+    return TrainingRunDetailResponse(
+        experiment_id=experiment_id,
+        run_id=str(manifest.get("run_id") or run_id),
+        available=True,
+        live_training=False,
+        status=str(manifest.get("status") or "created"),
+        inferred_status=inferred_status(manifest, run_dir),
+        algorithm=manifest.get("algorithm"),
+        horizon_days=_as_int(manifest.get("forecast_horizon_days")),
+        feature_set=manifest.get("feature_set"),
+        target_variable=manifest.get("target_variable"),
+        created_at_utc=manifest.get("created_at_utc"),
+        start_at_utc=manifest.get("start_at_utc"),
+        finish_at_utc=manifest.get("finish_at_utc"),
+        duration_ms=_as_int(timings.get("total_run") if isinstance(timings, dict) else None),
+        timings_ms=_sanitize(timings),
+        hyperparameters=_sanitize(manifest.get("hyperparameters") or {}),
+        diagnostics=_sanitize(diagnostics),
+        dataset_summary=_sanitize(dataset),
+        training_summary=_sanitize(training),
+        metrics=_sanitize(metrics),
+        artifacts=_sanitize(manifest.get("artifacts") or {}),
+        git_commit=manifest.get("git_commit"),
+        git_dirty=manifest.get("git_dirty"),
+        python_version=manifest.get("python_version"),
+        provenance_label=manifest.get("provenance_label"),
+        execution_mode=manifest.get("execution_mode"),
+        research_mode=str(manifest.get("research_mode") or "research_reanalysis"),
+        is_frozen_phase_4_1_model=False,
+        test_targets_accessed=bool(manifest.get("test_targets_accessed")),
+        operational_forecast=False,
+        operational_availability_verified=False,
+        is_ground_truth=False,
+        is_measured_soil_moisture=False,
+        suitable_for_modeling=False,
+        telemetry_validation_ok=validation_report.get("ok") if validation_report else None,
+        event_count=_as_int(manifest.get("event_count") or validation_report.get("event_count")),
+    )
+
+
+def training_run_events(
+    experiment_id: str,
+    run_id: str,
+    *,
+    event_type: str | None = None,
+    phase: str | None = None,
+    sequence_after: int = 0,
+    limit: int = 200,
+) -> TrainingRunEventsResponse:
+    run_dir = _run_dir(experiment_id, run_id)
+    events, info = read_jsonl_events(run_dir / "training_events.jsonl", run_id=run_id)
+    filtered = []
+    for event in events:
+        if int(event.get("sequence") or 0) <= int(sequence_after):
+            continue
+        if event_type and event.get("event_type") != event_type:
+            continue
+        if phase and event.get("phase") != phase:
+            continue
+        filtered.append(_sanitize(event))
+    limit = max(1, min(int(limit), 2000))
+    page = filtered[:limit]
+    return TrainingRunEventsResponse(
+        experiment_id=experiment_id,
+        run_id=run_id,
+        total=len(filtered),
+        returned=len(page),
+        sequence_after=int(sequence_after),
+        limit=limit,
+        truncated_final_line=bool(info.get("truncated_final_line")),
+        events=page,
+        live_training=False,
+    )
+
+
+def training_run_metrics(experiment_id: str, run_id: str) -> TrainingRunMetricsResponse:
+    run_dir = _run_dir(experiment_id, run_id)
+    payload = _optional_json(run_dir / "metrics.json")
+    events, _info = read_jsonl_events(run_dir / "training_events.jsonl", run_id=run_id)
+    history = [
+        _sanitize(event)
+        for event in events
+        if event.get("event_type") == "training_metric" and event.get("metric_value") is not None
+    ]
+    return TrainingRunMetricsResponse(
+        experiment_id=experiment_id,
+        run_id=run_id,
+        records=_sanitize(list(payload.get("records") or [])),
+        history=history,
+        training=_sanitize(payload.get("training") or {}),
+        validation=_sanitize(payload.get("validation") or {}),
+        live_training=False,
+    )
+
+
+def training_run_artifacts(experiment_id: str, run_id: str) -> TrainingRunArtifactsResponse:
+    run_dir = _run_dir(experiment_id, run_id)
+    root = run_dir.resolve()
+    items: list[TrainingRunArtifactItem] = []
+    for path in sorted(run_dir.rglob("*")):
+        if not path.is_file() or path.name.startswith("."):
+            continue
+        resolved = path.resolve()
+        if root not in resolved.parents and resolved != root:
+            continue
+        if path.is_symlink():
+            continue
+        relative = path.relative_to(run_dir).as_posix()
+        suffix = path.suffix.lower()
+        kind = {".json": "json", ".yaml": "yaml", ".csv": "csv", ".jsonl": "jsonl", ".joblib": "joblib"}.get(suffix, "file")
+        items.append(TrainingRunArtifactItem(
+            name=relative,
+            kind=kind,
+            size_bytes=path.stat().st_size,
+            deserializable=False,
+        ))
+    return TrainingRunArtifactsResponse(
+        experiment_id=experiment_id,
+        run_id=run_id,
+        artifacts=items,
+        live_training=False,
+    )
+
+
+def _as_float(value) -> float | None:
+    try:
+        if value is None or value == "":
+            return None
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number

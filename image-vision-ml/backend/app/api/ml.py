@@ -10,9 +10,14 @@ from backend.app.schemas.ml import (
     ExperimentPredictionsResponse,
     ExperimentProvenanceResponse,
     ExperimentTrainingResponse,
+    TrainingRunArtifactsResponse,
+    TrainingRunDetailResponse,
+    TrainingRunEventsResponse,
+    TrainingRunListResponse,
+    TrainingRunMetricsResponse,
 )
 from backend.app.services import ml_service
-from ml.preprocessing.errors import DatasetNotFoundError, MissingProcessedOutputError
+from ml.preprocessing.errors import DatasetNotFoundError, MissingProcessedOutputError, SoilForecastingError
 
 router = APIRouter()
 
@@ -118,3 +123,83 @@ def get_experiment_provenance(experiment_id: str) -> ExperimentProvenanceRespons
         return ml_service.experiment_provenance(experiment_id)
     except (DatasetNotFoundError, ValueError) as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/experiments/{experiment_id}/runs", response_model=TrainingRunListResponse)
+def list_experiment_runs(
+    experiment_id: str,
+    model: str | None = Query(default=None),
+    horizon_days: int | None = Query(default=None),
+    feature_set: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    start_date: str | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+) -> TrainingRunListResponse:
+    try:
+        return ml_service.list_training_runs(
+            experiment_id,
+            model=model,
+            horizon_days=horizon_days,
+            feature_set=feature_set,
+            status=status,
+            start_date=start_date,
+            limit=limit,
+        )
+    except (DatasetNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SoilForecastingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/experiments/{experiment_id}/runs/{run_id}", response_model=TrainingRunDetailResponse)
+def get_experiment_run(experiment_id: str, run_id: str) -> TrainingRunDetailResponse:
+    try:
+        return ml_service.training_run_detail(experiment_id, run_id)
+    except (DatasetNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SoilForecastingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/experiments/{experiment_id}/runs/{run_id}/events", response_model=TrainingRunEventsResponse)
+def get_experiment_run_events(
+    experiment_id: str,
+    run_id: str,
+    event_type: str | None = Query(default=None),
+    phase: str | None = Query(default=None),
+    sequence_after: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=2000),
+) -> TrainingRunEventsResponse:
+    try:
+        return ml_service.training_run_events(
+            experiment_id,
+            run_id,
+            event_type=event_type,
+            phase=phase,
+            sequence_after=sequence_after,
+            limit=limit,
+        )
+    except (DatasetNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SoilForecastingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/experiments/{experiment_id}/runs/{run_id}/metrics", response_model=TrainingRunMetricsResponse)
+def get_experiment_run_metrics(experiment_id: str, run_id: str) -> TrainingRunMetricsResponse:
+    try:
+        return ml_service.training_run_metrics(experiment_id, run_id)
+    except (DatasetNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SoilForecastingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/experiments/{experiment_id}/runs/{run_id}/artifacts", response_model=TrainingRunArtifactsResponse)
+def get_experiment_run_artifacts(experiment_id: str, run_id: str) -> TrainingRunArtifactsResponse:
+    try:
+        return ml_service.training_run_artifacts(experiment_id, run_id)
+    except (DatasetNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except SoilForecastingError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -10,12 +10,14 @@ from ml.soil_forecasting.pipeline import (
     train_models,
     validate_models,
 )
+from ml.soil_forecasting.training_instrumentation import execute_train_run
 
 __all__ = [
     "PIPELINE_VERSION",
     "check_experiment",
     "compare_models",
     "evaluate_test",
+    "execute_train_run",
     "prepare_experiment",
     "report_experiment",
     "train_models",

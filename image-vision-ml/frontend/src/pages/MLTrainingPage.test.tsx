@@ -255,6 +255,186 @@ function requestUrl(input: RequestInfo | URL): string {
   return input.url;
 }
 
+const RUN_ID = "run_20261022T191500Z_aaa111";
+const RUN_ID_B = "run_20261022T191600Z_bbb222";
+
+const runList = {
+  experiment_id: EXPERIMENT_ID,
+  total: 2,
+  limit: 200,
+  live_training: false,
+  note: "Read-only training-run index. GET does not train models.",
+  runs: [
+    {
+      run_id: RUN_ID,
+      experiment_id: EXPERIMENT_ID,
+      algorithm: "ridge",
+      horizon_days: 1,
+      feature_set: "C",
+      status: "completed",
+      inferred_status: "completed",
+      created_at_utc: "2026-10-22T19:15:00Z",
+      start_at_utc: "2026-10-22T19:15:00Z",
+      finish_at_utc: "2026-10-22T19:15:02Z",
+      duration_ms: 1200,
+      training_duration_ms: 80,
+      training_sample_count: 46,
+      validation_sample_count: 20,
+      selected_feature_count: 7,
+      validation_mae: 0.012,
+      validation_rmse: 0.015,
+      validation_skill_mae: 0.1,
+      provenance_label: "telemetry_development_run",
+      execution_mode: "research_development",
+      is_frozen_phase_4_1_model: false,
+      test_targets_accessed: false,
+      suitable_for_modeling: false,
+      research_mode: "research_reanalysis",
+    },
+    {
+      run_id: RUN_ID_B,
+      experiment_id: EXPERIMENT_ID,
+      algorithm: "gradient_boosting",
+      horizon_days: 1,
+      feature_set: "C",
+      status: "completed",
+      inferred_status: "completed",
+      created_at_utc: "2026-10-22T19:16:00Z",
+      start_at_utc: "2026-10-22T19:16:00Z",
+      finish_at_utc: "2026-10-22T19:16:03Z",
+      duration_ms: 2100,
+      training_duration_ms: 400,
+      training_sample_count: 46,
+      validation_sample_count: 20,
+      selected_feature_count: 7,
+      validation_mae: 0.013,
+      validation_rmse: 0.016,
+      validation_skill_mae: 0.05,
+      provenance_label: "telemetry_development_run",
+      execution_mode: "research_development",
+      is_frozen_phase_4_1_model: false,
+      test_targets_accessed: false,
+      suitable_for_modeling: false,
+      research_mode: "research_reanalysis",
+    },
+  ],
+};
+
+const runDetail = {
+  experiment_id: EXPERIMENT_ID,
+  run_id: RUN_ID,
+  available: true,
+  live_training: false,
+  status: "completed",
+  inferred_status: "completed",
+  algorithm: "ridge",
+  horizon_days: 1,
+  feature_set: "C",
+  target_variable: "swvl1",
+  created_at_utc: "2026-10-22T19:15:00Z",
+  start_at_utc: "2026-10-22T19:15:00Z",
+  finish_at_utc: "2026-10-22T19:15:02Z",
+  duration_ms: 1200,
+  timings_ms: { model_fitting: 80, total_run: 1200 },
+  hyperparameters: { alpha: 1.0, solver: "auto" },
+  diagnostics: {
+    optimizer: "ridge_auto",
+    training_iterations: null,
+    iteration_history_available: false,
+    iteration_history_reason: "not_exposed_by_estimator",
+    alpha: 1.0,
+    solver: "auto",
+    n_features: 7,
+    intercept: 0.2,
+    scaler: "StandardScaler",
+    fitting_duration_ms: 80,
+    coefficients: [{ feature: "swvl1_prev1", value: 0.11 }],
+  },
+  dataset_summary: {
+    training_sample_count: 46,
+    validation_sample_count: 20,
+    selected_feature_count: 7,
+  },
+  training_summary: {},
+  metrics: { validation: { mae: 0.012, rmse: 0.015, skill_mae: 0.1 } },
+  artifacts: {},
+  git_commit: "93f31ca",
+  git_dirty: true,
+  python_version: "3.14.4",
+  provenance_label: "telemetry_development_run",
+  execution_mode: "research_development",
+  research_mode: "research_reanalysis",
+  is_frozen_phase_4_1_model: false,
+  test_targets_accessed: false,
+  operational_forecast: false,
+  operational_availability_verified: false,
+  is_ground_truth: false,
+  is_measured_soil_moisture: false,
+  suitable_for_modeling: false,
+  telemetry_validation_ok: true,
+  event_count: 4,
+  note: "Read-only telemetry run.",
+};
+
+const boostingDetail = {
+  ...runDetail,
+  run_id: RUN_ID_B,
+  algorithm: "gradient_boosting",
+  diagnostics: {
+    n_iter_: 8,
+    training_iterations: 8,
+    max_iter: 8,
+    learning_rate: 0.1,
+    max_depth: 2,
+    early_stopping: false,
+    iteration_history_source: "staged_predict_after_fit",
+    native_train_score_available: false,
+    fitting_duration_ms: 40,
+    termination: "reached_max_iter",
+  },
+  hyperparameters: { max_iter: 8, learning_rate: 0.1, max_depth: 2 },
+};
+
+const runEvents = {
+  experiment_id: EXPERIMENT_ID,
+  run_id: RUN_ID,
+  total: 4,
+  returned: 4,
+  sequence_after: 0,
+  limit: 2000,
+  truncated_final_line: false,
+  live_training: false,
+  note: "Historical recorded events. This is not live monitoring.",
+  events: [
+    { sequence: 1, timestamp_utc: "2026-10-22T19:15:00Z", elapsed_ms: 0, event_type: "run_created", phase: "created" },
+    { sequence: 2, timestamp_utc: "2026-10-22T19:15:01Z", elapsed_ms: 10, event_type: "training_started", phase: "fit", model: "ridge" },
+    { sequence: 3, timestamp_utc: "2026-10-22T19:15:01Z", elapsed_ms: 20, event_type: "training_completed", phase: "fit", model: "ridge" },
+    { sequence: 4, timestamp_utc: "2026-10-22T19:15:02Z", elapsed_ms: 30, event_type: "run_completed", phase: "completed" },
+  ],
+};
+
+const boostingEvents = {
+  ...runEvents,
+  run_id: RUN_ID_B,
+  events: [
+    { sequence: 1, timestamp_utc: "2026-10-22T19:16:00Z", elapsed_ms: 0, event_type: "run_created", phase: "created" },
+    { sequence: 2, timestamp_utc: "2026-10-22T19:16:01Z", elapsed_ms: 5, event_type: "training_metric", phase: "fit", iteration: 1, metric_name: "training_mse", metric_value: 0.002, metric_unit: "squared_m3_per_m3", dataset_partition: "train", details: { calculation_method: "staged_predict_after_fit" } },
+    { sequence: 3, timestamp_utc: "2026-10-22T19:16:01Z", elapsed_ms: 8, event_type: "training_metric", phase: "fit", iteration: 2, metric_name: "training_mse", metric_value: 0.0015, metric_unit: "squared_m3_per_m3", dataset_partition: "train", details: { calculation_method: "staged_predict_after_fit" } },
+    { sequence: 4, timestamp_utc: "2026-10-22T19:16:03Z", elapsed_ms: 40, event_type: "run_completed", phase: "completed" },
+  ],
+};
+
+const runMetrics = {
+  experiment_id: EXPERIMENT_ID,
+  run_id: RUN_ID,
+  records: [],
+  history: [],
+  training: { mae: 0.01 },
+  validation: { mae: 0.012, rmse: 0.015, skill_mae: 0.1 },
+  live_training: false,
+  note: "Evaluation metrics and recorded history.",
+};
+
 function mockLabApi(overrides: Record<string, unknown> = {}) {
   const fetchMock = vi.fn((input: RequestInfo | URL) => {
     const url = requestUrl(input);
@@ -264,6 +444,18 @@ function mockLabApi(overrides: Record<string, unknown> = {}) {
           return jsonResponse({ detail: "Experiment index failed." }, 500);
         }
         return jsonResponse(overrides.listing ?? listing);
+      }
+      if (url.includes("/runs")) {
+        if (overrides.runsError) return jsonResponse({ detail: "Run index failed." }, 500);
+        if (url.includes("/events")) {
+          return jsonResponse(url.includes(RUN_ID_B) ? boostingEvents : (overrides.runEvents ?? runEvents));
+        }
+        if (url.includes("/metrics")) return jsonResponse(runMetrics);
+        if (url.includes("/artifacts")) return jsonResponse({ experiment_id: EXPERIMENT_ID, run_id: RUN_ID, artifacts: [], live_training: false, note: "" });
+        if (/\/runs\/[^/?]+/.test(url) && !/\/runs\/?(\?|$)/.test(url.split("?")[0])) {
+          return jsonResponse(url.includes(RUN_ID_B) ? boostingDetail : (overrides.runDetail ?? runDetail));
+        }
+        return jsonResponse(overrides.runList ?? runList);
       }
       if (url.includes("/dataset")) return jsonResponse(overrides.dataset ?? dataset);
       if (url.includes("/features")) return jsonResponse(features);
@@ -412,5 +604,82 @@ describe("ML Training Laboratory", () => {
     renderApp("/ml/training");
     expect(await screen.findByText("Experiment index failed.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+  });
+
+  it("lists telemetry runs and shows ridge diagnostics without a fabricated curve", async () => {
+    mockLabApi();
+    renderApp("/ml/training");
+    await screen.findByText("Experiment summary");
+    fireEvent.click(screen.getByRole("tab", { name: "Training Runs" }));
+    expect(await screen.findByLabelText("Training run")).toBeInTheDocument();
+    expect(screen.getByText("Training run summary")).toBeInTheDocument();
+    expect(screen.getByText("Not recorded")).toBeInTheDocument();
+    expect(screen.getByTestId("missing-metric-history")).toHaveTextContent(/linear system/i);
+    expect(screen.queryByTestId("training-metrics-chart")).not.toBeInTheDocument();
+    expect(screen.getByText(/Historical training playback/)).toBeInTheDocument();
+    expect(screen.getByText("suitable_for_modeling=false")).toBeInTheDocument();
+    expect(screen.getByText("test_targets_accessed=false")).toBeInTheDocument();
+  });
+
+  it("plays back stored events and steps without inventing states", async () => {
+    mockLabApi();
+    renderApp("/ml/training");
+    await screen.findByText("Experiment summary");
+    fireEvent.click(screen.getByRole("tab", { name: "Training Runs" }));
+    expect(await screen.findByTestId("playback-cursor")).toHaveTextContent("Event 1 / 4");
+    fireEvent.click(screen.getByRole("button", { name: "Step forward" }));
+    expect(screen.getByTestId("playback-cursor")).toHaveTextContent("Event 2 / 4");
+    fireEvent.click(screen.getByRole("button", { name: "Reset historical playback" }));
+    expect(screen.getByTestId("playback-cursor")).toHaveTextContent("Event 1 / 4");
+  });
+
+  it("compares runs and warns when requested", async () => {
+    mockLabApi();
+    renderApp("/ml/training");
+    await screen.findByText("Experiment summary");
+    fireEvent.click(screen.getByRole("tab", { name: "Training Runs" }));
+    expect(await screen.findByLabelText(`Compare ${RUN_ID}`)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(`Compare ${RUN_ID}`));
+    fireEvent.click(screen.getByLabelText(`Compare ${RUN_ID_B}`));
+    expect(screen.getByText(/Horizons, validation counts, and metric definitions match/)).toBeInTheDocument();
+    expect(screen.getAllByText("80 ms").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("1.20 s").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows boosting stage history from recorded points only", async () => {
+    mockLabApi();
+    renderApp("/ml/training");
+    await screen.findByText("Experiment summary");
+    fireEvent.click(screen.getByRole("tab", { name: "Training Runs" }));
+    const selector = await screen.findByLabelText("Training run") as HTMLSelectElement;
+    fireEvent.change(selector, { target: { value: RUN_ID_B } });
+    expect(await screen.findByTestId("training-metrics-chart")).toBeInTheDocument();
+    expect(screen.getByText(/Fitted iterations \(n_iter_\): 8/)).toBeInTheDocument();
+    expect(screen.queryByText(/epoch 1/i)).not.toBeInTheDocument();
+  });
+
+  it("shows an empty telemetry state when no runs exist", async () => {
+    mockLabApi({
+      runList: {
+        experiment_id: EXPERIMENT_ID,
+        total: 0,
+        limit: 200,
+        live_training: false,
+        note: "Read-only",
+        runs: [],
+      },
+    });
+    renderApp("/ml/training");
+    await screen.findByText("Experiment summary");
+    fireEvent.click(screen.getByRole("tab", { name: "Training Runs" }));
+    expect(await screen.findByTestId("training-runs-empty")).toHaveTextContent(/No telemetry-enabled training runs/);
+  });
+
+  it("shows a run API error with retry", async () => {
+    mockLabApi({ runsError: true });
+    renderApp("/ml/training");
+    await screen.findByText("Experiment summary");
+    fireEvent.click(screen.getByRole("tab", { name: "Training Runs" }));
+    expect(await screen.findByText("Run index failed.")).toBeInTheDocument();
   });
 });

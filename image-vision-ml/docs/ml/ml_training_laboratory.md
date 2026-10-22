@@ -2,7 +2,7 @@
 
 Research UI for inspecting stored Phase 4.1 soil-moisture forecasting experiments and for teaching the mathematics of the fitted algorithms. Route: `/ml/training`. Sidebar label: **ML Training Lab**.
 
-Last reviewed: `2026-10-22T19:26:01Z`.
+Last reviewed: `2026-10-22T20:30:33Z`.
 
 Visiting the page **does not train models**. GET requests are read-only. Educational simulations are labeled and are not experiment telemetry.
 
@@ -18,6 +18,7 @@ The laboratory is a scientific and educational dashboard for:
 6. Client-side educational demonstrations.
 7. Residual and forecast-versus-target charts from stored predictions.
 8. Reproducibility and research-readiness flags.
+9. **Training Runs**: separately recorded research-development telemetry, historical playback, and run comparison. This is not live monitoring.
 
 It is not an operational forecast console. Predictions navigation remains disabled.
 
@@ -75,34 +76,17 @@ Random shuffling is not used. Leakage is any information unavailable at issue ti
 
 ## Training telemetry limitations
 
-Phase 4.1 did **not** write `training_events.jsonl`. The UI shows:
+The frozen Phase 4.1 experiment still has **no** `training_events.jsonl` in its root. The Training Process tab shows:
 
 **Training history unavailable — this experiment recorded final metrics but not per-iteration telemetry.**
 
-Final MAE is never reconstructed into a loss curve. Persistence and seasonal models have no epochs. Ridge has solver convergence, not per-epoch loss. Boosting stages were not logged. `live_training` is always false. No job control.
+Final MAE is never reconstructed into a loss curve for that frozen evaluation. Persistence and seasonal models have no epochs. Ridge used a linear-system solver. Boosting stages were not logged on the original freeze. `live_training` is always false. No job control.
 
-### Optional future format `training_events.jsonl`
+### Training Runs tab
 
-One JSON object per line. Instrumentation must be opt-in and must not rewrite frozen experiments.
+Phase 4.1-Telemetry adds isolated development runs under `runs/<run_id>/`. The Training Runs tab lists those runs, shows a timeline from recorded events, plots only stored metric points, and offers **Historical training playback**. Missing histories are explained per algorithm. See [`training_telemetry.md`](training_telemetry.md).
 
-```json
-{
-  "experiment_id": "plovdiv_soil_forecast_baselines_v1",
-  "run_id": "optional-run",
-  "model_id": "ridge",
-  "event_type": "iteration",
-  "timestamp_utc": "2026-10-22T18:37:24Z",
-  "training_phase": "fit",
-  "iteration": 0,
-  "train_metric": null,
-  "validation_metric": null,
-  "learning_rate": null,
-  "sample_count": 350,
-  "elapsed_seconds": null,
-  "solver": "linear_system",
-  "note": "Ridge may log solver status instead of epoch loss."
-}
-```
+Educational Mathematics demos remain labeled **Educational simulation — not training telemetry from the agricultural model.** Real Ridge coefficients and HGBR `n_iter_` from a telemetry run are shown on Training Runs, not mixed into the synthetic GD demo.
 
 ## Evaluation metrics
 
@@ -136,6 +120,11 @@ Read-only. Experiment IDs are sanitized; path escape returns 404. Local source d
 - `GET /api/v1/ml/experiments/{id}/features`
 - `GET /api/v1/ml/experiments/{id}/training`
 - `GET /api/v1/ml/experiments/{id}/provenance`
+- `GET /api/v1/ml/experiments/{id}/runs`
+- `GET /api/v1/ml/experiments/{id}/runs/{run_id}`
+- `GET /api/v1/ml/experiments/{id}/runs/{run_id}/events`
+- `GET /api/v1/ml/experiments/{id}/runs/{run_id}/metrics`
+- `GET /api/v1/ml/experiments/{id}/runs/{run_id}/artifacts`
 
 Unavailable telemetry and missing files are explicit states, not zeros.
 

@@ -46,4 +46,5 @@ python -m scripts.change_log refresh
 | `CHG-0008` | 2026-10-22T17:13:30Z | Phase 4.0 | feature | verified | Leakage-safe agricultural ML research dataset (Phase 4.0) | `uncommitted` | [CHG-0008](changes/CHG-0008.md) |
 | `CHG-0009` | 2026-10-22T18:38:09Z | Phase 4.1 | feature | verified | First agricultural soil-moisture forecasting baselines (Phase 4.1) | `uncommitted` | [CHG-0009](changes/CHG-0009.md) |
 | `CHG-0010` | 2026-10-22T19:18:10Z | Phase 4.1-UI | feature | verified | ML Training Laboratory research dashboard (Phase 4.1-UI) | `uncommitted` | [CHG-0010](changes/CHG-0010.md) |
+| `CHG-0011` | 2026-10-22T20:28:22Z | Phase 4.1-Telemetry | feature | verified | Real ML training telemetry and Training Runs laboratory (Phase 4.1-Telemetry) | `uncommitted` | [CHG-0011](changes/CHG-0011.md) |
 <!-- CHANGE_TABLE_END -->

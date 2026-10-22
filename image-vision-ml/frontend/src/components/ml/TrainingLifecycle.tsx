@@ -37,6 +37,7 @@ export function TrainingLifecycle({ training }: Props) {
         ) : (
           <p className="text-sm text-sand-200" data-testid="training-history-unavailable">
             {telemetry?.reason ?? "Training history unavailable — this experiment recorded final metrics but not per-iteration telemetry."}
+            {" "}Open the Training Runs tab for separately recorded research-development sessions.
           </p>
         )}
         <p className="mt-2 text-xs text-slate-500">

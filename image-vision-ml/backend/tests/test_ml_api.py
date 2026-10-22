@@ -239,10 +239,143 @@ def test_experiment_get_does_not_train_or_rewrite(monkeypatch, tmp_path: Path):
     write_json_atomic(exp / "training_summary.json", {"fitted_on": "training", "trained": []})
     before = {path.name: (path.stat().st_mtime_ns, path.read_bytes()) for path in exp.iterdir()}
     monkeypatch.setattr(ml_service, "EXPERIMENTS_ROOT", root)
-    for suffix in ("", "/dataset", "/features", "/training", "/provenance", "/metrics?partition=validation"):
+    for suffix in (
+        "",
+        "/dataset",
+        "/features",
+        "/training",
+        "/provenance",
+        "/metrics?partition=validation",
+        "/runs",
+    ):
         response = client.get(f"/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1{suffix}")
         assert response.status_code == 200
     after = {path.name: (path.stat().st_mtime_ns, path.read_bytes()) for path in exp.iterdir()}
     assert after == before
     assert not (exp / "training_events.jsonl").exists()
+    empty_runs = client.get("/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs")
+    assert empty_runs.status_code == 200
+    assert empty_runs.json()["runs"] == []
+    assert empty_runs.json()["live_training"] is False
     assert client.get("/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/training").json()["live_training"] is False
+
+
+RUN_ID = "run_20261022T191500Z_aaa111"
+
+
+def _write_run(exp: Path, run_id: str = RUN_ID, *, algorithm: str = "ridge", horizon: int = 1) -> Path:
+    run_dir = exp / "runs" / run_id
+    run_dir.mkdir(parents=True)
+    (run_dir / "model_artifacts").mkdir()
+    write_json_atomic(run_dir / "run_manifest.json", {
+        "run_id": run_id,
+        "experiment_id": "plovdiv_soil_forecast_baselines_v1",
+        "status": "completed",
+        "algorithm": algorithm,
+        "forecast_horizon_days": horizon,
+        "feature_set": "C",
+        "created_at_utc": "2026-10-22T19:15:00Z",
+        "training_sample_count": 46,
+        "validation_sample_count": 20,
+        "validation_mae": 0.012,
+        "validation_rmse": 0.015,
+        "validation_skill_mae": 0.1,
+        "provenance_label": "telemetry_development_run",
+        "execution_mode": "research_development",
+        "timings_ms": {"total_run": 1200, "model_fitting": 80},
+        "test_targets_accessed": False,
+        "suitable_for_modeling": False,
+        "is_ground_truth": False,
+        "event_count": 3,
+        "artifacts": {"diagnostics": "model_artifacts/diagnostics.json"},
+        "hyperparameters": {"alpha": 1.0},
+    })
+    write_json_atomic(run_dir / "metrics.json", {
+        "records": [{"metric_name": "mae", "metric_value": 0.012, "dataset_partition": "validation"}],
+        "training": {"mae": 0.01},
+        "validation": {"mae": 0.012},
+    })
+    (run_dir / "training_events.jsonl").write_text(
+        "\n".join([
+            '{"schema_version":"1.0","run_id":"%s","sequence":1,"timestamp_utc":"2026-10-22T19:15:00Z","elapsed_ms":0,"event_type":"run_created","phase":"created","model":"%s","horizon_days":%s,"iteration":null,"metric_name":null,"metric_value":null,"metric_unit":null,"dataset_partition":null,"details":{}}' % (run_id, algorithm, horizon),
+            '{"schema_version":"1.0","run_id":"%s","sequence":2,"timestamp_utc":"2026-10-22T19:15:01Z","elapsed_ms":10,"event_type":"training_metric","phase":"fit","model":"%s","horizon_days":%s,"iteration":1,"metric_name":"training_mse","metric_value":0.001,"metric_unit":"squared_m3_per_m3","dataset_partition":"train","details":{}}' % (run_id, algorithm, horizon),
+            '{"schema_version":"1.0","run_id":"%s","sequence":3,"timestamp_utc":"2026-10-22T19:15:02Z","elapsed_ms":20,"event_type":"run_completed","phase":"completed","model":"%s","horizon_days":%s,"iteration":null,"metric_name":null,"metric_value":null,"metric_unit":null,"dataset_partition":null,"details":{}}' % (run_id, algorithm, horizon),
+        ]) + "\n",
+        encoding="utf-8",
+    )
+    (run_dir / "model_artifacts" / "estimator.joblib").write_bytes(b"not-a-real-joblib")
+    write_json_atomic(run_dir / "model_artifacts" / "diagnostics.json", {"optimizer": "ridge_auto"})
+    return run_dir
+
+
+def test_training_run_api_list_detail_events_metrics_and_filters(monkeypatch, tmp_path: Path):
+    root = tmp_path / "experiments"
+    exp = root / "plovdiv_soil_forecast_baselines_v1"
+    exp.mkdir(parents=True)
+    write_json_atomic(exp / "experiment_summary.json", {
+        "experiment_id": "plovdiv_soil_forecast_baselines_v1",
+        "frozen": True,
+        "suitable_for_modeling": False,
+    })
+    _write_run(exp)
+    _write_run(exp, "run_20261022T191600Z_bbb222", algorithm="gradient_boosting", horizon=1)
+    monkeypatch.setattr(ml_service, "EXPERIMENTS_ROOT", root)
+    listing = client.get("/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs")
+    assert listing.status_code == 200
+    body = listing.json()
+    assert body["total"] == 2
+    assert body["live_training"] is False
+    assert body["runs"][0]["suitable_for_modeling"] is False
+    assert body["runs"][0]["training_duration_ms"] == 80
+    assert body["runs"][0]["duration_ms"] == 1200
+    filtered = client.get(
+        "/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs?model=ridge&horizon_days=1&feature_set=C&status=completed&limit=1"
+    )
+    assert filtered.status_code == 200
+    assert filtered.json()["total"] == 1
+    detail = client.get(f"/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/{RUN_ID}")
+    assert detail.status_code == 200
+    assert detail.json()["live_training"] is False
+    assert detail.json()["test_targets_accessed"] is False
+    assert detail.json()["is_ground_truth"] is False
+    events = client.get(
+        f"/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/{RUN_ID}/events?event_type=training_metric&limit=10"
+    )
+    assert events.status_code == 200
+    assert events.json()["total"] == 1
+    assert events.json()["events"][0]["metric_name"] == "training_mse"
+    paged = client.get(
+        f"/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/{RUN_ID}/events?sequence_after=1&limit=10"
+    )
+    assert paged.json()["total"] == 2
+    metrics = client.get(f"/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/{RUN_ID}/metrics")
+    assert metrics.status_code == 200
+    assert metrics.json()["validation"]["mae"] == 0.012
+    assert len(metrics.json()["history"]) == 1
+    artifacts = client.get(f"/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/{RUN_ID}/artifacts")
+    assert artifacts.status_code == 200
+    names = [item["name"] for item in artifacts.json()["artifacts"]]
+    assert "model_artifacts/estimator.joblib" in names
+    assert all(item["deserializable"] is False for item in artifacts.json()["artifacts"])
+
+
+def test_training_run_api_rejects_invalid_ids_and_escapes(monkeypatch, tmp_path: Path):
+    root = tmp_path / "experiments"
+    exp = root / "plovdiv_soil_forecast_baselines_v1"
+    exp.mkdir(parents=True)
+    write_json_atomic(exp / "experiment_summary.json", {"experiment_id": "plovdiv_soil_forecast_baselines_v1"})
+    _write_run(exp)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.json").write_text("{\"secret\": true}", encoding="utf-8")
+    (exp / "runs" / "run_20261022T191700Z_eeeeee").symlink_to(outside)
+    monkeypatch.setattr(ml_service, "EXPERIMENTS_ROOT", root)
+    assert client.get("/api/v1/ml/experiments/missing_experiment/runs").status_code == 404
+    assert client.get("/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/missing_run").status_code == 404
+    assert client.get("/api/v1/ml/experiments/../secrets/runs").status_code == 404
+    assert client.get("/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/../frozen_experiment.json").status_code == 404
+    assert client.get("/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/run_20261022T191700Z_eeeeee").status_code == 404
+    listing = client.get("/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs")
+    assert listing.json()["total"] == 1
+    posted = client.post(f"/api/v1/ml/experiments/plovdiv_soil_forecast_baselines_v1/runs/{RUN_ID}")
+    assert posted.status_code in {404, 405}

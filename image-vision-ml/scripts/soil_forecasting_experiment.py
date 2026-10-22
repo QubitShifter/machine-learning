@@ -21,6 +21,7 @@ from ml.soil_forecasting.pipeline import (
     train_models,
     validate_models,
 )
+from ml.soil_forecasting.training_instrumentation import execute_train_run
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -43,11 +44,36 @@ def main(argv: list[str] | None = None) -> int:
     ):
         command = sub.add_parser(name, help=help_text)
         command.add_argument("--config", default="configs/soil_forecasting_experiment.yaml")
+    train_run = sub.add_parser(
+        "train-run",
+        help=(
+            "Fit one research-development model with telemetry. "
+            "Does not load 2025 test labels or mutate frozen Phase 4.1 artifacts."
+        ),
+    )
+    train_run.add_argument("--config", default="configs/soil_forecasting_experiment.yaml")
+    train_run.add_argument(
+        "--model",
+        required=True,
+        choices=("persistence", "seasonal", "ridge", "gradient_boosting", "hist_gradient_boosting"),
+    )
+    train_run.add_argument("--horizon", type=int, required=True)
+    train_run.add_argument("--feature-set", default="C")
+    train_run.add_argument(
+        "--telemetry",
+        action="store_true",
+        help="Required. Records a new isolated training run. GET APIs never set this.",
+    )
+    train_run.add_argument("--alpha", type=float, default=None)
+    train_run.add_argument("--max-depth", type=int, default=None)
+    train_run.add_argument("--learning-rate", type=float, default=None)
+    train_run.add_argument("--max-iter", type=int, default=None)
+    train_run.add_argument("--seed", type=int, default=None)
     args = parser.parse_args(argv)
     logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO))
     config = Path(args.config)
     try:
-        result = _run(args.command, config)
+        result = _run(args)
     except KeyboardInterrupt:
         logging.error("Interrupted.")
         return 130
@@ -58,7 +84,9 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _run(command: str, config: Path) -> dict:
+def _run(args) -> dict:
+    command = args.command
+    config = Path(args.config)
     if command == "check":
         return check_experiment(config)
     if command == "prepare":
@@ -73,6 +101,19 @@ def _run(command: str, config: Path) -> dict:
         return evaluate_test(config)
     if command == "report":
         return report_experiment(config)
+    if command == "train-run":
+        return execute_train_run(
+            config,
+            model=args.model,
+            horizon=args.horizon,
+            feature_set=args.feature_set,
+            telemetry=bool(args.telemetry),
+            alpha=args.alpha,
+            max_depth=getattr(args, "max_depth", None),
+            learning_rate=getattr(args, "learning_rate", None),
+            max_iter=getattr(args, "max_iter", None),
+            seed=args.seed,
+        )
     raise SoilForecastingError(f"Unknown command {command}.")
 
 

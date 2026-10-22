@@ -9,6 +9,7 @@ import { MathematicsLab } from "@/components/ml/MathematicsLab";
 import { ModelEvaluation } from "@/components/ml/ModelEvaluation";
 import { TrainingLifecycle } from "@/components/ml/TrainingLifecycle";
 import { TrainingOverview } from "@/components/ml/TrainingOverview";
+import { TrainingRunsPanel } from "@/components/ml/TrainingRunsPanel";
 import {
   useExperiment,
   useExperimentDataset,
@@ -152,6 +153,7 @@ export function MLTrainingPage() {
           <AlgorithmExplorer algorithm={algorithm} horizon={horizon} training={training.data} />
         ) : null}
         {tab === "training" ? <TrainingLifecycle training={training.data} /> : null}
+        {tab === "runs" ? <TrainingRunsPanel experimentId={selectedId} /> : null}
         {tab === "evaluation" ? (
           <QueryState
             isLoading={predictions.isLoading || validationMetrics.isLoading}

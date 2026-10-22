@@ -30,6 +30,7 @@ const TABS: { id: LabTab; label: string }[] = [
   { id: "dataset", label: "Dataset" },
   { id: "algorithms", label: "Algorithms" },
   { id: "training", label: "Training Process" },
+  { id: "runs", label: "Training Runs" },
   { id: "evaluation", label: "Evaluation" },
   { id: "mathematics", label: "Mathematics" },
   { id: "provenance", label: "Experiment Provenance" },

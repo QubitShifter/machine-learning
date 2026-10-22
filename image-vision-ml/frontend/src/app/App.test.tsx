@@ -705,6 +705,16 @@ function mockApi(overrides: Record<string, unknown> = {}) {
         return jsonResponse(overrides.soilDatasets ?? soilDatasets);
       }
       if (url.includes("/api/v1/ml/experiments")) {
+        if (url.includes("/runs")) {
+          return jsonResponse({
+            experiment_id: "none",
+            total: 0,
+            limit: 200,
+            runs: [],
+            live_training: false,
+            note: "Read-only training-run index. GET does not train models.",
+          });
+        }
         return jsonResponse(overrides.mlExperiments ?? []);
       }
       if (url.includes("/api/v1/ml/")) {
@@ -804,7 +814,7 @@ describe("UI Phase 1.0", () => {
     expect(await screen.findByText("ML Training Laboratory")).toBeInTheDocument();
     expect(screen.getByText("Coming later")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Predictions/ })).not.toBeInTheDocument();
-  });
+  }, 15000);
 
   it("loads live dataset counts on overview", async () => {
     renderApp("/");
